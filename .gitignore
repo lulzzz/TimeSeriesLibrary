@@ -1,0 +1,8 @@
+
+obj
+bin
+*.user
+*.datasource
+*.sql
+*.orig
+**/*.orig

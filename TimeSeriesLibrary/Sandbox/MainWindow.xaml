@@ -1,0 +1,10 @@
+﻿<Window x:Class="Sandbox.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="MainWindow" Height="250" Width="325">
+    <StackPanel>
+        <Button Name="GoButton" Click="GoButtonClick" Width="100">GO!</Button>
+        <Label Name="TimeLabelBlob">WAITING</Label>
+        <Label Name="TimeLabelNoBlob">WAITING</Label>
+    </StackPanel>
+</Window>
