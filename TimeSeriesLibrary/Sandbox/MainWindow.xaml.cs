@@ -25,10 +25,10 @@ namespace Sandbox
     /// </summary>
     public partial class MainWindow : Window
     {
-        const int nVals = 30000;
+        const int nVals = 720;
 
         int connNumber;
-        TS tsLib = new TS();
+        TSMax tsLib = new TSMax();
 
         public unsafe MainWindow()
         {
@@ -42,10 +42,33 @@ namespace Sandbox
         }
         private void GoButtonClick(object sender, RoutedEventArgs e)
         {
-            ReadBlobPacked();
+            //ReadBlobPacked();
             //ReadNoBlob();
+            WriteTest();
         }
 
+
+        void WriteTest()
+        {
+            int ret, i;
+
+            double[] valArray = new double[nVals];
+            DateTime startDate = new DateTime(1928, 1, 1, 23, 59, 0);
+
+            for (i = 0; i < nVals; i++)
+                valArray[i] = i * 3;
+
+            DateTime timerStart = DateTime.Now;
+            for (i = 0; i < 1200; i++)
+            {
+                TimeLabelBlob.Content = String.Format("Iteration {0}", i);
+                ret = tsLib.WriteValues(connNumber, "BinaryMax",
+                           3, 1, nVals, valArray, startDate);
+            }
+            DateTime timerEnd = DateTime.Now;
+            TimeSpan timerDiff = timerEnd - timerStart;
+            TimeLabelBlob.Content = String.Format("BLOBWRI --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
+        }
 
         void WriteBlobPacked()
         {
@@ -56,8 +79,8 @@ namespace Sandbox
 
             for (i = 0; i < nVals; i++)
                 valArray[i] = i * 3;
-            ret = tsLib.WriteValues(connNumber, "Demand_OutputTimeSeries", "Values3072",
-                       13, nVals, valArray, startDate);
+            ret = tsLib.WriteValues(connNumber, "BinaryMax",
+                       3, 1, nVals, valArray, startDate);
         }
 
         void WriteNoBlob()
@@ -136,8 +159,8 @@ namespace Sandbox
             for (i = 0; i < 1200; i++)
             {
                 TimeLabelBlob.Content = String.Format("Iteration {0}", i);
-                ret = tsLib.ReadValues(connNumber, "Demand_OutputTimeSeries", "Values3072",
-                                13, nVals, valArray, startDate);
+                ret = tsLib.ReadValues(connNumber, "BinaryMax",
+                                2, nVals, valArray, startDate);
             }
             DateTime timerEnd = DateTime.Now;
             TimeSpan timerDiff = timerEnd - timerStart;
