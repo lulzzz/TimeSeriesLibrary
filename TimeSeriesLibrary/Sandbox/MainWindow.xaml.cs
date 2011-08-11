@@ -25,30 +25,35 @@ namespace Sandbox
     /// </summary>
     public partial class MainWindow : Window
     {
-        const int nVals = 720;
+        const int nVals = 30000; //30000;
 
         int connNumber;
         TSMax tsLib = new TSMax();
+        TSFileS tsLibFS = new TSFileS();
 
         public unsafe MainWindow()
         {
             InitializeComponent();
 
             connNumber = tsLib.ConnxObject.OpenConnection(
-                "Data Source=.\\sqlexpress; Database=OasisOutput; Trusted_Connection=yes;");
+                "Data Source=.; Database=OasisOutput; Trusted_Connection=yes;");
+            connNumber = tsLibFS.ConnxObject.OpenConnection(
+                "Data Source=.; Database=OasisOutput; Trusted_Connection=yes;");
 
             //WriteNoBlob();
-            WriteBlobPacked();
+            //WriteBlobPacked();
+            //WriteBlobPackedFS();
         }
         private void GoButtonClick(object sender, RoutedEventArgs e)
         {
+            //ReadBlobPackedFS();
             //ReadBlobPacked();
             //ReadNoBlob();
             WriteTest();
         }
 
 
-        void WriteTest()
+        void WriteBlobPackedFS()
         {
             int ret, i;
 
@@ -57,17 +62,27 @@ namespace Sandbox
 
             for (i = 0; i < nVals; i++)
                 valArray[i] = i * 3;
+            ret = tsLibFS.WriteValues(connNumber, "FileStrm2",
+                       3, 1, nVals, valArray, startDate);
+        }
+
+        void ReadBlobPackedFS()
+        {
+            int ret, i;
+
+            double[] valArray = new double[nVals];
+            DateTime startDate = new DateTime(1928, 1, 1, 23, 59, 0);
 
             DateTime timerStart = DateTime.Now;
             for (i = 0; i < 1200; i++)
             {
                 TimeLabelBlob.Content = String.Format("Iteration {0}", i);
-                ret = tsLib.WriteValues(connNumber, "BinaryMax",
-                           3, 1, nVals, valArray, startDate);
+                ret = tsLibFS.ReadValues(connNumber, "FileStrm2",
+                                12029, nVals, valArray, startDate);
             }
             DateTime timerEnd = DateTime.Now;
             TimeSpan timerDiff = timerEnd - timerStart;
-            TimeLabelBlob.Content = String.Format("BLOBWRI --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
+            TimeLabelBlob.Content = String.Format("BLOBBED --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
         }
 
         void WriteBlobPacked()
@@ -83,9 +98,28 @@ namespace Sandbox
                        3, 1, nVals, valArray, startDate);
         }
 
+        void ReadBlobPacked()
+        {
+            int ret, i;
+
+            double[] valArray = new double[nVals];
+            DateTime startDate = new DateTime(1928, 1, 1, 23, 59, 0);
+
+            DateTime timerStart = DateTime.Now;
+            for (i = 0; i < 1200; i++)
+            {
+                TimeLabelBlob.Content = String.Format("Iteration {0}", i);
+                ret = tsLib.ReadValues(connNumber, "BinaryMax",
+                                11005, nVals, valArray, startDate);
+            }
+            DateTime timerEnd = DateTime.Now;
+            TimeSpan timerDiff = timerEnd - timerStart;
+            TimeLabelBlob.Content = String.Format("BLOBBED --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
+        }
+
         void WriteNoBlob()
         {
-            int i, tsId=1;
+            int i, tsId = 1;
 
             double[] valArray = new double[nVals];
             DateTime currDate = new DateTime(1928, 1, 1, 23, 59, 0);
@@ -148,23 +182,26 @@ namespace Sandbox
 
         }
 
-        void ReadBlobPacked()
+        void WriteTest()
         {
             int ret, i;
 
             double[] valArray = new double[nVals];
             DateTime startDate = new DateTime(1928, 1, 1, 23, 59, 0);
 
+            for (i = 0; i < nVals; i++)
+                valArray[i] = i * 3;
+
             DateTime timerStart = DateTime.Now;
             for (i = 0; i < 1200; i++)
             {
                 TimeLabelBlob.Content = String.Format("Iteration {0}", i);
-                ret = tsLib.ReadValues(connNumber, "BinaryMax",
-                                2, nVals, valArray, startDate);
+                ret = tsLibFS.WriteValues(connNumber, "FileStrm2",
+                           3, 1, nVals, valArray, startDate);
             }
             DateTime timerEnd = DateTime.Now;
             TimeSpan timerDiff = timerEnd - timerStart;
-            TimeLabelBlob.Content = String.Format("BLOBBED --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
+            TimeLabelBlob.Content = String.Format("BLOBWRI --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
         }
 
 
