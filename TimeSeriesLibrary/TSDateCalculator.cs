@@ -5,7 +5,7 @@ using System.Text;
 
 namespace TimeSeriesLibrary
 {
-    class TSDateCalculator
+    public class TSDateCalculator
     {
         public enum TimeStepUnitCode : short
         {
