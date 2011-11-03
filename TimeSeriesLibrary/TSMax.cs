@@ -103,7 +103,7 @@ namespace TimeSeriesLibrary
         /// <param name="connectionNumber">key number of the connection</param>
         /// <param name="tableName">name of the main table</param>
         /// <param name="id">id number of the time series</param>
-        /// <param name="nReqValues">number of values requested to read</param>
+        /// <param name="nMaxValues">number of values requested to read</param>
         /// <param name="valueArray">array requested to fill with values</param>
         /// <param name="reqStartTime">start time requested</param>
         /// <returns>If positive, number of values actually filled into array.

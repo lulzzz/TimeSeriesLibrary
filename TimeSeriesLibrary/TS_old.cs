@@ -8,28 +8,30 @@ using System.IO;
 
 namespace TimeSeriesLibrary
 {
-    public class TSFile
+    public class TS_old
     {
+        const int BlobSizeBytes = 3072;
+        const int BlobSizeVals = BlobSizeBytes / sizeof(double);
+
         public TSConnection ConnxObject = new TSConnection();
 
         ErrCodes.Enum ErrorCode;
-        Guid Id;
+        int Id;
         String TableName;
         TSDateCalculator.TimeStepUnitCode TimeStepUnit;
         short TimeStepQuantity;
+        DateTime ValuesStartDate;
+        DateTime ValuesEndDate;
         DateTime BlobStartDate;
         DateTime BlobEndDate;
         Boolean IsEmpty;
-        
         SqlConnection Connx;
-        SqlDataAdapter adp;
-        DataTable dTable;
 
         /// <summary>
         /// Method reads the record to get the definition of the time series
         /// </summary>
         /// <param name="id">id of the time series record</param>
-        Boolean Initialize(int connectionNumber, String tableName, Guid id)
+        Boolean Initialize(int connectionNumber, String tableName, int id)
         {
             Id = id;
             TableName = tableName;
@@ -44,10 +46,9 @@ namespace TimeSeriesLibrary
                 return false;
             }
             // Define the SQL query and get a resultset
-            String comm = String.Format("select TimeStepUnit,TimeStepQuantity,StartDate,EndDate "+
-                                        "from {0} where Id='{1}'", TableName, Id);
-            adp = new SqlDataAdapter(comm, Connx);
-            dTable = new DataTable();
+            String comm = String.Format("select * from {0} where Id={1}", TableName, Id);
+            SqlDataAdapter adp = new SqlDataAdapter(comm, Connx);
+            DataTable dTable = new DataTable();
             try
             {
                 adp.Fill(dTable);
@@ -68,15 +69,17 @@ namespace TimeSeriesLibrary
             {
                 TimeStepUnit = (TSDateCalculator.TimeStepUnitCode)dTable.Rows[0].Field<short>("TimeStepUnit");
                 TimeStepQuantity = dTable.Rows[0].Field<short>("TimeStepQuantity");
-                if (dTable.Rows[0]["StartDate"] is DBNull)
+                if (dTable.Rows[0]["ValuesStartDate"] is DBNull)
                 {
                     IsEmpty = true;
                 }
                 else
                 {
                     IsEmpty = false;
-                    BlobStartDate = dTable.Rows[0].Field<DateTime>("StartDate");
-                    BlobEndDate = dTable.Rows[0].Field<DateTime>("EndDate");
+                    ValuesStartDate = dTable.Rows[0].Field<DateTime>("ValuesStartDate");
+                    ValuesEndDate = dTable.Rows[0].Field<DateTime>("ValuesEndDate");
+                    BlobStartDate = dTable.Rows[0].Field<DateTime>("BlobStartDate");
+                    BlobEndDate = dTable.Rows[0].Field<DateTime>("BlobEndDate");
                 }
             }
             catch
@@ -93,6 +96,7 @@ namespace TimeSeriesLibrary
         /// </summary>
         void ClearProperties()
         {
+            Id=-1;
             TableName="";
         }
 
@@ -108,7 +112,7 @@ namespace TimeSeriesLibrary
         /// <returns>If positive, number of values actually filled into array.
         /// If negative, the error code.</returns>
         public unsafe int ReadValues(
-            int connectionNumber, String tableName, Guid id,
+            int connectionNumber, String tableName, String valuesTableName, int id,
             int nReqValues, double[] valueArray, DateTime reqStartDate)
         {
             // Initialize class fields
@@ -118,7 +122,7 @@ namespace TimeSeriesLibrary
                 return (int)ErrorCode;
             }
 
-            int t, tBlob;
+            int i, t, tBlob;
 
             DateTime reqEndDate
                 = TSDateCalculator.IncrementDate(reqStartDate, TimeStepUnit, TimeStepQuantity, nReqValues);
@@ -126,9 +130,12 @@ namespace TimeSeriesLibrary
             //
             // Start the DataTable
 
-            // SQL statement to return the values
-            String comm = String.Format("select ValueBlob from {0} where Id='{1}' ",
-                                    TableName, Id);
+            // SQL statement to return the values records
+            String comm = String.Format("select * from {0} where TimeSeries_Id={1} " +
+                            "and BlobStartDate between '{2:yyyyMMdd HH:mm}' and '{3:yyyyMMdd HH:mm}' " +
+                            "or ValueEndDate between '{2:yyyyMMdd HH:mm}' and '{3:yyyyMMdd HH:mm}' " +
+                            "order by BlobStartDate",
+                            valuesTableName, Id, reqStartDate, reqEndDate);
             // Send SQL resultset to DataTable dTable
             SqlDataAdapter adp = new SqlDataAdapter(comm, Connx);
             DataTable dTable = new DataTable();
@@ -140,23 +147,25 @@ namespace TimeSeriesLibrary
             {
                 return (int)ErrCodes.Enum.Could_Not_Open_Values_Table;
             }
+            int dTableRowCount = dTable.Rows.Count;
             // There should be at least 1 row in the table
-            if (dTable.Rows.Count < 1)
+            if (dTableRowCount < 1)
             {
                 return (int)ErrCodes.Enum.Record_Not_Found_Values_Table;
             }
-
+            
+            i = 0;
             DataRow currentRow = dTable.Rows[0];
             Byte[] blobData = (Byte[])currentRow["ValueBlob"];
             MemoryStream blobStream = new MemoryStream(blobData);
             BinaryReader blobReader = new BinaryReader(blobStream);
-            int blobLengthVals = (int)blobStream.Length / sizeof(double);
 
             // In our first data blob, skip any values that precede the requested start date
-            if (reqStartDate > BlobStartDate)
+            DateTime rowBlobStartDate = (DateTime)currentRow["ValueStartDate"];
+            if (reqStartDate > rowBlobStartDate)
             {
                 int numSkipValues
-                    = TSDateCalculator.CountSteps(BlobStartDate, reqStartDate, TimeStepUnit, TimeStepQuantity);
+                    = TSDateCalculator.CountSteps(rowBlobStartDate, reqStartDate, TimeStepUnit, TimeStepQuantity);
                 for (tBlob = 0; tBlob < numSkipValues; tBlob++)
                 {
                     blobReader.ReadInt32();
@@ -164,13 +173,23 @@ namespace TimeSeriesLibrary
             }
 
             // Loop through all values that need to be stored
-            for (t = 0; t < nReqValues; t++)
+            for (t = 0, tBlob = 0; t < nReqValues; t++, tBlob++)
             {
                 // If this value overruns the current record's blob
-                if (t >= blobLengthVals)
+                if (tBlob >= BlobSizeVals)
                 {
-                    t--;
-                    break;
+                    if (i + 1 >= dTableRowCount)
+                    {
+                        t--;
+                        break;
+                    }
+                    // Move to the next record and its blob
+                    i++;
+                    currentRow = dTable.Rows[i];
+                    blobData = (Byte[])currentRow["ValueBlob"];
+                    blobStream = new MemoryStream(blobData);
+                    blobReader = new BinaryReader(blobStream);
+                    tBlob = 0;
                 }
                 // Write the current value onto the blob data
                 valueArray[t] = blobReader.ReadDouble();
@@ -186,19 +205,16 @@ namespace TimeSeriesLibrary
         /// 
         /// </summary>
         public unsafe int WriteValues(
-                    int connectionNumber, String tableName,
-                    short timeStepUnit, short timeStepQuantity,
-                    int nOutValues, double[] valueArray, DateTime OutStartDate)
+            int connectionNumber, String tableName, String valuesTableName, int id,
+            int nOutValues, double[] valueArray, DateTime OutStartDate)
         {
             ErrorCode = ErrCodes.Enum.None;
+            if (Initialize(connectionNumber, tableName, id) == false)
+                return (int)ErrorCode;
 
-            TimeStepUnit = (TSDateCalculator.TimeStepUnitCode)timeStepUnit;
-            TimeStepQuantity = timeStepQuantity;
-            TableName = tableName;
-
-            int numStepsAddStart=0;
-            int numStepsAddEnd = 0;
-            int t, tBlob;
+            int numRecAddEnd = 0, numStepsAddStart=0;
+            int numRecAddStart = 0, numStepsAddEnd = 0;
+            int i, t, tBlob;
 
             DateTime OutEndDate 
                 = TSDateCalculator.IncrementDate(OutStartDate, TimeStepUnit, TimeStepQuantity, nOutValues);
@@ -207,12 +223,15 @@ namespace TimeSeriesLibrary
             // Start the DataTable
             
             // SQL statement to return the values records
-            String comm = String.Format("select * from {0} where 1=0", TableName);
+            String comm = String.Format("select * from {0} where TimeSeries_Id={1} "+
+                            "and BlobStartDate between '{2:yyyyMMdd HH:mm}' and '{3:yyyyMMdd HH:mm}' "+
+                            "or ValueEndDate between '{2:yyyyMMdd HH:mm}' and '{3:yyyyMMdd HH:mm}' "+
+                            "order by BlobStartDate",
+                            valuesTableName, Id, OutStartDate, OutEndDate);
             // Send SQL resultset to DataTable dTable
-            Connx = ConnxObject.TSConnectionsCollection[connectionNumber];
-            adp = new SqlDataAdapter(comm, Connx);
+            SqlDataAdapter adp = new SqlDataAdapter(comm, Connx);
             SqlCommandBuilder bld = new SqlCommandBuilder(adp);
-            dTable = new DataTable();
+            DataTable dTable = new DataTable();
             try
             {
                 adp.Fill(dTable);
@@ -221,7 +240,6 @@ namespace TimeSeriesLibrary
             {
                 return (int)ErrCodes.Enum.Could_Not_Open_Values_Table;
             }
-            IsEmpty = true;
 
             //
             // Determine if values records need to be added to the front and/or end of the values
@@ -230,33 +248,57 @@ namespace TimeSeriesLibrary
             if (IsEmpty)
             {
                 BlobStartDate = OutStartDate;
-                BlobEndDate = OutEndDate;
+                numRecAddStart = (nOutValues - 1) / BlobSizeVals + 1;
+                BlobEndDate = TSDateCalculator.IncrementDate(BlobStartDate, TimeStepUnit, TimeStepQuantity,
+                                            numRecAddStart * BlobSizeVals);
             }
             // The time series already contains values records
             else
-            {   // TODO: This is not yet working!
-
+            {
                 // Determine how many new records are needed at the front
                 if (OutStartDate < BlobStartDate)
                 {
                     numStepsAddStart
                         = TSDateCalculator.CountSteps(OutStartDate, BlobStartDate, TimeStepUnit, TimeStepQuantity);
+                    numRecAddStart = (numStepsAddStart - 1) / BlobSizeVals + 1;
+                    BlobStartDate = TSDateCalculator.IncrementDate(BlobStartDate, TimeStepUnit, TimeStepQuantity,
+                                            -numRecAddStart * BlobSizeVals);
                 }
                 // Determine how many new records are needed at the end
                 if (OutEndDate < BlobEndDate)
                 {
                     numStepsAddEnd
                         = TSDateCalculator.CountSteps(BlobEndDate, OutEndDate, TimeStepUnit, TimeStepQuantity);
+                    numRecAddEnd = (numStepsAddEnd - 1) / BlobSizeVals + 1;
+                    BlobEndDate = TSDateCalculator.IncrementDate(BlobEndDate, TimeStepUnit, TimeStepQuantity,
+                                            numRecAddEnd * BlobSizeVals);
                 }
             }
-            DataRow currentRow = dTable.NewRow();
+            DataRow currentRow;
+            // Add new records to front of the DataTable            
+            for(i=0; i<numRecAddStart; i++)
+            {
+                currentRow = InitializedDataRow(dTable);
+                dTable.Rows.InsertAt(currentRow, 0);
+            }
+            // Add new records to end of the DataTable            
+            for (i = 0; i < numRecAddEnd; i++)
+            {
+                currentRow = InitializedDataRow(dTable);
+                dTable.Rows.Add(currentRow, 0);
+            }
             
             //
             // Fill the values into the DataTable's records
 
             // start at first record
+            i=0;
+            currentRow = dTable.Rows[0];
+            DateTime rowBlobStartDate = BlobStartDate;
+            DateTime rowBlobEndDate = TSDateCalculator.IncrementDate(BlobStartDate, TimeStepUnit, TimeStepQuantity,
+                                            BlobSizeVals-1);
             DateTime currentDate = OutStartDate;
-            Byte[] blobData = new Byte[nOutValues * sizeof(double)];
+            Byte[] blobData = new Byte[BlobSizeBytes];
             MemoryStream blobStream = new MemoryStream(blobData);
             BinaryWriter blobWriter = new BinaryWriter(blobStream);
 
@@ -265,23 +307,68 @@ namespace TimeSeriesLibrary
             {
                 // TODO: the loop is currently only fit to handle a time series that is not being overwritten
 
+                // If this value overruns the current record's blob
+                if (tBlob >= BlobSizeVals)
+                {
+                    // write the meta-parameters to the record in values table
+                    FillDataRow(currentRow, 0, rowBlobStartDate, rowBlobStartDate, rowBlobEndDate, blobData);
+                    blobData = new Byte[BlobSizeBytes];
+                    blobStream = new MemoryStream(blobData);
+                    blobWriter = new BinaryWriter(blobStream);
+                    // Move to the next record and its blob
+                    i++;
+                    currentRow = dTable.Rows[i];
+                    rowBlobStartDate = TSDateCalculator.IncrementDate(rowBlobEndDate, TimeStepUnit, TimeStepQuantity, 1);
+                    rowBlobEndDate = TSDateCalculator.IncrementDate(rowBlobStartDate, TimeStepUnit, TimeStepQuantity, BlobSizeVals-1);
+                    tBlob = 0;
+                }
                 // Write the current value onto the blob data
                 blobWriter.Write(valueArray[t]);
             }
+            FillDataRow(currentRow, 0, rowBlobStartDate, rowBlobStartDate, OutEndDate, blobData);
+            adp.Update(dTable);
 
 
             // now save meta-parameters to the main table
-            currentRow["TimeStepUnit"] = (short)TimeStepUnit;
-            currentRow["TimeStepQuantity"] = TimeStepQuantity;
-            currentRow["StartDate"] = OutStartDate;
-            currentRow["EndDate"] = OutEndDate;
-            currentRow["ValueBlob"] = blobData;
-            dTable.Rows.Add(currentRow);
+            comm = String.Format("select * from {0} where Id={1}", TableName, Id);
+            adp = new SqlDataAdapter(comm, Connx);
+            dTable = new DataTable();
+            bld = new SqlCommandBuilder(adp);
+            adp.Fill(dTable); 
+            currentRow = dTable.Rows[0];
+            currentRow["ValuesStartDate"] = BlobStartDate;
+            currentRow["ValuesEndDate"] = BlobEndDate;
+            currentRow["BlobStartDate"] = BlobStartDate;
+            currentRow["BlobEndDate"] = BlobEndDate;
             adp.Update(dTable);
 
             ClearProperties();
             return 0;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        private DataRow InitializedDataRow(DataTable dTable)
+        {
+            DataRow currentRow = dTable.NewRow();
+            currentRow["TimeSeries_Id"] = Id;
+            currentRow["NumSkip"] = 0;
+            currentRow["ValueBlob"] = null;
+            return currentRow;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        void FillDataRow(DataRow currentRow, int numSkip, DateTime blobStartDate, DateTime valueStartDate,
+                    DateTime valueEndDate, Byte[] blobData)
+        {
+            currentRow["NumSkip"] = numSkip;
+            currentRow["BlobStartDate"] = blobStartDate;
+            currentRow["ValueStartDate"] = valueStartDate;
+            currentRow["ValueEndDate"] = valueEndDate;
+            currentRow["ValueBlob"] = blobData;
+        }
     }
 }

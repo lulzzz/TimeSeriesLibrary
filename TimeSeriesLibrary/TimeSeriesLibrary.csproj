@@ -42,11 +42,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="TSFileS.cs" />
+    <Compile Include="TS.cs" />
     <Compile Include="TSFile.cs" />
     <Compile Include="TSMax.cs" />
     <Compile Include="ErrCodes.cs" />
-    <Compile Include="TS.cs" />
+    <Compile Include="TS_old.cs" />
     <Compile Include="TSConnection.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TSDateCalculator.cs" />

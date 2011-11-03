@@ -3,34 +3,85 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Data.SqlTypes;
 using System.Text;
 using System.IO;
+using System.Runtime.InteropServices;
+using System.Runtime.Serialization.Formatters.Binary;
 
 namespace TimeSeriesLibrary
 {
     public class TS
     {
-        const int BlobSizeBytes = 3072;
-        const int BlobSizeVals = BlobSizeBytes / sizeof(double);
+        #region Private Fields
+        private TSConnection ConnxObject = new TSConnection();
 
-        public TSConnection ConnxObject = new TSConnection();
+        private ErrCodes.Enum ErrorCode;
+        private int Id;
+        private String TableName;
+        private TSDateCalculator.TimeStepUnitCode TimeStepUnit;
+        private short TimeStepQuantity;
+        private DateTime BlobStartDate;
+        private DateTime BlobEndDate;
+        private Boolean IsEmpty;
 
-        ErrCodes.Enum ErrorCode;
-        int Id;
-        String TableName;
-        TSDateCalculator.TimeStepUnitCode TimeStepUnit;
-        short TimeStepQuantity;
-        DateTime ValuesStartDate;
-        DateTime ValuesEndDate;
-        DateTime BlobStartDate;
-        DateTime BlobEndDate;
-        Boolean IsEmpty;
-        SqlConnection Connx;
+        private SqlConnection Connx;
+        private SqlDataAdapter adp;
+        private DataTable dTable; 
+        #endregion
 
+
+        #region Public Methods for Connection
         /// <summary>
-        /// Method reads the record to get the definition of the time series
+        /// Opens a new connection for the time series library to use.  The new connection 
+        /// is added to a list and assigned a serial number.  The method returns the
+        /// serial number of the new connection.
         /// </summary>
-        /// <param name="id">id of the time series record</param>
+        /// <param name="connectionString">The connection string used to open the connection.</param>
+        /// <returns>The serial number of the new connection.</returns>
+        public int OpenConnection(String connectionString)
+        {
+            // all the logic is found in the TSConnection object.
+            return ConnxObject.OpenConnection(connectionString);
+        }
+        /// <summary>
+        /// Closes the connection identified with the given serial number.  When the
+        /// connection is closed, it is removed from the list of connections available to
+        /// the time series library, and the serial number no longer refers to this
+        /// connection.
+        /// </summary>
+        /// <param name="connectionNumber">The serial number of the connection to be closed</param>
+        public void CloseConnection(int connectionNumber)
+        {
+            // all the logic is found in the TSConnection object.
+            ConnxObject.CloseConnection(connectionNumber);
+        }
+        #endregion
+
+
+        #region Private ClearProperties method
+        /// <summary>
+        /// Method clears some critical properties of the object, to enforce the rule
+        /// that every public method should begin by calling Initialize().  Any method
+        /// that initializes the properties should call ClearProperties upon completion.
+        /// </summary>
+        private void ClearProperties()
+        {
+            Id = -1;
+            TableName = "";
+        } 
+        #endregion
+
+
+        #region Private Initialize method
+        /// <summary>
+        /// Method reads the given record from the given table to get defining parameters of the
+        /// time series.  This process is preliminary to reading or writing the actual time series values.
+        /// </summary>
+        /// <param name="connectionNumber">Serial number of the connection to the database that contains the time series</param>
+        /// <param name="tableName">Name of the table that contains the time series</param>
+        /// <param name="id">ID number of the time series record</param>
+        /// <returns>true if successful, false if there was an error</returns>
         Boolean Initialize(int connectionNumber, String tableName, int id)
         {
             Id = id;
@@ -46,9 +97,10 @@ namespace TimeSeriesLibrary
                 return false;
             }
             // Define the SQL query and get a resultset
-            String comm = String.Format("select * from {0} where Id={1}", TableName, Id);
-            SqlDataAdapter adp = new SqlDataAdapter(comm, Connx);
-            DataTable dTable = new DataTable();
+            String comm = String.Format("select TimeStepUnit,TimeStepQuantity,StartDate,EndDate " +
+                                        "from {0} where Id='{1}'", TableName, Id);
+            adp = new SqlDataAdapter(comm, Connx);
+            dTable = new DataTable();
             try
             {
                 adp.Fill(dTable);
@@ -59,7 +111,7 @@ namespace TimeSeriesLibrary
                 return false;
             }
             // There should be at least 1 row in the table
-            if(dTable.Rows.Count < 1)
+            if (dTable.Rows.Count < 1)
             {
                 ErrorCode = ErrCodes.Enum.Record_Not_Found_Main_Table;
                 return false;
@@ -69,17 +121,16 @@ namespace TimeSeriesLibrary
             {
                 TimeStepUnit = (TSDateCalculator.TimeStepUnitCode)dTable.Rows[0].Field<short>("TimeStepUnit");
                 TimeStepQuantity = dTable.Rows[0].Field<short>("TimeStepQuantity");
-                if (dTable.Rows[0]["ValuesStartDate"] is DBNull)
+                if (dTable.Rows[0]["StartDate"] is DBNull)
                 {
+                    // TODO: this IsEmpty business is probaby obsolete
                     IsEmpty = true;
                 }
                 else
                 {
                     IsEmpty = false;
-                    ValuesStartDate = dTable.Rows[0].Field<DateTime>("ValuesStartDate");
-                    ValuesEndDate = dTable.Rows[0].Field<DateTime>("ValuesEndDate");
-                    BlobStartDate = dTable.Rows[0].Field<DateTime>("BlobStartDate");
-                    BlobEndDate = dTable.Rows[0].Field<DateTime>("BlobEndDate");
+                    BlobStartDate = dTable.Rows[0].Field<DateTime>("StartDate");
+                    BlobEndDate = dTable.Rows[0].Field<DateTime>("EndDate");
                 }
             }
             catch
@@ -88,17 +139,101 @@ namespace TimeSeriesLibrary
                 return false;
             }
             return true;
-        }
+        } 
+        #endregion
 
+
+        #region Public methods overrides for ReadValues
         /// <summary>
-        /// Method clears some critical properties of the object, to enforce the rule
-        /// that every public method should begin by calling Initialize().
+        /// Reads values of a time series and returns the array of values of the time series,
+        /// but does not return an array of date values.  The selected values are determined
+        /// by the start date and a number of values (the array length).
         /// </summary>
-        void ClearProperties()
+        /// <param name="connectionNumber">Serial number of the connection to the database that contains the time series</param>
+        /// <param name="tableName">Name of the table that contains the time series</param>
+        /// <param name="id">ID number of the time series record</param>
+        /// <param name="nMaxValues">The number of values to read into the array</param>
+        /// <param name="valueArray">The array of time series values that the method populates</param>
+        /// <param name="reqStartDate">The first date from which the method is to fetch time series values</param>
+        /// <returns>The number of values that were actually populated into the valueArray.  Negative number indicates an error code</returns>
+        public unsafe int ReadValues(
+            int connectionNumber, String tableName, int id,
+            int nReqValues, double[] valueArray, DateTime reqStartDate)
         {
-            Id=-1;
-            TableName="";
+            return ReadValuesCore(connectionNumber, tableName, id,
+                        nReqValues, valueArray, new DateTime[nReqValues], false,
+                        reqStartDate, new DateTime(), false);
         }
+        /// <summary>
+        /// Reads values of a time series and returns the array of values of the time series,
+        /// but does not return an array of date values.  The selected values are determined
+        /// by the start date and an end date.  However, an array length must be specified.
+        /// The array is not filled past the end date *or* the array length, whichever comes
+        /// up shorter.
+        /// </summary>
+        /// <param name="connectionNumber">Serial number of the connection to the database that contains the time series</param>
+        /// <param name="tableName">Name of the table that contains the time series</param>
+        /// <param name="id">ID number of the time series record</param>
+        /// <param name="nMaxValues">The upper bound on the number of values to read into the array</param>
+        /// <param name="valueArray">The array of time series values that the method populates</param>
+        /// <param name="reqStartDate">The first date from which the method is to fetch time series values</param>
+        /// <param name="reqEndDate">The last date from which the method is to fetch time series values</param>
+        /// <returns>The number of values that were actually populated into the valueArray.  Negative number indicates an error code</returns>
+        public unsafe int ReadValues(
+            int connectionNumber, String tableName, int id,
+            int nMaxValues, double[] valueArray, DateTime reqStartDate, DateTime reqEndDate)
+        {
+            return ReadValuesCore(connectionNumber, tableName, id,
+                        nMaxValues, valueArray, new DateTime[nMaxValues], false,
+                        reqStartDate, reqEndDate, true);
+        }
+        /// <summary>
+        /// Reads values of a time series and returns the array of values of the time series,
+        /// plus an array of date values for the time series.  The selected values are determined
+        /// by the start date and a number of values (the array length).
+        /// </summary>
+        /// <param name="connectionNumber">Serial number of the connection to the database that contains the time series</param>
+        /// <param name="tableName">Name of the table that contains the time series</param>
+        /// <param name="id">ID number of the time series record</param>
+        /// <param name="nMaxValues">The number of values to read into the array</param>
+        /// <param name="valueArray">The array of time series values that the method populates</param>
+        /// <param name="dateArray">The array of time series values that the method populates</param>
+        /// <param name="reqStartDate">The first date from which the method is to fetch time series values</param>
+        /// <returns>The number of values that were actually populated into the valueArray.  Negative number indicates an error code</returns>
+        public unsafe int ReadValues(
+            int connectionNumber, String tableName, int id,
+            int nReqValues, double[] valueArray, DateTime[] dateArray, DateTime reqStartDate)
+        {
+            return ReadValuesCore(connectionNumber, tableName, id,
+                        nReqValues, valueArray, dateArray, true,
+                        reqStartDate, new DateTime(), false);
+        }
+        /// <summary>
+        /// Reads values of a time series and returns the array of values of the time series,
+        /// plus an array of date values for the time series.  The selected values are determined
+        /// by the start date and an end date.  However, an array length must be specified.
+        /// The array is not filled past the end date *or* the array length, whichever comes
+        /// up shorter.
+        /// </summary>
+        /// <param name="connectionNumber">Serial number of the connection to the database that contains the time series</param>
+        /// <param name="tableName">Name of the table that contains the time series</param>
+        /// <param name="id">ID number of the time series record</param>
+        /// <param name="nMaxValues">The upper bound on the number of values to read into the array</param>
+        /// <param name="valueArray">The array of time series values that the method populates</param>
+        /// <param name="dateArray"></param>
+        /// <param name="reqStartDate">The first date from which the method is to fetch time series values</param>
+        /// <param name="reqEndDate">The last date from which the method is to fetch time series values</param>
+        /// <returns>The number of values that were actually populated into the valueArray.  Negative number indicates an error code</returns>
+        public unsafe int ReadValues(
+            int connectionNumber, String tableName, int id,
+            int nMaxValues, double[] valueArray, DateTime[] dateArray, DateTime reqStartDate, DateTime reqEndDate)
+        {
+            return ReadValuesCore(connectionNumber, tableName, id,
+                        nMaxValues, valueArray, dateArray, true,
+                        reqStartDate, reqEndDate, true);
+        }
+        #endregion
+
 
         /// <summary>
         /// 
@@ -106,132 +241,166 @@ namespace TimeSeriesLibrary
         /// <param name="connectionNumber">key number of the connection</param>
         /// <param name="tableName">name of the main table</param>
         /// <param name="id">id number of the time series</param>
-        /// <param name="nReqValues">number of values requested to read</param>
+        /// <param name="nMaxValues">number of values requested to read</param>
         /// <param name="valueArray">array requested to fill with values</param>
         /// <param name="reqStartTime">start time requested</param>
         /// <returns>If positive, number of values actually filled into array.
         /// If negative, the error code.</returns>
-        public unsafe int ReadValues(
-            int connectionNumber, String tableName, String valuesTableName, int id,
-            int nReqValues, double[] valueArray, DateTime reqStartDate)
+        private unsafe int ReadValuesCore(
+            int connectionNumber, String tableName, int id,
+            int nMaxValues, double[] valueArray, DateTime[] dateArray, Boolean dateArrayIsReq,
+            DateTime reqStartDate, DateTime reqEndDate, Boolean endDateIsSpecified)
         {
+            int nValuesRead = 0;
             // Initialize class fields
             ErrorCode = ErrCodes.Enum.None;
             if (Initialize(connectionNumber, tableName, id) == false)
             {
+                // If Initialize method returned an error code
+                return (int)ErrorCode;
+            }
+            // Error trap
+            if (nMaxValues < 1)
+            {
+                ErrorCode = ErrCodes.Enum.Array_Length_Less_Than_One;
+                return (int)ErrorCode;
+            }
+            if (Connx.State == ConnectionState.Closed)
+                Connx.Open();
+            SqlCommand sqlCommand = new SqlCommand();
+            sqlCommand.Connection = Connx;
+
+            //
+            // Compute parameters related to the time range of requested dates
+            //
+
+            int nReqValues = nMaxValues;
+            // If the end date is specified
+            if (endDateIsSpecified)
+            {
+                // Error trap
+                if (reqEndDate < reqStartDate)
+                {
+                    ErrorCode = ErrCodes.Enum.End_Date_Precedes_Start_Date;
+                    return (int)ErrorCode;
+                }
+                // The number of values that will be filled into the array is determined by the start date and end date
+                nReqValues = TSDateCalculator.CountSteps(reqStartDate, reqEndDate, TimeStepUnit, TimeStepQuantity);
+                // The number of values that will be filled into the array can not exceed the array size specified
+                // in the method's parameter list.
+                nReqValues = Math.Min(nReqValues, nMaxValues);
+            }
+            // If the end date is *not* specified
+            else
+            {
+                // The end date must be computed from the start date and the array length (nMaxValues);
+                reqEndDate = TSDateCalculator.IncrementDate
+                                (reqStartDate, TimeStepUnit, TimeStepQuantity, nMaxValues);
+            }
+            // Check whether time range of requested dates is covered by time series in database
+            // The check does not include whether the requested end date is past the date in database--in that
+            // case, method will return truncated array.
+            // TODO: CHECK PRECISION IMPLICATIONS of the IF statement
+            if (reqEndDate < BlobStartDate || reqStartDate > BlobEndDate || reqStartDate < BlobStartDate)
+            {
+                ErrorCode = ErrCodes.Enum.Requested_Dates_Outside_Of_Range;
                 return (int)ErrorCode;
             }
 
-            int i, t, tBlob;
 
-            DateTime reqEndDate
-                = TSDateCalculator.IncrementDate(reqStartDate, TimeStepUnit, TimeStepQuantity, nReqValues);
-
-            //
-            // Start the DataTable
-
-            // SQL statement to return the values records
-            String comm = String.Format("select * from {0} where TimeSeries_Id={1} " +
-                            "and BlobStartDate between '{2:yyyyMMdd HH:mm}' and '{3:yyyyMMdd HH:mm}' " +
-                            "or ValueEndDate between '{2:yyyyMMdd HH:mm}' and '{3:yyyyMMdd HH:mm}' " +
-                            "order by BlobStartDate",
-                            valuesTableName, Id, reqStartDate, reqEndDate);
-            // Send SQL resultset to DataTable dTable
-            SqlDataAdapter adp = new SqlDataAdapter(comm, Connx);
-            DataTable dTable = new DataTable();
-            try
+            // Get the file path of the SQL FILESTREAM BLOB.
+            // Note that this file path is only recognized by SqlFileStream object.
+            // It is not a regular disk directory path.
+            sqlCommand.CommandText = String.Format("select ValueBlob.PathName() from {0} " +
+                                                   "where Id='{1}' ", TableName, Id);
+            Object pathObj = sqlCommand.ExecuteScalar();
+            if (pathObj == DBNull.Value)
             {
-                adp.Fill(dTable);
+                ErrorCode = ErrCodes.Enum.Record_Not_Found_Values_Table;
+                return (int)ErrorCode;
             }
-            catch
-            {
-                return (int)ErrCodes.Enum.Could_Not_Open_Values_Table;
-            }
-            int dTableRowCount = dTable.Rows.Count;
-            // There should be at least 1 row in the table
-            if (dTableRowCount < 1)
-            {
-                return (int)ErrCodes.Enum.Record_Not_Found_Values_Table;
-            }
-            
-            i = 0;
-            DataRow currentRow = dTable.Rows[0];
-            Byte[] blobData = (Byte[])currentRow["ValueBlob"];
-            MemoryStream blobStream = new MemoryStream(blobData);
-            BinaryReader blobReader = new BinaryReader(blobStream);
+            String filePath = (string)pathObj;
 
-            // In our first data blob, skip any values that precede the requested start date
-            DateTime rowBlobStartDate = (DateTime)currentRow["ValueStartDate"];
-            if (reqStartDate > rowBlobStartDate)
+            // For FILESTREAM BLOB operations, we must explicitly create a transaction context
+            // to ensure data consistency during the read.
+            sqlCommand.Transaction = Connx.BeginTransaction();
+            sqlCommand.CommandText = "SELECT GET_FILESTREAM_TRANSACTION_CONTEXT()";
+            byte[] txContext = (byte[])sqlCommand.ExecuteScalar();
+            // SqlFileStream object is used to read the file
+            SqlFileStream sqlFileStream = new SqlFileStream(filePath, txContext, FileAccess.Read);
+
+            // Skip any values that precede the requested start date
+            // TODO: CHECK PRECISION IMPLICATIONS
+            int nSkipValues = 0;
+            if (reqStartDate > BlobStartDate)
             {
-                int numSkipValues
-                    = TSDateCalculator.CountSteps(rowBlobStartDate, reqStartDate, TimeStepUnit, TimeStepQuantity);
-                for (tBlob = 0; tBlob < numSkipValues; tBlob++)
+                nSkipValues = TSDateCalculator.CountSteps
+                                   (BlobStartDate, reqStartDate, TimeStepUnit, TimeStepQuantity);
+                sqlFileStream.Seek(nSkipValues * sizeof(double), 0);
+            }
+
+            // Get the number of bytes that will be read
+            int nBin = Math.Min(nReqValues * sizeof(double), (int)sqlFileStream.Length);
+            // BinaryReader object gives us a block of bytes from the FILESTREAM
+            BinaryReader blobReader = new BinaryReader(sqlFileStream);
+            // Copy the entire block of memory into the array
+            Buffer.BlockCopy(blobReader.ReadBytes(nBin), 0, valueArray, 0, nBin);
+
+            nValuesRead = nBin / sizeof(double);
+            // 
+            if (dateArrayIsReq)
+            {
+                dateArray[0] = TSDateCalculator.IncrementDate
+                                    (BlobStartDate, TimeStepUnit, TimeStepQuantity, nSkipValues);
+                for (int t = 1; t < nValuesRead; t++)
                 {
-                    blobReader.ReadInt32();
+                    dateArray[t] = TSDateCalculator.IncrementDate
+                                        (dateArray[t - 1], TimeStepUnit, TimeStepQuantity, 1);
                 }
             }
 
-            // Loop through all values that need to be stored
-            for (t = 0, tBlob = 0; t < nReqValues; t++, tBlob++)
-            {
-                // If this value overruns the current record's blob
-                if (tBlob >= BlobSizeVals)
-                {
-                    if (i + 1 >= dTableRowCount)
-                    {
-                        t--;
-                        break;
-                    }
-                    // Move to the next record and its blob
-                    i++;
-                    currentRow = dTable.Rows[i];
-                    blobData = (Byte[])currentRow["ValueBlob"];
-                    blobStream = new MemoryStream(blobData);
-                    blobReader = new BinaryReader(blobStream);
-                    tBlob = 0;
-                }
-                // Write the current value onto the blob data
-                valueArray[t] = blobReader.ReadDouble();
-            }
-
+            // Closes the C# FileStream class (does not necessarily close the the underlying FILESTREAM handle).
+            sqlFileStream.Close();
+            // Finalize the transaction
+            sqlCommand.Transaction.Commit();
 
             ClearProperties();
-            return t;
+            return nValuesRead;
         }
+
 
 
         /// <summary>
         /// 
         /// </summary>
         public unsafe int WriteValues(
-            int connectionNumber, String tableName, String valuesTableName, int id,
-            int nOutValues, double[] valueArray, DateTime OutStartDate)
+                    int connectionNumber, String tableName,
+                    short timeStepUnit, short timeStepQuantity,
+                    int nOutValues, double[] valueArray, DateTime OutStartDate)
         {
             ErrorCode = ErrCodes.Enum.None;
-            if (Initialize(connectionNumber, tableName, id) == false)
-                return (int)ErrorCode;
 
-            int numRecAddEnd = 0, numStepsAddStart=0;
-            int numRecAddStart = 0, numStepsAddEnd = 0;
-            int i, t, tBlob;
+            TimeStepUnit = (TSDateCalculator.TimeStepUnitCode)timeStepUnit;
+            TimeStepQuantity = timeStepQuantity;
+            TableName = tableName;
 
-            DateTime OutEndDate 
+            int numStepsAddStart = 0;
+            int numStepsAddEnd = 0;
+            int t, tBlob;
+
+            DateTime OutEndDate
                 = TSDateCalculator.IncrementDate(OutStartDate, TimeStepUnit, TimeStepQuantity, nOutValues);
 
             //
             // Start the DataTable
-            
+
             // SQL statement to return the values records
-            String comm = String.Format("select * from {0} where TimeSeries_Id={1} "+
-                            "and BlobStartDate between '{2:yyyyMMdd HH:mm}' and '{3:yyyyMMdd HH:mm}' "+
-                            "or ValueEndDate between '{2:yyyyMMdd HH:mm}' and '{3:yyyyMMdd HH:mm}' "+
-                            "order by BlobStartDate",
-                            valuesTableName, Id, OutStartDate, OutEndDate);
+            String comm = String.Format("select * from {0} where 1=0", TableName);
             // Send SQL resultset to DataTable dTable
-            SqlDataAdapter adp = new SqlDataAdapter(comm, Connx);
+            Connx = ConnxObject.TSConnectionsCollection[connectionNumber];
+            adp = new SqlDataAdapter(comm, Connx);
             SqlCommandBuilder bld = new SqlCommandBuilder(adp);
-            DataTable dTable = new DataTable();
+            dTable = new DataTable();
             try
             {
                 adp.Fill(dTable);
@@ -240,6 +409,7 @@ namespace TimeSeriesLibrary
             {
                 return (int)ErrCodes.Enum.Could_Not_Open_Values_Table;
             }
+            IsEmpty = true;
 
             //
             // Determine if values records need to be added to the front and/or end of the values
@@ -248,127 +418,50 @@ namespace TimeSeriesLibrary
             if (IsEmpty)
             {
                 BlobStartDate = OutStartDate;
-                numRecAddStart = (nOutValues - 1) / BlobSizeVals + 1;
-                BlobEndDate = TSDateCalculator.IncrementDate(BlobStartDate, TimeStepUnit, TimeStepQuantity,
-                                            numRecAddStart * BlobSizeVals);
+                BlobEndDate = OutEndDate;
             }
             // The time series already contains values records
             else
-            {
+            {   // TODO: This is not yet working!
+
                 // Determine how many new records are needed at the front
                 if (OutStartDate < BlobStartDate)
                 {
                     numStepsAddStart
                         = TSDateCalculator.CountSteps(OutStartDate, BlobStartDate, TimeStepUnit, TimeStepQuantity);
-                    numRecAddStart = (numStepsAddStart - 1) / BlobSizeVals + 1;
-                    BlobStartDate = TSDateCalculator.IncrementDate(BlobStartDate, TimeStepUnit, TimeStepQuantity,
-                                            -numRecAddStart * BlobSizeVals);
                 }
                 // Determine how many new records are needed at the end
                 if (OutEndDate < BlobEndDate)
                 {
                     numStepsAddEnd
                         = TSDateCalculator.CountSteps(BlobEndDate, OutEndDate, TimeStepUnit, TimeStepQuantity);
-                    numRecAddEnd = (numStepsAddEnd - 1) / BlobSizeVals + 1;
-                    BlobEndDate = TSDateCalculator.IncrementDate(BlobEndDate, TimeStepUnit, TimeStepQuantity,
-                                            numRecAddEnd * BlobSizeVals);
                 }
             }
-            DataRow currentRow;
-            // Add new records to front of the DataTable            
-            for(i=0; i<numRecAddStart; i++)
-            {
-                currentRow = InitializedDataRow(dTable);
-                dTable.Rows.InsertAt(currentRow, 0);
-            }
-            // Add new records to end of the DataTable            
-            for (i = 0; i < numRecAddEnd; i++)
-            {
-                currentRow = InitializedDataRow(dTable);
-                dTable.Rows.Add(currentRow, 0);
-            }
-            
+            DataRow currentRow = dTable.NewRow();
+
             //
             // Fill the values into the DataTable's records
 
             // start at first record
-            i=0;
-            currentRow = dTable.Rows[0];
-            DateTime rowBlobStartDate = BlobStartDate;
-            DateTime rowBlobEndDate = TSDateCalculator.IncrementDate(BlobStartDate, TimeStepUnit, TimeStepQuantity,
-                                            BlobSizeVals-1);
             DateTime currentDate = OutStartDate;
-            Byte[] blobData = new Byte[BlobSizeBytes];
-            MemoryStream blobStream = new MemoryStream(blobData);
-            BinaryWriter blobWriter = new BinaryWriter(blobStream);
+            int nBin = nOutValues * sizeof(double);
+            Byte[] blobData = new Byte[nBin];
 
-            // Loop through all values that need to be stored
-            for (t=0, tBlob=0; t < nOutValues; t++, tBlob++)
-            {
-                // TODO: the loop is currently only fit to handle a time series that is not being overwritten
-
-                // If this value overruns the current record's blob
-                if (tBlob >= BlobSizeVals)
-                {
-                    // write the meta-parameters to the record in values table
-                    FillDataRow(currentRow, 0, rowBlobStartDate, rowBlobStartDate, rowBlobEndDate, blobData);
-                    blobData = new Byte[BlobSizeBytes];
-                    blobStream = new MemoryStream(blobData);
-                    blobWriter = new BinaryWriter(blobStream);
-                    // Move to the next record and its blob
-                    i++;
-                    currentRow = dTable.Rows[i];
-                    rowBlobStartDate = TSDateCalculator.IncrementDate(rowBlobEndDate, TimeStepUnit, TimeStepQuantity, 1);
-                    rowBlobEndDate = TSDateCalculator.IncrementDate(rowBlobStartDate, TimeStepUnit, TimeStepQuantity, BlobSizeVals-1);
-                    tBlob = 0;
-                }
-                // Write the current value onto the blob data
-                blobWriter.Write(valueArray[t]);
-            }
-            FillDataRow(currentRow, 0, rowBlobStartDate, rowBlobStartDate, OutEndDate, blobData);
-            adp.Update(dTable);
+            Buffer.BlockCopy(valueArray, 0, blobData, 0, nBin);
 
 
             // now save meta-parameters to the main table
-            comm = String.Format("select * from {0} where Id={1}", TableName, Id);
-            adp = new SqlDataAdapter(comm, Connx);
-            dTable = new DataTable();
-            bld = new SqlCommandBuilder(adp);
-            adp.Fill(dTable); 
-            currentRow = dTable.Rows[0];
-            currentRow["ValuesStartDate"] = BlobStartDate;
-            currentRow["ValuesEndDate"] = BlobEndDate;
-            currentRow["BlobStartDate"] = BlobStartDate;
-            currentRow["BlobEndDate"] = BlobEndDate;
+            currentRow["TimeStepUnit"] = (short)TimeStepUnit;
+            currentRow["TimeStepQuantity"] = TimeStepQuantity;
+            currentRow["StartDate"] = OutStartDate;
+            currentRow["EndDate"] = OutEndDate;
+            currentRow["ValueBlob"] = blobData;
+            dTable.Rows.Add(currentRow);
             adp.Update(dTable);
 
             ClearProperties();
             return 0;
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        private DataRow InitializedDataRow(DataTable dTable)
-        {
-            DataRow currentRow = dTable.NewRow();
-            currentRow["TimeSeries_Id"] = Id;
-            currentRow["NumSkip"] = 0;
-            currentRow["ValueBlob"] = null;
-            return currentRow;
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        void FillDataRow(DataRow currentRow, int numSkip, DateTime blobStartDate, DateTime valueStartDate,
-                    DateTime valueEndDate, Byte[] blobData)
-        {
-            currentRow["NumSkip"] = numSkip;
-            currentRow["BlobStartDate"] = blobStartDate;
-            currentRow["ValueStartDate"] = valueStartDate;
-            currentRow["ValueEndDate"] = valueEndDate;
-            currentRow["ValueBlob"] = blobData;
-        }
     }
 }
