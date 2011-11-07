@@ -27,8 +27,6 @@ namespace TimeSeriesLibrary
         private SqlDataAdapter adp;
         private DataTable dTable;
 
-        public Object o; // %%% DELETEME ERASEME
-
         #region Class Constructor
         /// <summary>
         /// Class constructor
@@ -232,7 +230,7 @@ namespace TimeSeriesLibrary
             catch
             {
                 ErrorCode=ErrCodes.Enum.Could_Not_Open_Values_Table;
-                return Guid.Parse("0");
+                return new Guid();
             }
             IsEmpty = true;
 
@@ -284,6 +282,8 @@ namespace TimeSeriesLibrary
 
 
             // now save meta-parameters to the main table
+            Id = Guid.NewGuid();
+            currentRow["Guid"] = Id;
             currentRow["TimeStepUnit"] = (short)TimeStepUnit;
             currentRow["TimeStepQuantity"] = TimeStepQuantity;
             currentRow["StartDate"] = OutStartDate;
@@ -291,10 +291,6 @@ namespace TimeSeriesLibrary
             currentRow["ValueBlob"] = blobData;
             dTable.Rows.Add(currentRow);
             adp.Update(dTable);
-            o = currentRow["GUID"];
-            o = currentRow["EndDate"];
-//            Id = (Guid)currentRow["GUID"];
-
 
             ClearProperties();
             return Id;
