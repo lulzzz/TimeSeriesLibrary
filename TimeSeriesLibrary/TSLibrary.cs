@@ -17,7 +17,7 @@ namespace TimeSeriesLibrary
         /// <summary>
         /// TSConnection object maintains a list of connections that have been opened by the library
         /// </summary>
-        public TSConnection ConnxObject = new TSConnection();
+        public static TSConnection ConnxObject = new TSConnection();
 
         public ErrCodes.Enum ErrorCode;
 
@@ -47,16 +47,12 @@ namespace TimeSeriesLibrary
             // all the logic is found in the TSConnection object.
             ConnxObject.CloseConnection(connectionNumber);
         }
-        #endregion
-
-
-        #region Private methods for Connection
         /// <summary>
         /// Returns the SqlConnection object corresponding to the given connection number.
         /// </summary>
         /// <param name="connectionNumber">serial number of the connection within the collection</param>
         /// <returns></returns>
-        private SqlConnection GetConnectionFromId(int connectionNumber)
+        public SqlConnection GetConnectionFromId(int connectionNumber)
         {
             SqlConnection connx;
             try
@@ -104,11 +100,36 @@ namespace TimeSeriesLibrary
             // Construct new TS object with SqlConnection object and table name
             TS ts = new TS(connx, tableName);
 
-            return ts.WriteValues(timeStepUnit, timeStepQuantity, nOutValues, valueArray, OutStartDate);
+            ts.WriteValues(timeStepUnit, timeStepQuantity, nOutValues, valueArray, OutStartDate);
+            return 0;
         }
 
         #endregion
 
+
+        #region Public methods for XML import
+        public int XmlImportWithList(int connectionNumber, String tableName, String xmlFileName,
+                        List<TSImport> tsImportList)
+        {
+            // Get the connection that we'll pass along.
+            SqlConnection connx = GetConnectionFromId(connectionNumber);
+
+            // Construct new TS object with SqlConnection object and table name
+            TSXml tsXml = new TSXml(connx, tableName);
+
+            return tsXml.ReadAndStore(xmlFileName, tsImportList);
+        }
+        public int XmlImport(int connectionNumber, String tableName, String xmlFileName)
+        {
+            // Get the connection that we'll pass along.
+            SqlConnection connx = GetConnectionFromId(connectionNumber);
+
+            // Construct new TS object with SqlConnection object and table name
+            TSXml tsXml = new TSXml(connx, tableName);
+
+            return tsXml.ReadAndStore(xmlFileName, new List<TSImport>());
+        }
+        #endregion
 
     }
 }

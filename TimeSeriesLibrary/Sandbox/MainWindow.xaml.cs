@@ -28,7 +28,7 @@ namespace Sandbox
         const int nVals = 30000; //30000;
 
         int connNumber;
-        TS tsLib = new TS();
+        TSLibrary tsLib = new TSLibrary();
 
         public unsafe MainWindow()
         {
@@ -41,7 +41,12 @@ namespace Sandbox
         }
         private void GoButtonClick(object sender, RoutedEventArgs e)
         {
-            ReadBlobPacked();
+            List<TSImport> l = new List<TSImport>();
+            tsLib.XmlImportWithList(connNumber, "FileStrm2",
+                        "D:\\OASIS\\_Build\\TimeSeriesLibrary\\TimeSeriesLibrary\\Sandbox\\test1.xml",
+                        l);
+            int i = 0;
+            //ReadBlobPacked();
             //WriteTest();
         }
 
@@ -70,8 +75,8 @@ namespace Sandbox
             for (i = 0; i < 1200; i++)
             {
                 TimeLabelBlob.Content = String.Format("Iteration {0}", i);
-                ret = tsLib.ReadValues(connNumber, "FileStrm2",
-                                12029, nVals, valArray, startDate);
+//                ret = tsLib.ReadValues(connNumber, "FileStrm2",
+//                                12029, nVals, valArray, startDate);
             }
             DateTime timerEnd = DateTime.Now;
             TimeSpan timerDiff = timerEnd - timerStart;

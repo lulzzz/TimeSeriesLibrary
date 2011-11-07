@@ -15,7 +15,7 @@ namespace TimeSeriesLibrary
     public class TS
     {
         public ErrCodes.Enum ErrorCode;
-        public Guid Id;
+        public Guid Id = new Guid();
         public String TableName;
         public TSDateCalculator.TimeStepUnitCode TimeStepUnit;
         public short TimeStepQuantity;
@@ -27,6 +27,7 @@ namespace TimeSeriesLibrary
         private SqlDataAdapter adp;
         private DataTable dTable;
 
+        public Object o; // %%% DELETEME ERASEME
 
         #region Class Constructor
         /// <summary>
@@ -199,7 +200,7 @@ namespace TimeSeriesLibrary
         /// <summary>
         /// 
         /// </summary>
-        public unsafe int WriteValues(
+        public unsafe Guid WriteValues(
                     short timeStepUnit, short timeStepQuantity,
                     int nOutValues, double[] valueArray, DateTime OutStartDate)
         {
@@ -230,7 +231,8 @@ namespace TimeSeriesLibrary
             }
             catch
             {
-                return (int)ErrCodes.Enum.Could_Not_Open_Values_Table;
+                ErrorCode=ErrCodes.Enum.Could_Not_Open_Values_Table;
+                return Guid.Parse("0");
             }
             IsEmpty = true;
 
@@ -289,9 +291,13 @@ namespace TimeSeriesLibrary
             currentRow["ValueBlob"] = blobData;
             dTable.Rows.Add(currentRow);
             adp.Update(dTable);
+            o = currentRow["GUID"];
+            o = currentRow["EndDate"];
+//            Id = (Guid)currentRow["GUID"];
+
 
             ClearProperties();
-            return 0;
+            return Id;
         }
 
     }
