@@ -5,5 +5,5 @@ bin
 *.datasource
 *.sql
 *.orig
-*.suo
+TimeSeriesLibrary.suo
 **/*.orig
