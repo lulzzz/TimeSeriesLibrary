@@ -49,14 +49,14 @@ namespace TimeSeriesLibrary
         /// or write the time series, whether or not those functions will need the entire
         /// set of data values.
         /// </summary>
-        /// <param name="id">id of the time series record</param>
+        /// <param name="id">GUID id of the time series record</param>
         Boolean Initialize(Guid id)
         {
             // store the method's input parameters
             Id = id;
             // Define the SQL query and get a resultset
             String comm = String.Format("select TimeStepUnit,TimeStepQuantity,StartDate,EndDate " +
-                                        "from {0} where Id='{1}'", TableName, Id);
+                                        "from {0} where Guid='{1}'", TableName, Id);
             adp = new SqlDataAdapter(comm, Connx);
             dTable = new DataTable();
             try
@@ -65,6 +65,7 @@ namespace TimeSeriesLibrary
             }
             catch
             {
+                throw new TSLibraryException("Table '" + TableName + "' could not be opened using query:\n\n." + comm);
                 ErrorCode = ErrCodes.Enum.Could_Not_Open_Main_Table;
                 return false;
             }
@@ -140,7 +141,7 @@ namespace TimeSeriesLibrary
             // Start the DataTable
 
             // SQL statement to return the values
-            String comm = String.Format("select ValueBlob from {0} where Id='{1}' ",
+            String comm = String.Format("select ValueBlob from {0} where Guid='{1}' ",
                                     TableName, Id);
             // Send SQL resultset to DataTable dTable
             SqlDataAdapter adp = new SqlDataAdapter(comm, Connx);
@@ -280,9 +281,9 @@ namespace TimeSeriesLibrary
                 blobWriter.Write(valueArray[t]);
             }
 
-
-            // now save meta-parameters to the main table
+            // NewGuid method generates a GUID value that is virtually guaranteed to be unique
             Id = Guid.NewGuid();
+            // now save meta-parameters to the main table
             currentRow["Guid"] = Id;
             currentRow["TimeStepUnit"] = (short)TimeStepUnit;
             currentRow["TimeStepQuantity"] = TimeStepQuantity;

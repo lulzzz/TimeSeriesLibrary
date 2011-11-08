@@ -42,11 +42,11 @@ namespace Sandbox
         private void GoButtonClick(object sender, RoutedEventArgs e)
         {
             List<TSImport> l = new List<TSImport>();
-            tsLib.XmlImportWithList(connNumber, "FileStrm2",
-                        "D:\\OASIS\\_Build\\TimeSeriesLibrary\\TimeSeriesLibrary\\Sandbox\\test1.xml",
-                        l);
+            //tsLib.XmlImportWithList(connNumber, "FileStrm2",
+                        //"D:\\OASIS\\_Build\\TimeSeriesLibrary\\TimeSeriesLibrary\\Sandbox\\test2.xml",
+                        //l);
             int i = 0;
-            //ReadBlobPacked();
+            ReadBlobPacked();
             //WriteTest();
         }
 
@@ -72,11 +72,11 @@ namespace Sandbox
             DateTime startDate = new DateTime(1928, 1, 1, 23, 59, 0);
 
             DateTime timerStart = DateTime.Now;
-            for (i = 0; i < 1200; i++)
+            for (i = 0; i < 1; i++)
             {
                 TimeLabelBlob.Content = String.Format("Iteration {0}", i);
-//                ret = tsLib.ReadValues(connNumber, "FileStrm2",
-//                                12029, nVals, valArray, startDate);
+                ret = tsLib.ReadValues(connNumber, "FileStrm2",
+                                Guid.Parse("2E426104-4A7B-4CCF-9981-3E3DFD47BFEC"), nVals, valArray, startDate);
             }
             DateTime timerEnd = DateTime.Now;
             TimeSpan timerDiff = timerEnd - timerStart;
