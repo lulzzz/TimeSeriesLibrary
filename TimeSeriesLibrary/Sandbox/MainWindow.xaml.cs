@@ -25,7 +25,7 @@ namespace Sandbox
     /// </summary>
     public partial class MainWindow : Window
     {
-        const int nVals = 30000; //30000;
+        const int nVals = 729; //30000;
 
         int connNumber;
         TSLibrary tsLib = new TSLibrary();
@@ -41,15 +41,26 @@ namespace Sandbox
         }
         private void GoButtonClick(object sender, RoutedEventArgs e)
         {
-            List<TSImport> l = new List<TSImport>();
-            //tsLib.XmlImportWithList(connNumber, "FileStrm2",
-                        //"D:\\OASIS\\_Build\\TimeSeriesLibrary\\TimeSeriesLibrary\\Sandbox\\test2.xml",
-                        //l);
-            int i = 0;
-            ReadBlobPacked();
-            //WriteTest();
+            //ImportTest();
+            //ReadBlobPacked();
+            WriteTest();
         }
 
+        void ImportTest()
+        {
+            int i;
+            List<TSImport> l = new List<TSImport>();
+
+            DateTime timerStart = DateTime.Now;
+            for (i = 0; i < 6; i++)
+            {
+                tsLib.XmlImportWithList(connNumber, "FileStrm2",
+                            "D:\\OASIS\\_Build\\TimeSeriesLibrary\\TimeSeriesLibrary\\Sandbox\\test4.xml", l);
+            }
+            DateTime timerEnd = DateTime.Now;
+            TimeSpan timerDiff = timerEnd - timerStart;
+            TimeLabelBlob.Content = String.Format("Imported --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
+        }
 
         void WriteBlobPacked()
         {
@@ -95,7 +106,7 @@ namespace Sandbox
                 valArray[i] = i * 3;
 
             DateTime timerStart = DateTime.Now;
-            for (i = 0; i < 1200; i++)
+            for (i = 0; i < 6600; i++)
             {
                 TimeLabelBlob.Content = String.Format("Iteration {0}", i);
                 ret = tsLib.WriteValues(connNumber, "FileStrm2",

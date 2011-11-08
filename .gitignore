@@ -5,4 +5,5 @@ bin
 *.datasource
 *.sql
 *.orig
+*.suo
 **/*.orig
