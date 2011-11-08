@@ -14,7 +14,7 @@ namespace TimeSeriesLibrary
     /// </summary>
     public class TS
     {
-        public ErrCodes.Enum ErrorCode;
+        public ErrCode.Enum ErrorCode;
         public Guid Id = new Guid();
         public String TableName;
         public TSDateCalculator.TimeStepUnitCode TimeStepUnit;
@@ -24,8 +24,6 @@ namespace TimeSeriesLibrary
 
         private Boolean IsEmpty;
         private SqlConnection Connx;
-        private SqlDataAdapter adp;
-        private DataTable dTable;
 
         #region Class Constructor
         /// <summary>
@@ -54,47 +52,40 @@ namespace TimeSeriesLibrary
         {
             // store the method's input parameters
             Id = id;
-            // Define the SQL query and get a resultset
+            // Define the SQL query
             String comm = String.Format("select TimeStepUnit,TimeStepQuantity,StartDate,EndDate " +
                                         "from {0} where Guid='{1}'", TableName, Id);
-            adp = new SqlDataAdapter(comm, Connx);
-            dTable = new DataTable();
+            // SqlDataAdapter object will use the query to fill the DataTable
+            SqlDataAdapter adp = new SqlDataAdapter(comm, Connx);
+            DataTable dTable = new DataTable();
+            // Execute the query to fill the DataTable object
             try
             {
                 adp.Fill(dTable);
             }
             catch
-            {
-                throw new TSLibraryException("Table '" + TableName + "' could not be opened using query:\n\n." + comm);
-                ErrorCode = ErrCodes.Enum.Could_Not_Open_Main_Table;
-                return false;
+            {   // The query failed.
+                throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
+                                "Table '" + TableName + "' could not be opened using query:\n\n." + comm);
             }
-            // There should be at least 1 row in the table
+            // There should be at least 1 row in the DataTable object
             if (dTable.Rows.Count < 1)
             {
-                ErrorCode = ErrCodes.Enum.Record_Not_Found_Main_Table;
-                return false;
+                throw new TSLibraryException(ErrCode.Enum.Record_Not_Found_Table,
+                                "Found zero records using query:\n\n." + comm);
             }
             // Assign properties from table to this object
-            try
+            TimeStepUnit = (TSDateCalculator.TimeStepUnitCode)dTable.Rows[0].Field<short>("TimeStepUnit");
+            TimeStepQuantity = dTable.Rows[0].Field<short>("TimeStepQuantity");
+            if (dTable.Rows[0]["StartDate"] is DBNull)
             {
-                TimeStepUnit = (TSDateCalculator.TimeStepUnitCode)dTable.Rows[0].Field<short>("TimeStepUnit");
-                TimeStepQuantity = dTable.Rows[0].Field<short>("TimeStepQuantity");
-                if (dTable.Rows[0]["StartDate"] is DBNull)
-                {
-                    IsEmpty = true;
-                }
-                else
-                {
-                    IsEmpty = false;
-                    BlobStartDate = dTable.Rows[0].Field<DateTime>("StartDate");
-                    BlobEndDate = dTable.Rows[0].Field<DateTime>("EndDate");
-                }
+                IsEmpty = true;
             }
-            catch
+            else
             {
-                ErrorCode = ErrCodes.Enum.Missing_Fields_From_Main_Table;
-                return false;
+                IsEmpty = false;
+                BlobStartDate = dTable.Rows[0].Field<DateTime>("StartDate");
+                BlobEndDate = dTable.Rows[0].Field<DateTime>("EndDate");
             }
             return true;
         }
@@ -114,75 +105,85 @@ namespace TimeSeriesLibrary
 
 
         /// <summary>
-        /// 
+        /// Method reads the time series matching the given GUID, storing the values into
+        /// the given array of double-precision floats.  The method starts populating the
+        /// array at the given start date, filling in no more than the number of values
+        /// that are requested.
         /// </summary>
-        /// <param name="id">id number of the time series</param>
-        /// <param name="nMaxValues">number of values requested to read</param>
+        /// <param name="id">GUID id of the time series</param>
+        /// <param name="nReqValues">number of values requested to read</param>
         /// <param name="valueArray">array requested to fill with values</param>
         /// <param name="reqStartTime">start time requested</param>
-        /// <returns>If positive, number of values actually filled into array.
-        /// If negative, the error code.</returns>
+        /// <returns>The number of values actually filled into array</returns>
         public unsafe int ReadValues(Guid id,
             int nReqValues, double[] valueArray, DateTime reqStartDate)
         {
-            // Initialize class fields
-            ErrorCode = ErrCodes.Enum.None;
-            if (Initialize(id) == false)
-            {
-                return (int)ErrorCode;
-            }
+            // Initialize class fields other than the BLOB of data values
+            Initialize(id);
 
-            int t, tBlob;
+            int t;  // Counter for each value that is read
+            int tSkip;  // Counter for each value that skipped at the beginning of the BLOB of values
 
+            // Using the start date and number of values, compute the requested end date.
             DateTime reqEndDate
                 = TSDateCalculator.IncrementDate(reqStartDate, TimeStepUnit, TimeStepQuantity, nReqValues);
 
             //
             // Start the DataTable
 
-            // SQL statement to return the values
+            // SQL statement that will only give us the BLOB of data values
             String comm = String.Format("select ValueBlob from {0} where Guid='{1}' ",
                                     TableName, Id);
-            // Send SQL resultset to DataTable dTable
+            // SqlDataAdapter object will use the query to fill the DataTable
             SqlDataAdapter adp = new SqlDataAdapter(comm, Connx);
             DataTable dTable = new DataTable();
+            // Execute the query to fill the DataTable object
             try
             {
                 adp.Fill(dTable);
             }
             catch
-            {
-                return (int)ErrCodes.Enum.Could_Not_Open_Values_Table;
+            {   // The query failed
+                throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
+                                "Table '" + TableName + "' could not be opened using query:\n\n." + comm);
             }
             // There should be at least 1 row in the table
             if (dTable.Rows.Count < 1)
             {
-                return (int)ErrCodes.Enum.Record_Not_Found_Values_Table;
+                throw new TSLibraryException(ErrCode.Enum.Record_Not_Found_Table,
+                                "Found zero records using query:\n\n." + comm);
             }
 
+            // DataRow object represents the current row of the DataTable object, which in turn is our result set
             DataRow currentRow = dTable.Rows[0];
+            // Cast the BLOB as an array of bytes
             Byte[] blobData = (Byte[])currentRow["ValueBlob"];
+            // MemoryStream and BinaryReader objects allow us to read each value one-by-one.
             MemoryStream blobStream = new MemoryStream(blobData);
             BinaryReader blobReader = new BinaryReader(blobStream);
+            // How many elements of size 'double' are in the blob?
             int blobLengthVals = (int)blobStream.Length / sizeof(double);
 
-            // In our first data blob, skip any values that precede the requested start date
+            // Skip any values that precede the requested start date
+            tSkip = 0;
             if (reqStartDate > BlobStartDate)
             {
                 int numSkipValues
                     = TSDateCalculator.CountSteps(BlobStartDate, reqStartDate, TimeStepUnit, TimeStepQuantity);
-                for (tBlob = 0; tBlob < numSkipValues; tBlob++)
+                for (; tSkip < numSkipValues; tSkip++)
                 {
-                    blobReader.ReadInt32();
+                    blobReader.ReadDouble();
                 }
             }
+            int blobLengthValsAdj = blobLengthVals - tSkip;
 
             // Loop through all values that need to be stored
             for (t = 0; t < nReqValues; t++)
             {
                 // If this value overruns the current record's blob
-                if (t >= blobLengthVals)
+                if (t >= blobLengthValsAdj)
                 {
+                    // we'll stop here
                     t--;
                     break;
                 }
@@ -203,7 +204,7 @@ namespace TimeSeriesLibrary
                     short timeStepUnit, short timeStepQuantity,
                     int nOutValues, double[] valueArray, DateTime OutStartDate)
         {
-            ErrorCode = ErrCodes.Enum.None;
+            ErrorCode = ErrCode.Enum.None;
 
             TimeStepUnit = (TSDateCalculator.TimeStepUnitCode)timeStepUnit;
             TimeStepQuantity = timeStepQuantity;
@@ -221,16 +222,16 @@ namespace TimeSeriesLibrary
             // SQL statement to return the values records
             String comm = String.Format("select * from {0} where 1=0", TableName);
             // Send SQL resultset to DataTable dTable
-            adp = new SqlDataAdapter(comm, Connx);
+            SqlDataAdapter adp = new SqlDataAdapter(comm, Connx);
             SqlCommandBuilder bld = new SqlCommandBuilder(adp);
-            dTable = new DataTable();
+            DataTable dTable = new DataTable();
             try
             {
                 adp.Fill(dTable);
             }
             catch
             {
-                ErrorCode=ErrCodes.Enum.Could_Not_Open_Values_Table;
+                ErrorCode=ErrCode.Enum.Could_Not_Open_Values_Table;
                 return new Guid();
             }
             IsEmpty = true;

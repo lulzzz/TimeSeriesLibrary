@@ -8,9 +8,9 @@ namespace TimeSeriesLibrary
     [Serializable()]
     public class TSLibraryException : Exception
     {
-        public TSLibraryException() : base() { }
-        public TSLibraryException(string message) : base(message) { }
-        public TSLibraryException(string message, Exception inner) : base(message, inner) { }
+        public TSLibraryException(ErrCode.Enum errCode) : base() { }
+        public TSLibraryException(ErrCode.Enum errCode, string message) : base(message) { }
+        public TSLibraryException(ErrCode.Enum errCode, string message, Exception inner) : base(message, inner) { }
 
         // A constructor is needed for serialization when an
         // exception propagates from a remoting server to the client. 

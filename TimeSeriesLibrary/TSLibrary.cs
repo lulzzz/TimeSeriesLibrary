@@ -19,7 +19,7 @@ namespace TimeSeriesLibrary
         /// </summary>
         public static TSConnection ConnxObject = new TSConnection();
 
-        public ErrCodes.Enum ErrorCode;
+        public ErrCode.Enum ErrorCode;
 
 
         #region Public Methods for Connection
@@ -61,7 +61,7 @@ namespace TimeSeriesLibrary
             }
             catch
             {
-                ErrorCode = ErrCodes.Enum.Connection_Not_Found;
+                ErrorCode = ErrCode.Enum.Connection_Not_Found;
                 return null;
             }
             return connx;
@@ -89,7 +89,7 @@ namespace TimeSeriesLibrary
 
         #region Public methods for WRITING time series
 
-        public unsafe int WriteValues(
+        public unsafe Guid WriteValues(
                     int connectionNumber, String tableName,
                     short timeStepUnit, short timeStepQuantity,
                     int nOutValues, double[] valueArray, DateTime OutStartDate)
@@ -100,8 +100,7 @@ namespace TimeSeriesLibrary
             // Construct new TS object with SqlConnection object and table name
             TS ts = new TS(connx, tableName);
 
-            ts.WriteValues(timeStepUnit, timeStepQuantity, nOutValues, valueArray, OutStartDate);
-            return 0;
+            return ts.WriteValues(timeStepUnit, timeStepQuantity, nOutValues, valueArray, OutStartDate);
         }
 
         #endregion

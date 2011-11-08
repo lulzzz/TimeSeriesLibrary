@@ -14,7 +14,7 @@ namespace TimeSeriesLibrary
     /// </summary>
     public class TSXml
     {
-        public ErrCodes.Enum ErrorCode;
+        public ErrCode.Enum ErrorCode;
 
         private String TableName;
         private SqlConnection Connx;
@@ -55,8 +55,7 @@ namespace TimeSeriesLibrary
             double[] valueArray = null;                       // to be read from XML
 
             // Flags will indicate if the XML is missing any data
-            Boolean foundTimeStepUnit, foundTimeStepQuantity, foundStartDate, foundValueArray,
-                    foundAllRequiredElements;
+            Boolean foundTimeStepUnit, foundTimeStepQuantity, foundStartDate, foundValueArray;
 
             // This XmlReader object opens the XML file and parses it for us.  The 'using'
             // statement ensures that the XmlReader's resources are properly disposed.
@@ -64,12 +63,14 @@ namespace TimeSeriesLibrary
             {
                 // All of the data that we'll read is contained inside an element named 'Import'
                 if (!xmlReader.ReadToFollowing("Import"))
-                    return 0;
+                    throw new TSLibraryException(ErrCode.Enum.Xml_File_Empty, 
+                                "The XML file '"+xmlFileName+"' does not contain an <Import> element.");
                 // The file must contain at least one element named 'TimeSeries'.  Move to the first
                 // such element now.
                 if (!xmlReader.ReadToDescendant("TimeSeries"))
                     // if no such element is found then there is nothing to process
-                    return 0;
+                    throw new TSLibraryException(ErrCode.Enum.Xml_File_Empty,
+                                "The XML file '" + xmlFileName + "' does not contain any <TimeSeries> elements.");
                 // do-while loop through all elements named 'TimeSeries'.  There will be one iteration
                 // of this loop for each timeseries in the XML file.
                 do
@@ -81,7 +82,6 @@ namespace TimeSeriesLibrary
                     TSImport tsImport = new TSImport();
                     // Flags will indicate if the XML is missing any data
                     foundTimeStepUnit = foundTimeStepQuantity = foundStartDate = foundValueArray = false;
-                    foundAllRequiredElements = false;
 
                     // advance the reader past the outer element
                     oneSeriesXmlReader.ReadStartElement();
@@ -147,7 +147,6 @@ namespace TimeSeriesLibrary
                     // These flags indicate whether each of the required fields was found in the XML file.
                     if (foundTimeStepUnit && foundTimeStepQuantity && foundStartDate && foundValueArray)
                     {
-                        foundAllRequiredElements = true;
                     }
                     else
                     {
@@ -162,7 +161,7 @@ namespace TimeSeriesLibrary
                         if (!foundTimeStepUnit) errorList += "\n<TimeStepUnit> was not found";
                         if (!foundTimeStepQuantity) errorList += "\n<TimeStepQuantity> was not found";
                         if (!foundValueArray) errorList += "\n<Data> was not found";
-                        throw new TSLibraryException(errorList);
+                        throw new TSLibraryException(ErrCode.Enum.Xml_File_Incomplete, errorList);
                     }
                     // The TS object is used to save one record to the database table
                     TS ts = new TS(Connx, TableName);
