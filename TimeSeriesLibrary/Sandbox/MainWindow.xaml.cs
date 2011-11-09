@@ -40,11 +40,26 @@ namespace Sandbox
 
             WriteBlobPacked();
         }
+        private void MainWindowClosed(object sender, EventArgs e)
+        {
+            tsLib.CloseConnection(connNumber);
+        }
+        
+
         private void GoButtonClick(object sender, RoutedEventArgs e)
         {
             //ImportTest();
-            ReadTest();
+            //ReadTest();
             //WriteTest();
+            //DeleteTest();
+        }
+
+        void DeleteTest()
+        {
+            bool ret = tsLib.DeleteMatchingSeries(connNumber, "FileStrm2", "Id > 102476");
+            if (ret == false)
+            {
+            }
         }
 
         void ImportTest()
@@ -84,7 +99,7 @@ namespace Sandbox
             DateTime startDate = new DateTime(1928, 1, 1, 23, 59, 0);
 
             DateTime timerStart = DateTime.Now;
-            for (i = 0; i < 1200; i++)
+            for (i = 0; i < 10; i++)
             {
                 TimeLabelBlob.Content = String.Format("Iteration {0}", i);
                 ret = tsLib.ReadValues(connNumber, "FileStrm2",
@@ -107,7 +122,7 @@ namespace Sandbox
                 valArray[i] = i * 3;
 
             DateTime timerStart = DateTime.Now;
-            for (i = 0; i < 6600; i++)
+            for (i = 0; i < 1200; i++)
             {
                 TimeLabelBlob.Content = String.Format("Iteration {0}", i);
                 tsLib.WriteValues(connNumber, "FileStrm2",

@@ -19,9 +19,6 @@ namespace TimeSeriesLibrary
         /// </summary>
         public static TSConnection ConnxObject = new TSConnection();
 
-        public ErrCode.Enum ErrorCode;
-
-
         #region Public Methods for Connection
         /// <summary>
         /// Opens a new connection for the time series library to use.  The new connection 
@@ -29,7 +26,7 @@ namespace TimeSeriesLibrary
         /// serial number of the new connection.
         /// </summary>
         /// <param name="connectionString">The connection string used to open the connection.</param>
-        /// <returns>The serial number of the new connection.</returns>
+        /// <returns>The serial number that was automatically assigned to the new connection.</returns>
         public int OpenConnection(String connectionString)
         {
             // all the logic is found in the TSConnection object.
@@ -51,7 +48,7 @@ namespace TimeSeriesLibrary
         /// Returns the SqlConnection object corresponding to the given connection number.
         /// </summary>
         /// <param name="connectionNumber">serial number of the connection within the collection</param>
-        /// <returns></returns>
+        /// <returns>The SqlConnection object corresponding to the given connection number</returns>
         public SqlConnection GetConnectionFromId(int connectionNumber)
         {
             SqlConnection connx;
@@ -61,8 +58,9 @@ namespace TimeSeriesLibrary
             }
             catch
             {
-                ErrorCode = ErrCode.Enum.Connection_Not_Found;
-                return null;
+                throw new TSLibraryException(ErrCode.Enum.Connection_Not_Found,
+                                String.Format("TimeSeriesLibrary does not have an open connection number {0}", 
+                                connectionNumber));
             }
             return connx;
         }
@@ -106,6 +104,35 @@ namespace TimeSeriesLibrary
         #endregion
 
 
+        #region Public methods for DELETING time series
+
+        public bool DeleteSeries(
+                int connectionNumber, String tableName, Guid id)
+        {
+            // Get the connection that we'll pass along.
+            SqlConnection connx = GetConnectionFromId(connectionNumber);
+
+            // Construct new TS object with SqlConnection object and table name
+            TS ts = new TS(connx, tableName);
+
+            return ts.DeleteSeries(id);
+        }
+
+        public bool DeleteMatchingSeries(
+                int connectionNumber, String tableName, String whereClause)
+        {
+            // Get the connection that we'll pass along.
+            SqlConnection connx = GetConnectionFromId(connectionNumber);
+
+            // Construct new TS object with SqlConnection object and table name
+            TS ts = new TS(connx, tableName);
+
+            return ts.DeleteMatchingSeries(whereClause);
+        }
+
+        #endregion
+
+
         #region Public methods for XML import
         public int XmlImportWithList(int connectionNumber, String tableName, String xmlFileName,
                         List<TSImport> tsImportList)
@@ -120,13 +147,7 @@ namespace TimeSeriesLibrary
         }
         public int XmlImport(int connectionNumber, String tableName, String xmlFileName)
         {
-            // Get the connection that we'll pass along.
-            SqlConnection connx = GetConnectionFromId(connectionNumber);
-
-            // Construct new TS object with SqlConnection object and table name
-            TSXml tsXml = new TSXml(connx, tableName);
-
-            return tsXml.ReadAndStore(xmlFileName, new List<TSImport>());
+            return XmlImportWithList(connectionNumber, tableName, xmlFileName, new List<TSImport>());
         }
         #endregion
 

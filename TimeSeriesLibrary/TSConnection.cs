@@ -53,12 +53,20 @@ namespace TimeSeriesLibrary
         {
             SqlConnection connx;
             try
-            {   // the constructor opens the connection
+            {   // instantiate the SqlConnection object
                 connx = new SqlConnection(connxString);
             }
             catch
-            {   // The connection process failed--the connection will
-                // not be added to the collection.
+            {   // instantiation failed -- perhaps due to bad connection string
+                return 0;
+            }
+            try
+            {   // method opens the connection
+                connx.Open();
+            }
+            catch
+            {   // connection could not be opened
+                connx.Dispose();
                 return 0;
             }
             // What will be the new key (i.e., the connection number)
@@ -79,6 +87,7 @@ namespace TimeSeriesLibrary
             {   // close the connection
                 SqlConnection connx = TSConnectionsCollection[key];
                 connx.Close();
+                connx.Dispose();
             }
             catch
             {
