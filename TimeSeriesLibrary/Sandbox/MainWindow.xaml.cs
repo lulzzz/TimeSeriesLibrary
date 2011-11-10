@@ -25,7 +25,7 @@ namespace Sandbox
     /// </summary>
     public partial class MainWindow : Window
     {
-        const int nVals = 30000, nIter = 1200;
+        const int nVals = 30000, nIter = 1000;
 
         int connNumber;
         TSLibrary tsLib = new TSLibrary();
@@ -53,10 +53,12 @@ namespace Sandbox
         private void GoButtonClick(object sender, RoutedEventArgs e)
         {
             //ImportTest();
-            //ReadArrayTest();
-            ReadListTest();
+            ReadArrayTest();
+            //ReadListTest();
             //WriteArrayTest();
+            //WriteListTest();
             //DeleteTest();
+
         }
 
         void DeleteTest()
@@ -101,7 +103,7 @@ namespace Sandbox
             List<double> valList = new List<double>();
 
             for (i = 0; i < nVals; i++)
-                valList.Add(i * 2.5);
+                valList.Add(i * 10);
             testId2 = tsLib.WriteValues(connNumber, "FileStrm2",
                        3, 1, nVals, valList, StartDate);
         }
@@ -117,7 +119,7 @@ namespace Sandbox
             ret = tsLib.ReadValuesUnsafe(connNumber, "FileStrm2",
                             testId2, nVals, valArray, StartDate);
 
-            ret = ret;
+            ret = 3;
         }
 
         void ReadArrayTest()
@@ -163,7 +165,7 @@ namespace Sandbox
             double[] valArray = new double[nVals];
 
             for (i = 0; i < nVals; i++)
-                valArray[i] = i * 3;
+                valArray[i] = i * 25;
 
             DateTime timerStart = DateTime.Now;
             for (i = 0; i < nIter; i++)
@@ -176,7 +178,28 @@ namespace Sandbox
             TimeSpan timerDiff = timerEnd - timerStart;
             TimeLabelBlob.Content = String.Format("BLOBWRI --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
         }
+        void WriteListTest()
+        {
+            int i;
 
+            List<double> valList = new List<double>();
 
+            for (i = 0; i < nVals; i++)
+                valList.Add(i * 1.5);
+
+            DateTime timerStart = DateTime.Now;
+            for (i = 0; i < nIter; i++)
+            {
+                TimeLabelBlob.Content = String.Format("Iteration {0}", i);
+                tsLib.WriteValues(connNumber, "FileStrm2",
+                           3, 1, nVals, valList, StartDate);
+            }
+            DateTime timerEnd = DateTime.Now;
+            TimeSpan timerDiff = timerEnd - timerStart;
+            TimeLabelBlob.Content = String.Format("BLOBWRI --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
+        }
+
+        
+        
     }
 }
