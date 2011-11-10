@@ -25,20 +25,24 @@ namespace Sandbox
     /// </summary>
     public partial class MainWindow : Window
     {
-        const int nVals = 30000;
+        const int nVals = 30000, nIter = 1200;
 
         int connNumber;
         TSLibrary tsLib = new TSLibrary();
-        Guid testId = new Guid();
+        Guid testId1 = new Guid();
+        Guid testId2 = new Guid();
+        DateTime StartDate = new DateTime(1928, 1, 1, 23, 59, 0);
 
-        public unsafe MainWindow()
+        public MainWindow()
         {
             InitializeComponent();
 
             connNumber = tsLib.OpenConnection(
                 "Data Source=.; Database=OasisOutput; Trusted_Connection=yes;");
 
-            WriteBlobPacked();
+            WriteOneSeriesArray();
+            //WriteOneSeriesList();
+            //ReadOneSeriesArray();
         }
         private void MainWindowClosed(object sender, EventArgs e)
         {
@@ -49,8 +53,9 @@ namespace Sandbox
         private void GoButtonClick(object sender, RoutedEventArgs e)
         {
             //ImportTest();
-            //ReadTest();
-            //WriteTest();
+            //ReadArrayTest();
+            ReadListTest();
+            //WriteArrayTest();
             //DeleteTest();
         }
 
@@ -78,32 +83,72 @@ namespace Sandbox
             TimeLabelBlob.Content = String.Format("Imported --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
         }
 
-        void WriteBlobPacked()
+        void WriteOneSeriesArray()
         {
             int i;
 
             double[] valArray = new double[nVals];
-            DateTime startDate = new DateTime(1928, 1, 1, 23, 59, 0);
 
             for (i = 0; i < nVals; i++)
                 valArray[i] = i * 3;
-            testId = tsLib.WriteValues(connNumber, "FileStrm2",
-                       3, 1, nVals, valArray, startDate);
+            testId1 = tsLib.WriteValuesUnsafe(connNumber, "FileStrm2",
+                       3, 1, nVals, valArray, StartDate);
+        }
+        void WriteOneSeriesList()
+        {
+            int i;
+
+            List<double> valList = new List<double>();
+
+            for (i = 0; i < nVals; i++)
+                valList.Add(i * 2.5);
+            testId2 = tsLib.WriteValues(connNumber, "FileStrm2",
+                       3, 1, nVals, valList, StartDate);
+        }
+        void ReadOneSeriesArray()
+        {
+            int ret;
+
+            double[] valArray = new double[nVals];
+
+            ret = tsLib.ReadValuesUnsafe(connNumber, "FileStrm2",
+                            testId1, nVals, valArray, StartDate);
+
+            ret = tsLib.ReadValuesUnsafe(connNumber, "FileStrm2",
+                            testId2, nVals, valArray, StartDate);
+
+            ret = ret;
         }
 
-        void ReadTest()
+        void ReadArrayTest()
         {
             int ret, i;
 
             double[] valArray = new double[nVals];
-            DateTime startDate = new DateTime(1928, 1, 1, 23, 59, 0);
 
             DateTime timerStart = DateTime.Now;
-            for (i = 0; i < 10; i++)
+            for (i = 0; i < nIter; i++)
+            {
+                TimeLabelBlob.Content = String.Format("Iteration {0}", i);
+                ret = tsLib.ReadValuesUnsafe(connNumber, "FileStrm2",
+                                testId1, nVals, valArray, StartDate);
+            }
+            DateTime timerEnd = DateTime.Now;
+            TimeSpan timerDiff = timerEnd - timerStart;
+            TimeLabelBlob.Content = String.Format("BLOBBED --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
+        }
+        void ReadListTest()
+        {
+            int ret, i;
+
+            List<double> valList = new List<double>();
+
+            DateTime timerStart = DateTime.Now;
+            for (i = 0; i < nIter; i++)
             {
                 TimeLabelBlob.Content = String.Format("Iteration {0}", i);
                 ret = tsLib.ReadValues(connNumber, "FileStrm2",
-                                testId, nVals, valArray, startDate);
+                                testId1, nVals, ref valList, StartDate);
             }
             DateTime timerEnd = DateTime.Now;
             TimeSpan timerDiff = timerEnd - timerStart;
@@ -111,22 +156,21 @@ namespace Sandbox
         }
 
 
-        void WriteTest()
+        void WriteArrayTest()
         {
             int i;
 
             double[] valArray = new double[nVals];
-            DateTime startDate = new DateTime(1928, 1, 1, 23, 59, 0);
 
             for (i = 0; i < nVals; i++)
                 valArray[i] = i * 3;
 
             DateTime timerStart = DateTime.Now;
-            for (i = 0; i < 1200; i++)
+            for (i = 0; i < nIter; i++)
             {
                 TimeLabelBlob.Content = String.Format("Iteration {0}", i);
-                tsLib.WriteValues(connNumber, "FileStrm2",
-                           3, 1, nVals, valArray, startDate);
+                tsLib.WriteValuesUnsafe(connNumber, "FileStrm2",
+                           3, 1, nVals, valArray, StartDate);
             }
             DateTime timerEnd = DateTime.Now;
             TimeSpan timerDiff = timerEnd - timerStart;

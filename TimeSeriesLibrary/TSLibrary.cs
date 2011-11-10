@@ -69,13 +69,26 @@ namespace TimeSeriesLibrary
 
         #region Public methods for READING time series
 
-        public unsafe int ReadValues(
+        public int ReadValues(
+                int connectionNumber, String tableName, Guid id,
+                int nReqValues, ref List<double> valueList, DateTime reqStartDate)
+        {
+            // Get the connection that we'll pass along.
+            SqlConnection connx = GetConnectionFromId(connectionNumber);
+            // Construct new TS object with SqlConnection object and table name
+            TS ts = new TS(connx, tableName);
+
+            double[] valueArray = new double[nReqValues];
+            int ret = ts.ReadValues(id, nReqValues, valueArray, reqStartDate);
+            valueList = valueArray.ToList<double>();
+            return ret;
+        }
+        public unsafe int ReadValuesUnsafe(
                 int connectionNumber, String tableName, Guid id,
                 int nReqValues, double[] valueArray, DateTime reqStartDate)
         {
             // Get the connection that we'll pass along.
             SqlConnection connx = GetConnectionFromId(connectionNumber);
-
             // Construct new TS object with SqlConnection object and table name
             TS ts = new TS(connx, tableName);
 
@@ -87,14 +100,26 @@ namespace TimeSeriesLibrary
 
         #region Public methods for WRITING time series
 
-        public unsafe Guid WriteValues(
+        // TODO: test the effectiveness of safe/unsafe versions by making a C++ sandbox.
+        public Guid WriteValues(
+                    int connectionNumber, String tableName,
+                    short timeStepUnit, short timeStepQuantity,
+                    int nOutValues, List<double> valueList, DateTime OutStartDate)
+        {
+            // Get the connection that we'll pass along.
+            SqlConnection connx = GetConnectionFromId(connectionNumber);
+            // Construct new TS object with SqlConnection object and table name
+            TS ts = new TS(connx, tableName);
+
+            return ts.WriteValues(timeStepUnit, timeStepQuantity, nOutValues, valueList.ToArray<double>(), OutStartDate);
+        }
+        public unsafe Guid WriteValuesUnsafe(
                     int connectionNumber, String tableName,
                     short timeStepUnit, short timeStepQuantity,
                     int nOutValues, double[] valueArray, DateTime OutStartDate)
         {
             // Get the connection that we'll pass along.
             SqlConnection connx = GetConnectionFromId(connectionNumber);
-
             // Construct new TS object with SqlConnection object and table name
             TS ts = new TS(connx, tableName);
 
@@ -111,7 +136,6 @@ namespace TimeSeriesLibrary
         {
             // Get the connection that we'll pass along.
             SqlConnection connx = GetConnectionFromId(connectionNumber);
-
             // Construct new TS object with SqlConnection object and table name
             TS ts = new TS(connx, tableName);
 
@@ -123,7 +147,6 @@ namespace TimeSeriesLibrary
         {
             // Get the connection that we'll pass along.
             SqlConnection connx = GetConnectionFromId(connectionNumber);
-
             // Construct new TS object with SqlConnection object and table name
             TS ts = new TS(connx, tableName);
 
@@ -139,7 +162,6 @@ namespace TimeSeriesLibrary
         {
             // Get the connection that we'll pass along.
             SqlConnection connx = GetConnectionFromId(connectionNumber);
-
             // Construct new TS object with SqlConnection object and table name
             TSXml tsXml = new TSXml(connx, tableName);
 
