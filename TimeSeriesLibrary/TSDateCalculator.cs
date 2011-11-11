@@ -15,6 +15,7 @@ namespace TimeSeriesLibrary
         /// </summary>
         public enum TimeStepUnitCode : short
         {
+            Irregular = 0,
             Minute = 1,
             Hour = 2,
             Day = 3,

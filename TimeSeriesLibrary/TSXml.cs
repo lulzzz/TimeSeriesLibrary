@@ -166,9 +166,8 @@ namespace TimeSeriesLibrary
                     // The TS object is used to save one record to the database table
                     TS ts = new TS(Connx, TableName);
                     // save the record
-                    ts.WriteValues((short)TimeStepUnit, TimeStepQuantity, valueArray.Length, valueArray, StartDate);
-                    // The TS object records the GUID that identifies this timeseries' record
-                    tsImport.Id = ts.Id;
+                    tsImport.Id = ts.WriteValuesRegular((short)TimeStepUnit, TimeStepQuantity, 
+                                            valueArray.Length, valueArray, StartDate);
                     // Done with the TS object.
                     ts = null;
                     

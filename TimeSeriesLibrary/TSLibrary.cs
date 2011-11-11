@@ -17,7 +17,7 @@ namespace TimeSeriesLibrary
         /// <summary>
         /// TSConnection object maintains a list of connections that have been opened by the library
         /// </summary>
-        public static TSConnection ConnxObject = new TSConnection();
+        public TSConnection ConnxObject = new TSConnection();
 
         #region Public Methods for Connection
         /// <summary>
@@ -79,8 +79,22 @@ namespace TimeSeriesLibrary
             TS ts = new TS(connx, tableName);
 
             double[] valueArray = new double[nReqValues];
-            int ret = ts.ReadValues(id, nReqValues, valueArray, reqStartDate);
+            int ret = ts.ReadValuesRegular(id, nReqValues, valueArray, reqStartDate);
             valueList = valueArray.ToList<double>();
+            return ret;
+        }
+        public int ReadDatesValues(
+                int connectionNumber, String tableName, Guid id,
+                int nReqValues, ref List<TimeSeriesValue> dateValueList, DateTime reqStartDate)
+        {
+            // Get the connection that we'll pass along.
+            SqlConnection connx = GetConnectionFromId(connectionNumber);
+            // Construct new TS object with SqlConnection object and table name
+            TS ts = new TS(connx, tableName);
+
+            double[] valueArray = new double[nReqValues];
+            int ret = ts.ReadValuesRegular(id, nReqValues, valueArray, reqStartDate);
+            //valueList = valueArray.ToList<double>();
             return ret;
         }
         public unsafe int ReadValuesUnsafe(
@@ -92,7 +106,7 @@ namespace TimeSeriesLibrary
             // Construct new TS object with SqlConnection object and table name
             TS ts = new TS(connx, tableName);
 
-            return ts.ReadValues(id, nReqValues, valueArray, reqStartDate);
+            return ts.ReadValuesRegular(id, nReqValues, valueArray, reqStartDate);
         }
         
         #endregion
@@ -111,7 +125,7 @@ namespace TimeSeriesLibrary
             // Construct new TS object with SqlConnection object and table name
             TS ts = new TS(connx, tableName);
 
-            return ts.WriteValues(timeStepUnit, timeStepQuantity, nOutValues, valueList.ToArray<double>(), OutStartDate);
+            return ts.WriteValuesRegular(timeStepUnit, timeStepQuantity, nOutValues, valueList.ToArray<double>(), OutStartDate);
         }
         public unsafe Guid WriteValuesUnsafe(
                     int connectionNumber, String tableName,
@@ -123,7 +137,7 @@ namespace TimeSeriesLibrary
             // Construct new TS object with SqlConnection object and table name
             TS ts = new TS(connx, tableName);
 
-            return ts.WriteValues(timeStepUnit, timeStepQuantity, nOutValues, valueArray, OutStartDate);
+            return ts.WriteValuesRegular(timeStepUnit, timeStepQuantity, nOutValues, valueArray, OutStartDate);
         }
 
         #endregion

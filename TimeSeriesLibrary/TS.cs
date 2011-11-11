@@ -16,13 +16,15 @@ namespace TimeSeriesLibrary
     {
         // Fields with class scope may be shared between method calls
         public Guid Id = new Guid();   // unique identifier for the database record
-        public String TableName;       // name of the database table that stores this time series
-        public TSDateCalculator.TimeStepUnitCode TimeStepUnit;  // code for the units that measure the regular time step (e.g. hour, day, month)
-        public short TimeStepQuantity;   // number of units per time step (e.g. Quantity=6 for 6-hour time steps)
-        public DateTime BlobStartDate;   // Date of the first time step stored in the database
-        public DateTime BlobEndDate;     // Date of the last time step stored in the database
-        private Boolean IsEmpty;         // Indicates that no values have been written to the BLOB
+        private String TableName;       // name of the database table that stores this time series
+        private TSDateCalculator.TimeStepUnitCode TimeStepUnit;  // code for the units that measure the regular time step (e.g. hour, day, month)
+        private short TimeStepQuantity;   // number of units per time step (e.g. Quantity=6 for 6-hour time steps)
+        private DateTime BlobStartDate;   // Date of the first time step stored in the database
+        private DateTime BlobEndDate;     // Date of the last time step stored in the database
+        private int TimeStepCount;        // The number of time steps stored in the database
         private SqlConnection Connx;     // Object handles the connection to the database
+
+        public Boolean IsInitialized;
 
         #region Class Constructor
         /// <summary>
@@ -32,8 +34,12 @@ namespace TimeSeriesLibrary
         /// <param name="tableName">Name of the table in the database that stores this object's record</param>
         public TS(SqlConnection connx, String tableName)
         {
+            // Store the method parameters in class fields
             Connx = connx;
             TableName = tableName;
+            // Mark this time series as uninitialized
+            // (because the meta parameters have not yet been read from the database)
+            IsInitialized = false;
         }
         #endregion
 
@@ -52,7 +58,7 @@ namespace TimeSeriesLibrary
             // store the method's input parameters
             Id = id;
             // Define the SQL query
-            String comm = String.Format("select TimeStepUnit,TimeStepQuantity,StartDate,EndDate " +
+            String comm = String.Format("select TimeStepUnit,TimeStepQuantity,TimeStepCount,StartDate,EndDate " +
                                         "from {0} where Guid='{1}'", TableName, Id);
             // SqlDataAdapter object will use the query to fill the DataTable
             using (SqlDataAdapter adp = new SqlDataAdapter(comm, Connx))
@@ -77,35 +83,35 @@ namespace TimeSeriesLibrary
                 // Assign properties from table to this object
                 TimeStepUnit = (TSDateCalculator.TimeStepUnitCode)dTable.Rows[0].Field<short>("TimeStepUnit");
                 TimeStepQuantity = dTable.Rows[0].Field<short>("TimeStepQuantity");
-                if (dTable.Rows[0]["StartDate"] is DBNull)
-                {
-                    IsEmpty = true;
-                }
-                else
-                {
-                    IsEmpty = false;
-                    BlobStartDate = dTable.Rows[0].Field<DateTime>("StartDate");
-                    BlobEndDate = dTable.Rows[0].Field<DateTime>("EndDate");
-                }
+                TimeStepCount = dTable.Rows[0].Field<int>("TimeStepCount");
+                BlobStartDate = dTable.Rows[0].Field<DateTime>("StartDate");
+                BlobEndDate = dTable.Rows[0].Field<DateTime>("EndDate");
             }
+            IsInitialized = true;
             return true;
         }
         #endregion
 
 
-        #region Method for clearing object's properties
+        #region Method builds string for returning empty DataTable
         /// <summary>
-        /// Method clears some critical properties of the object, to enforce the rule
-        /// that every public method should begin by calling Initialize().
+        /// Method returns a string for querying the database table and returning an empty result set.
+        /// The subsequent query can be used to create an empty DataTable object, with the necessary
+        /// columns defined.  Because the query names all required fields of the database table, the
+        /// subsequent query will raise an exception if any fields are missing.
         /// </summary>
-        void ClearProperties()
+        /// <returns></returns>
+        String BuildStringForEmptyDataTable()
         {
-            TableName = "";
-        } 
+            // note: by including 'where 1=0', we ensure that an empty resultset will be returned.
+            return String.Format("select" +
+                                 "  Guid, TimeStepUnit, TimeStepQuantity, TimeStepCount, StartDate, EndDate, Checksum, ValueBlob" +
+                                 "  from {0} where 1=0", TableName);
+        }
         #endregion
 
 
-        #region ReadValues() Method
+        #region ReadValuesRegular() Method
         /// <summary>
         /// Method reads the time series matching the given GUID, storing the values into
         /// the given array of double-precision floats.  The method starts populating the
@@ -115,18 +121,18 @@ namespace TimeSeriesLibrary
         /// <param name="id">GUID id of the time series</param>
         /// <param name="nReqValues">number of values requested to read</param>
         /// <param name="valueArray">array requested to fill with values</param>
-        /// <param name="reqStartTime">start time requested</param>
-        /// <returns>The number of values actually filled into array</returns>
-        public unsafe int ReadValues(Guid id,
+        /// <param name="reqStartDate">start date requested</param>
+        /// <returns>The number of values actually filled into the array</returns>
+        public unsafe int ReadValuesRegular(Guid id,
             int nReqValues, double[] valueArray, DateTime reqStartDate)
         {
-            int numReadValues;
+            int numReadValues = 0;
             // Initialize class fields other than the BLOB of data values
-            Initialize(id);
+            if (!IsInitialized) Initialize(id);
 
             // Using the start date and number of values, compute the requested end date.
-            DateTime reqEndDate
-                = TSDateCalculator.IncrementDate(reqStartDate, TimeStepUnit, TimeStepQuantity, nReqValues);
+            //DateTime reqEndDate
+            //    = TSDateCalculator.IncrementDate(reqStartDate, TimeStepUnit, TimeStepQuantity, nReqValues);
 
             //
             // Start the DataTable
@@ -178,13 +184,97 @@ namespace TimeSeriesLibrary
                 // Transfer the entire array of data as a block
                 Buffer.BlockCopy(blobReader.ReadBytes(numBlobBin), numSkipBin, valueArray, 0, numReadBin);
             }
-            ClearProperties();
             return numReadValues;
         }
         #endregion
 
 
-        #region WriteValues() Method
+        #region ReadValuesIrregular() Method
+        /// <summary>
+        /// Method reads the irregular time series matching the given GUID, storing the dates and
+        /// values into the given array of TimeSeriesValue (a struct containing the date/value pair).
+        /// The method starts populating the array at the given start date, filling in no more than
+        /// the number of values, that are requested, and not reading past the given end date
+        /// </summary>
+        /// <param name="id">GUID id of the time series</param>
+        /// <param name="nReqValues">number of values requested to read</param>
+        /// <param name="dateValueArray">array requrested to fill with date/value pairs</param>
+        /// <param name="reqStartDate">start date requested</param>
+        /// <param name="reqEndDate">end date requested</param>
+        /// <returns>The number of values actually filled into the array</returns>
+        public unsafe int ReadValuesIrregular(Guid id,
+            int nReqValues, TimeSeriesValue[] dateValueArray, DateTime reqStartDate, DateTime reqEndDate)
+        {
+            int numReadValues = 0;
+            // Initialize class fields other than the BLOB of data values
+            if (!IsInitialized) Initialize(id);
+
+            // If the start or end date requested by the caller are such that the stored time series
+            // does not overlap, then we don't need to go any further.
+            if (reqStartDate > BlobEndDate || reqEndDate < BlobStartDate)
+                return 0;
+
+            // SQL statement that will only give us the BLOB of data values
+            String comm = String.Format("select ValueBlob from {0} where Guid='{1}' ",
+                                    TableName, Id);
+            // SqlDataAdapter object will use the query to fill the DataTable
+            using (SqlDataAdapter adp = new SqlDataAdapter(comm, Connx))
+            {
+                DataTable dTable = new DataTable();
+                // Execute the query to fill the DataTable object
+                try
+                {
+                    adp.Fill(dTable);
+                }
+                catch
+                {   // The query failed
+                    throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
+                                    "Table '" + TableName + "' could not be opened using query:\n\n." + comm);
+                }
+                // There should be at least 1 row in the table
+                if (dTable.Rows.Count < 1)
+                {
+                    throw new TSLibraryException(ErrCode.Enum.Record_Not_Found_Table,
+                                    "Found zero records using query:\n\n." + comm);
+                }
+
+                // DataRow object represents the current row of the DataTable object, which in turn is our result set
+                DataRow currentRow = dTable.Rows[0];
+                // Cast the BLOB as an array of bytes
+                Byte[] blobData = (Byte[])currentRow["ValueBlob"];
+                // MemoryStream and BinaryReader objects enable bulk copying of data from the BLOB
+                MemoryStream blobStream = new MemoryStream(blobData);
+                BinaryReader blobReader = new BinaryReader(blobStream);
+                // How many elements of 'TimeSeriesValue' are in the BLOB?
+                int numBlobBin = (int)blobStream.Length;
+                int numBlobValues = numBlobBin / sizeof(TimeSeriesValue);
+                DateTime currDate;
+                int j = 0;
+                // Loop through all time steps in the BLOB
+                for (int i = 0; i < numBlobValues; i++)
+                {
+                    // First check the date of this time step
+                    currDate = DateTime.FromBinary(blobReader.ReadInt64());
+                    // If date is before or after the dates requested by the caller, then
+                    // we won't record the date/value info to the output array.
+                    if (currDate < reqStartDate) continue;
+                    if (currDate > reqEndDate) break;
+                    // Record the date and value to the output array.
+                    dateValueArray[j].Date = currDate;
+                    dateValueArray[j].Value = blobReader.ReadDouble();
+                    j++;
+                    // Don't overrun the array length specified by the caller
+                    if (j >= nReqValues) break;
+                }
+                
+                numReadValues = j;
+            }
+            return numReadValues;
+        }
+        #endregion
+
+
+        #region WriteValuesRegular() Method
         /// <summary>
         /// Method writes the given array of values as a timeseries to the database with the given
         /// start date and time step descriptors.
@@ -196,16 +286,13 @@ namespace TimeSeriesLibrary
         /// <param name="valueArray">The array of values to be written to the database</param>
         /// <param name="OutStartDate">The date of the first time step</param>
         /// <returns>GUID value identifying the database record that was created</returns>
-        public unsafe Guid WriteValues(
+        public unsafe Guid WriteValuesRegular(
                     short timeStepUnit, short timeStepQuantity,
                     int nOutValues, double[] valueArray, DateTime OutStartDate)
         {
             // Record values from function parameters
             TimeStepUnit = (TSDateCalculator.TimeStepUnitCode)timeStepUnit;
             TimeStepQuantity = timeStepQuantity;
-
-            int numStepsAddStart = 0;
-            int numStepsAddEnd = 0;
 
             // Determine the date of the last time step
             DateTime OutEndDate
@@ -217,7 +304,7 @@ namespace TimeSeriesLibrary
             // SQL statement that gives us a resultset for the DataTable object.  Note that
             // this query is rigged so that it will always return 0 records.  This is because
             // we only want the resultset to define the fields of the DataTable object.
-            String comm = String.Format("select * from {0} where 1=0", TableName);
+            String comm = BuildStringForEmptyDataTable();
             // SqlDataAdapter object will use the query to fill the DataTable
             using (SqlDataAdapter adp = new SqlDataAdapter(comm, Connx))
             {
@@ -237,34 +324,7 @@ namespace TimeSeriesLibrary
                         throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
                                         "Table '" + TableName + "' could not be opened using query:\n\n." + comm);
                     }
-                    IsEmpty = true;
 
-                    //
-                    // Determine if values records need to be added to the front and/or end of the values
-
-                    // No time series values have been entered yet
-                    if (IsEmpty)
-                    {
-                        BlobStartDate = OutStartDate;
-                        BlobEndDate = OutEndDate;
-                    }
-                    // The time series already contains values records
-                    else
-                    {   // TODO: This is not yet working!
-
-                        // Determine how many new records are needed at the front
-                        if (OutStartDate < BlobStartDate)
-                        {
-                            numStepsAddStart
-                                = TSDateCalculator.CountSteps(OutStartDate, BlobStartDate, TimeStepUnit, TimeStepQuantity);
-                        }
-                        // Determine how many new records are needed at the end
-                        if (OutEndDate < BlobEndDate)
-                        {
-                            numStepsAddEnd
-                                = TSDateCalculator.CountSteps(BlobEndDate, OutEndDate, TimeStepUnit, TimeStepQuantity);
-                        }
-                    }
                     // DataRow object represents the current row of the DataTable object, which in turn
                     // represents a record that we will add to the database table.
                     DataRow currentRow = dTable.NewRow();
@@ -284,17 +344,103 @@ namespace TimeSeriesLibrary
                     currentRow["Guid"] = Id;
                     currentRow["TimeStepUnit"] = (short)TimeStepUnit;
                     currentRow["TimeStepQuantity"] = TimeStepQuantity;
+                    currentRow["TimeStepCount"] = nOutValues;
                     currentRow["StartDate"] = OutStartDate;
                     currentRow["EndDate"] = OutEndDate;
+                    currentRow["Checksum"] = ".";
                     currentRow["ValueBlob"] = blobData;
                     dTable.Rows.Add(currentRow);
                     adp.Update(dTable);
                 }
             }
 
-            ClearProperties();
             return Id;
         } 
+        #endregion
+
+
+        #region WriteValuesIrregular() Method
+        /// <summary>
+        /// Method writes the given array of values as a timeseries to the database with the given
+        /// start date and time step descriptors.
+        /// </summary>
+        /// <param name="timeStepUnit">TSDateCalculator.TimeStepUnitCode value for Minute,Hour,Day,Week,Month, or Year</param>
+        /// <param name="timeStepQuantity">The number of the given unit that defines the time step.
+        /// For instance, if the time step is 6 hours long, then this value is 6.</param>
+        /// <param name="nOutValues">The number of values in the array to be written to the database</param>
+        /// <param name="valueArray">The array of values to be written to the database</param>
+        /// <param name="OutStartDate">The date of the first time step</param>
+        /// <returns>GUID value identifying the database record that was created</returns>
+        public unsafe Guid WriteValuesIrregular(
+                    int nOutValues, TimeSeriesValue[] dateValueArray)
+        {
+            // Determine the date of the first and last time step
+            DateTime OutStartDate = dateValueArray[0].Date;
+            DateTime OutEndDate = dateValueArray[nOutValues-1].Date;
+
+            //
+            // Start the DataTable
+
+            // SQL statement that gives us a resultset for the DataTable object.  Note that
+            // this query is rigged so that it will always return 0 records.  This is because
+            // we only want the resultset to define the fields of the DataTable object.
+            String comm = BuildStringForEmptyDataTable();
+            // SqlDataAdapter object will use the query to fill the DataTable
+            using (SqlDataAdapter adp = new SqlDataAdapter(comm, Connx))
+            {
+                // SqlCommandBuilder object must be instantiated in order for us to call
+                // the Update method of the SqlDataAdapter.  Interestingly, we only need to
+                // instantiate this object--we don't need to use it in any other way.
+                using (SqlCommandBuilder bld = new SqlCommandBuilder(adp))
+                {
+                    DataTable dTable = new DataTable();
+                    // Execute the query to fill the DataTable object
+                    try
+                    {
+                        adp.Fill(dTable);
+                    }
+                    catch
+                    {   // The query failed
+                        throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
+                                        "Table '" + TableName + "' could not be opened using query:\n\n." + comm);
+                    }
+
+                    // DataRow object represents the current row of the DataTable object, which in turn
+                    // represents a record that we will add to the database table.
+                    DataRow currentRow = dTable.NewRow();
+
+                    //
+                    // Fill the values into the DataTable's records
+
+                    // start at first record
+                    int nBin = nOutValues * sizeof(TimeSeriesValue);
+                    Byte[] blobData = new Byte[nBin];
+
+                    MemoryStream blobStream = new MemoryStream(blobData);
+                    BinaryWriter blobWriter = new BinaryWriter(blobStream);
+                    for (int i = 0; i < nOutValues; i++)
+                    {
+                        blobWriter.Write(dateValueArray[i].Date.ToBinary());
+                        blobWriter.Write(dateValueArray[i].Value);
+                    }
+                    // NewGuid method generates a GUID value that is virtually guaranteed to be unique
+                    Id = Guid.NewGuid();
+                    // now save meta-parameters to the main table
+                    currentRow["Guid"] = Id;
+                    currentRow["TimeStepUnit"] = (short)TSDateCalculator.TimeStepUnitCode.Irregular;
+                    currentRow["TimeStepQuantity"] = 1;
+                    currentRow["TimeStepCount"] = nOutValues;
+                    currentRow["StartDate"] = OutStartDate;
+                    currentRow["EndDate"] = OutEndDate;
+                    currentRow["Checksum"] = ".";
+                    currentRow["ValueBlob"] = blobData;
+                    dTable.Rows.Add(currentRow);
+                    adp.Update(dTable);
+                }
+            }
+
+            return Id;
+        }
         #endregion
 
 

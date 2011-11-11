@@ -16,6 +16,8 @@ using System.Windows.Shapes;
 using System.Data;
 using System.Data.SqlClient;
 
+using System.IO;
+
 using TimeSeriesLibrary;
 
 namespace Sandbox
@@ -25,7 +27,7 @@ namespace Sandbox
     /// </summary>
     public partial class MainWindow : Window
     {
-        const int nVals = 30000, nIter = 1000;
+        const int nVals = 5, nIter = 1000;
 
         int connNumber;
         TSLibrary tsLib = new TSLibrary();
@@ -40,7 +42,8 @@ namespace Sandbox
             connNumber = tsLib.OpenConnection(
                 "Data Source=.; Database=OasisOutput; Trusted_Connection=yes;");
 
-            WriteOneSeriesArray();
+            WriteOneSeriesIrreg();
+            //WriteOneSeriesArray();
             //WriteOneSeriesList();
             //ReadOneSeriesArray();
         }
@@ -53,7 +56,7 @@ namespace Sandbox
         private void GoButtonClick(object sender, RoutedEventArgs e)
         {
             //ImportTest();
-            ReadArrayTest();
+            //ReadArrayTest();
             //ReadListTest();
             //WriteArrayTest();
             //WriteListTest();
@@ -85,6 +88,27 @@ namespace Sandbox
             TimeLabelBlob.Content = String.Format("Imported --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
         }
 
+        void WriteOneSeriesIrreg()
+        {
+            int i;
+            DateTime date = StartDate;
+
+            TimeSeriesValue[] dateValArray = new TimeSeriesValue[nVals];
+            TS ts = new TS(tsLib.ConnxObject.TSConnectionsCollection[connNumber], "FileStrm2");
+
+            for (i = 0; i < nVals; i++)
+            {
+                dateValArray[i].Date = date;
+                dateValArray[i].Value = i*5;
+                
+                date = date.AddDays(1);
+            }
+            testId1 = ts.WriteValuesIrregular(nVals, dateValArray);
+            
+            TimeSeriesValue[] outArray = new TimeSeriesValue[nVals];
+            i = ts.ReadValuesIrregular(testId1, nVals, outArray, StartDate, StartDate.AddDays(5));
+            date = StartDate;
+        }
         void WriteOneSeriesArray()
         {
             int i;
