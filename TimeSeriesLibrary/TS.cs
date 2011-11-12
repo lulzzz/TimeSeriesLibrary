@@ -15,14 +15,16 @@ namespace TimeSeriesLibrary
     public class TS
     {
         // Fields with class scope may be shared between method calls
-        public Guid Id = new Guid();   // unique identifier for the database record
-        private String TableName;       // name of the database table that stores this time series
-        private TSDateCalculator.TimeStepUnitCode TimeStepUnit;  // code for the units that measure the regular time step (e.g. hour, day, month)
-        private short TimeStepQuantity;   // number of units per time step (e.g. Quantity=6 for 6-hour time steps)
-        private DateTime BlobStartDate;   // Date of the first time step stored in the database
-        private DateTime BlobEndDate;     // Date of the last time step stored in the database
-        private int TimeStepCount;        // The number of time steps stored in the database
+
         private SqlConnection Connx;     // Object handles the connection to the database
+        private String TableName;       // name of the database table that stores this time series
+
+        public Guid Id = new Guid();   // unique identifier for the database record
+        public TSDateCalculator.TimeStepUnitCode TimeStepUnit;  // code for the units that measure the regular time step (e.g. hour, day, month)
+        public short TimeStepQuantity;   // number of units per time step (e.g. Quantity=6 for 6-hour time steps)
+        public DateTime BlobStartDate;   // Date of the first time step stored in the database
+        public DateTime BlobEndDate;     // Date of the last time step stored in the database
+        public int TimeStepCount;        // The number of time steps stored in the database
 
         public Boolean IsInitialized;
 
@@ -53,7 +55,7 @@ namespace TimeSeriesLibrary
         /// set of data values.
         /// </summary>
         /// <param name="id">GUID id of the time series record</param>
-        Boolean Initialize(Guid id)
+        public Boolean Initialize(Guid id)
         {
             // store the method's input parameters
             Id = id;
@@ -501,6 +503,46 @@ namespace TimeSeriesLibrary
                 return true;
 
             return false;
+        }
+        #endregion
+
+
+        #region FillDateArray() Method
+        /// <summary>
+        /// Method fills in the values of the given array of DateTime values with the dates for
+        /// each time step in the time series that matches the given GUID id.  The array is filled
+        /// starting at the given start date, or the start date of the database record, whichever
+        /// is earliest.  The array is filled up the the given number of values.
+        /// </summary>
+        /// <param name="id">GUID id of the time series</param>
+        /// <param name="nReqValues">number of values requested to be filled</param>
+        /// <param name="dateArray">array requested to fill with values</param>
+        /// <param name="reqStartDate">start date requested</param>
+        public unsafe void FillDateArray(Guid id,
+            int nReqValues, DateTime[] dateArray, DateTime reqStartDate)
+        {
+            // Initialize class fields
+            if (!IsInitialized) Initialize(id);
+
+            int i;
+            // The time steps boundaries are defined by the database record, so
+            // we can't rely on the reqStartDate to have the correct time step boundary.
+            // Therefore, begin counting at the first date in the database record.
+            if (reqStartDate > BlobStartDate)
+            {
+                i = TSDateCalculator.CountSteps(BlobStartDate, reqStartDate, TimeStepUnit, TimeStepQuantity);
+                dateArray[0] = TSDateCalculator.IncrementDate(BlobStartDate, TimeStepUnit, TimeStepQuantity, i);
+            }
+            else
+            {
+                dateArray[0] = BlobStartDate;
+            }
+
+            // Loop through the length of the array and fill in the date values
+            for (i = 1; i < nReqValues; i++)
+            {
+                dateArray[i] = TSDateCalculator.IncrementDate(dateArray[i-1], TimeStepUnit, TimeStepQuantity, 1);
+            }
         }
         #endregion
 

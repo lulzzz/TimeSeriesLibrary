@@ -69,6 +69,7 @@ namespace TimeSeriesLibrary
 
         #region Public methods for READING time series
 
+        // usage: ??
         public int ReadValues(
                 int connectionNumber, String tableName, Guid id,
                 int nReqValues, ref List<double> valueList, DateTime reqStartDate)
@@ -83,20 +84,8 @@ namespace TimeSeriesLibrary
             valueList = valueArray.ToList<double>();
             return ret;
         }
-        public int ReadDatesValues(
-                int connectionNumber, String tableName, Guid id,
-                int nReqValues, ref List<TimeSeriesValue> dateValueList, DateTime reqStartDate)
-        {
-            // Get the connection that we'll pass along.
-            SqlConnection connx = GetConnectionFromId(connectionNumber);
-            // Construct new TS object with SqlConnection object and table name
-            TS ts = new TS(connx, tableName);
-
-            double[] valueArray = new double[nReqValues];
-            int ret = ts.ReadValuesRegular(id, nReqValues, valueArray, reqStartDate);
-            //valueList = valueArray.ToList<double>();
-            return ret;
-        }
+        
+        // usage: for onevar to read model output, b/c it does not need dates for each timeseries
         public unsafe int ReadValuesUnsafe(
                 int connectionNumber, String tableName, Guid id,
                 int nReqValues, double[] valueArray, DateTime reqStartDate)
@@ -108,7 +97,119 @@ namespace TimeSeriesLibrary
 
             return ts.ReadValuesRegular(id, nReqValues, valueArray, reqStartDate);
         }
+        // usage: general model/onevar input
+        public unsafe int ReadDatesValuesUnsafe(
+                int connectionNumber, String tableName, Guid id,
+                int nReqValues, TimeSeriesValue[] valueArray, DateTime reqStartDate, DateTime reqEndDate)
+        {
+            // Get the connection that we'll pass along.
+            SqlConnection connx = GetConnectionFromId(connectionNumber);
+            // Construct new TS object with SqlConnection object and table name
+            TS ts = new TS(connx, tableName);
+
+            int nValuesRead = 0;
+            // Read the meta-parameters of the time series so that we'll know if it's regular or irregular
+            if (!ts.IsInitialized) ts.Initialize(id);
+
+            //return ts.ReadValuesRegular(id, nReqValues, valueArray, reqStartDate);
+            return nValuesRead;
+        }
+
+        // usage: for GUI to retrieve an entire time series.  The length of the list is allocated in this method.
+        public int ReadAllDatesValues(
+                int connectionNumber, String tableName, Guid id,
+                ref List<TimeSeriesValue> dateValueList)
+        {
+            // Get the connection that we'll pass along.
+            SqlConnection connx = GetConnectionFromId(connectionNumber);
+            // Construct new TS object with SqlConnection object and table name
+            TS ts = new TS(connx, tableName);
+
+            // Read the meta-parameters of the time series so that we'll know its date and list-length limits
+            if (!ts.IsInitialized) ts.Initialize(id);
+
+            // let the sister function do the rest of the work
+            return ReadLimitedDatesValues(connectionNumber, tableName, id,
+                        ts.TimeStepCount, ref dateValueList, ts.BlobStartDate, ts.BlobEndDate);
+        }
         
+        // usage: for GUI to retrieve a time series, with date and list-length limits.
+        // The length of the list is allocated in this method.
+        public int ReadLimitedDatesValues(
+                int connectionNumber, String tableName, Guid id,
+                int nReqValues, ref List<TimeSeriesValue> dateValueList, DateTime reqStartDate, DateTime reqEndDate)
+        {
+            // Get the connection that we'll pass along.
+            SqlConnection connx = GetConnectionFromId(connectionNumber);
+            // Construct new TS object with SqlConnection object and table name
+            TS ts = new TS(connx, tableName);
+
+            int nValuesRead = 0;
+            // Read the meta-parameters of the time series so that we'll know if it's regular or irregular
+            if(!ts.IsInitialized) ts.Initialize(id);
+
+            // Caller has the option of passing nReqValues==0, indicating that there should be no
+            // limit on the list length
+            if (nReqValues == 0) nReqValues = ts.TimeStepCount;
+
+            // The operations will differ for regular and irregular time series
+            if (ts.TimeStepUnit == TSDateCalculator.TimeStepUnitCode.Irregular)
+            {
+                // IRREGULAR TIME SERIES
+
+                // Allocate an array of date/value pairs that will be used by the caller
+                TimeSeriesValue[] dateValueArray = new TimeSeriesValue[nReqValues];
+                // Read the date/value list from the database
+                nValuesRead = ts.ReadValuesIrregular(id, nReqValues, dateValueArray, reqStartDate, reqEndDate);
+                // resize the array so that the list that we make from it will have exactly the right size
+                if(nValuesRead!=nReqValues)
+                    Array.Resize<TimeSeriesValue>(ref dateValueArray, nValuesRead);
+                // Convert the array of date/value pairs into the list that will be used by the caller
+                dateValueList = dateValueArray.ToList<TimeSeriesValue>();
+            }
+            else
+            {
+                // REGULAR TIME SERIES
+
+                // Allocate an array to hold the time series' data values
+                double[] valueArray = new double[nReqValues];
+                // Read the data values from the database
+                nValuesRead = ts.ReadValuesRegular(id, nReqValues, valueArray, reqStartDate);
+                // Allocate an array to hold the time series' date values
+                DateTime[] dateArray = new DateTime[nValuesRead];
+                // Fill the array with the date values corresponding to the time steps defined
+                // for this time series in the database.
+                ts.FillDateArray(id, nValuesRead, dateArray, reqStartDate);
+                // Allocate a list of date/value pairs that will be used by the caller
+                dateValueList = new List<TimeSeriesValue>(nValuesRead);
+                // Loop through all values, building the list of date/value pairs out of the
+                // primitive array of dates and primitive array of values.
+                TimeSeriesValue tsv = new TimeSeriesValue();
+                int i;
+                for (i = 0; i < nValuesRead; i++)
+                {
+                    tsv.Date = dateArray[i];
+                    tsv.Value = valueArray[i];
+                    dateValueList.Add(tsv);
+                    // So far we have ignored the requested end date.  However, at this
+                    // stage we won't make the list any longer than was requested by the caller.
+                    if (tsv.Date >= reqEndDate)
+                    {
+                        i++;
+                        break;
+                    }
+                }
+                // If the number of requested values is much smaller than the capacity of the list,
+                // then we'll reallocate the list so as not to waste memory.
+                if (i < nValuesRead * 0.4)
+                {
+                    dateValueList.TrimExcess();
+                }
+                nValuesRead = i;
+            }
+            return nValuesRead;
+        }
+
         #endregion
 
 

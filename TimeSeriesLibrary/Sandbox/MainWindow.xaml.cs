@@ -43,7 +43,8 @@ namespace Sandbox
                 "Data Source=.; Database=OasisOutput; Trusted_Connection=yes;");
 
             WriteOneSeriesIrreg();
-            //WriteOneSeriesArray();
+            WriteOneSeriesArray();
+            ReadOneSeriesGUI();
             //WriteOneSeriesList();
             //ReadOneSeriesArray();
         }
@@ -62,6 +63,28 @@ namespace Sandbox
             //WriteListTest();
             //DeleteTest();
 
+        }
+
+
+        void ReadOneSeriesGUI()
+        {
+            int ret;
+
+            List<TimeSeriesValue> dateValueList = new List<TimeSeriesValue>();
+
+            ret = tsLib.ReadAllDatesValues(connNumber, "FileStrm2",
+                            testId1, ref dateValueList);
+
+            ret = tsLib.ReadAllDatesValues(connNumber, "FileStrm2",
+                            testId2, ref dateValueList);
+
+            ret = tsLib.ReadLimitedDatesValues(connNumber, "FileStrm2",
+                            testId1, nVals, ref dateValueList, StartDate, StartDate.AddDays(3));
+
+            ret = tsLib.ReadLimitedDatesValues(connNumber, "FileStrm2",
+                            testId2, nVals, ref dateValueList, StartDate, StartDate.AddDays(3));
+
+            ret = 3;
         }
 
         void DeleteTest()
@@ -105,9 +128,9 @@ namespace Sandbox
             }
             testId1 = ts.WriteValuesIrregular(nVals, dateValArray);
             
-            TimeSeriesValue[] outArray = new TimeSeriesValue[nVals];
-            i = ts.ReadValuesIrregular(testId1, nVals, outArray, StartDate, StartDate.AddDays(5));
-            date = StartDate;
+            //TimeSeriesValue[] outArray = new TimeSeriesValue[nVals];
+            //i = ts.ReadValuesIrregular(testId1, nVals, outArray, StartDate, StartDate.AddDays(5));
+            //date = StartDate;
         }
         void WriteOneSeriesArray()
         {
@@ -117,8 +140,15 @@ namespace Sandbox
 
             for (i = 0; i < nVals; i++)
                 valArray[i] = i * 3;
-            testId1 = tsLib.WriteValuesUnsafe(connNumber, "FileStrm2",
+            testId2 = tsLib.WriteValuesUnsafe(connNumber, "FileStrm2",
                        3, 1, nVals, valArray, StartDate);
+
+            //List<TimeSeriesValue> tsvList = new List<TimeSeriesValue>();
+            //tsLib.ReadDatesValues(connNumber, "FileStrm2", testId1,
+            //            nVals, ref tsvList, StartDate);
+
+            DateTime date = StartDate;
+
         }
         void WriteOneSeriesList()
         {
