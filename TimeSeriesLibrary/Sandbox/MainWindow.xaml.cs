@@ -27,7 +27,7 @@ namespace Sandbox
     /// </summary>
     public partial class MainWindow : Window
     {
-        const int nVals = 5, nIter = 1000;
+        const int nVals = 10, nIter = 1000;
 
         int connNumber;
         TSLibrary tsLib = new TSLibrary();
@@ -44,7 +44,7 @@ namespace Sandbox
 
             WriteOneSeriesIrreg();
             WriteOneSeriesArray();
-            ReadOneSeriesGUI();
+            ReadOneSeriesModel();
             //WriteOneSeriesList();
             //ReadOneSeriesArray();
         }
@@ -66,6 +66,20 @@ namespace Sandbox
         }
 
 
+        void ReadOneSeriesModel()
+        {
+            int ret;
+
+            TimeSeriesValue[] dateValueArray = new TimeSeriesValue[nVals];
+
+            ret = tsLib.ReadDatesValuesUnsafe(connNumber, "FileStrm2",
+                            testId1, nVals, dateValueArray, StartDate, StartDate.AddDays(5));
+
+            ret = tsLib.ReadDatesValuesUnsafe(connNumber, "FileStrm2",
+                            testId2, nVals, dateValueArray, StartDate, StartDate.AddDays(3));
+
+            ret = 3;
+        }
         void ReadOneSeriesGUI()
         {
             int ret;

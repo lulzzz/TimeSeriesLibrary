@@ -11,6 +11,7 @@ namespace TimeSeriesLibrary
         public enum Enum : int
         {
             None = 0,
+            Internal_Error = -1,
 
             Requested_Dates_Outside_Of_Range = -5,
 

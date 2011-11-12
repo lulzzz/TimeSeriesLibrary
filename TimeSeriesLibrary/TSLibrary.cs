@@ -100,7 +100,7 @@ namespace TimeSeriesLibrary
         // usage: general model/onevar input
         public unsafe int ReadDatesValuesUnsafe(
                 int connectionNumber, String tableName, Guid id,
-                int nReqValues, TimeSeriesValue[] valueArray, DateTime reqStartDate, DateTime reqEndDate)
+                int nReqValues, TimeSeriesValue[] dateValueArray, DateTime reqStartDate, DateTime reqEndDate)
         {
             // Get the connection that we'll pass along.
             SqlConnection connx = GetConnectionFromId(connectionNumber);
@@ -111,6 +111,44 @@ namespace TimeSeriesLibrary
             // Read the meta-parameters of the time series so that we'll know if it's regular or irregular
             if (!ts.IsInitialized) ts.Initialize(id);
 
+            // The operations will differ for regular and irregular time series
+            if (ts.TimeStepUnit == TSDateCalculator.TimeStepUnitCode.Irregular)
+            {
+                // IRREGULAR TIME SERIES
+
+                // Read the date/value array from the database
+                nValuesRead = ts.ReadValuesIrregular(id, nReqValues, dateValueArray, reqStartDate, reqEndDate);
+            }
+            else
+            {
+                // REGULAR TIME SERIES
+
+                // Allocate an array to hold the time series' data values
+                double[] valueArray = new double[nReqValues];
+                // Read the data values from the database
+                nValuesRead = ts.ReadValuesRegular(id, nReqValues, valueArray, reqStartDate);
+                // Allocate an array to hold the time series' date values
+                DateTime[] dateArray = new DateTime[nValuesRead];
+                // Fill the array with the date values corresponding to the time steps defined
+                // for this time series in the database.
+                ts.FillDateArray(id, nValuesRead, dateArray, reqStartDate);
+                // Loop through all values, filling the array of date/value pairs from the
+                // primitive array of dates and primitive array of values.
+                int i;
+                for (i = 0; i < nValuesRead; i++)
+                {
+                    dateValueArray[i].Date = dateArray[i];
+                    dateValueArray[i].Value = valueArray[i];
+                    // So far we have ignored the requested end date.  However, at this
+                    // stage we won't make the list any longer than was requested by the caller.
+                    if (dateValueArray[i].Date >= reqEndDate)
+                    {
+                        i++;
+                        break;
+                    }
+                }
+                nValuesRead = i;
+            }
             //return ts.ReadValuesRegular(id, nReqValues, valueArray, reqStartDate);
             return nValuesRead;
         }

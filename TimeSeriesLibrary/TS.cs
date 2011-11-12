@@ -5,6 +5,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Text;
 using System.IO;
+using System.Security.Cryptography;
 
 namespace TimeSeriesLibrary
 {
@@ -14,7 +15,7 @@ namespace TimeSeriesLibrary
     /// </summary>
     public class TS
     {
-        // Fields with class scope may be shared between method calls
+        // Fields with class scope may be shared between method calls.
 
         private SqlConnection Connx;     // Object handles the connection to the database
         private String TableName;       // name of the database table that stores this time series
@@ -27,6 +28,84 @@ namespace TimeSeriesLibrary
         public int TimeStepCount;        // The number of time steps stored in the database
 
         public Boolean IsInitialized;
+
+        public static int blobPadForChecksumLength;
+
+
+
+        #region Static Constructor
+        /// <summary>
+        /// Static constructor is called before the first instance of the class is initialized--not when an
+        /// individual instance of the class is initialized.  That is, the static constructor is only called
+        /// once per run.  The static constructor can only set static data for the class.
+        /// </summary>
+        static TS()
+        {
+            // The binary array that the 'Write' methods build has padding at the front.  
+            // The BLOB (representing the timeseries values) that is saved to the database only
+            // includes the portion of the binary array that follows a padding at the front.
+            // The padding at the front is filled with the values of meta parameters that
+            // are needed to define the time series.  The full binary array--the BLOB data plus
+            // the padding--is used to compute an MD5 checksum to fingerprint this timeseries.
+
+            // It is crucial that the the meta parameters provided for in the padding as defined
+            // here be consistent
+            // with methods BuildStringForEmptyDataTable() and PadBlobForChecksum()
+            blobPadForChecksumLength =
+                // TimeStepUnit
+                sizeof(TSDateCalculator.TimeStepUnitCode) +
+                // TimeStepQuantity
+                sizeof(short) +
+                // TimeStepCount
+                sizeof(int) +
+                // StartDate and EndDate
+                8 + 8;
+        }
+        #endregion
+
+
+        #region ComputeChecksum() Method
+        byte[] ComputeChecksum(byte[] blobData)
+        {
+            // The binary array that the 'Write' methods build has padding at the front.  
+            // The BLOB (representing the timeseries values) that is saved to the database only
+            // includes the portion of the binary array that follows a padding at the front.
+            // The padding at the front is filled with the values of meta parameters that
+            // are needed to define the time series.  The full binary array--the BLOB data plus
+            // the padding--is used to compute an MD5 checksum to fingerprint this timeseries.
+
+            // It is crucial that the the meta parameters provided for in the padding as defined
+            // here be consistent with method BuildStringForEmptyDataTable() and the calculation
+            // of static field blobPadForChecksumLength in this class's static constructor.
+
+
+            MemoryStream blobStream = new MemoryStream(blobData);
+            BinaryWriter blobWriter = new BinaryWriter(blobStream);
+
+            // TimeStepUnit
+            blobWriter.Write((short)TimeStepUnit);
+            // TimeStepQuantity
+            blobWriter.Write(TimeStepQuantity);
+            // TimeStepCount
+            blobWriter.Write(TimeStepCount);
+            // StartDate and EndDate
+            blobWriter.Write(BlobStartDate.ToBinary());
+            blobWriter.Write(BlobEndDate.ToBinary());
+
+            // For security, ensure that the padding for the meta parameters does not run into
+            // the part of the array that is reserved for the BLOB.  This would indicate a coding error.
+            if (blobWriter.BaseStream.Position > blobPadForChecksumLength)
+            {
+                throw new TSLibraryException(ErrCode.Enum.Internal_Error,
+                                "INTERNAL ERROR: The padding for checksum data has been overrun.");
+            }
+            // MD5CryptoServiceProvider object has methods to compute the checksum
+            MD5CryptoServiceProvider md5Hasher = new MD5CryptoServiceProvider();
+            // compute and return the checksum
+            return md5Hasher.ComputeHash(blobData);
+        }
+        #endregion
+
 
         #region Class Constructor
         /// <summary>
@@ -102,7 +181,7 @@ namespace TimeSeriesLibrary
         /// columns defined.  Because the query names all required fields of the database table, the
         /// subsequent query will raise an exception if any fields are missing.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>The SQL command that returns an empty resultset</returns>
         String BuildStringForEmptyDataTable()
         {
             // note: by including 'where 1=0', we ensure that an empty resultset will be returned.
@@ -331,27 +410,30 @@ namespace TimeSeriesLibrary
                     // represents a record that we will add to the database table.
                     DataRow currentRow = dTable.NewRow();
 
-                    //
-                    // Fill the values into the DataTable's records
-
-                    // start at first record
-                    DateTime currentDate = OutStartDate;
+                    // The number of bytes required for the BLOB
                     int nBin = nOutValues * sizeof(double);
-                    Byte[] blobData = new Byte[nBin];
-                    Buffer.BlockCopy(valueArray, 0, blobData, 0, nBin);
+                    // Allocate an array for the BLOB--plus a bit of padding that is used to compute the checksum
+                    Byte[] blobData = new Byte[nBin + blobPadForChecksumLength];
+                    // Copy the array of doubles that was passed to the method into the byte array.  We skip
+                    // a bit of padding at the beginning that is used to compute the checksum.  Thus, the
+                    // byte array (without the padding for checksum) becomes the BLOB.
+                    Buffer.BlockCopy(valueArray, 0, blobData, blobPadForChecksumLength, nBin);
+                    // compute the checksum
+                    Byte[] checksum = ComputeChecksum(blobData);
 
                     // NewGuid method generates a GUID value that is virtually guaranteed to be unique
                     Id = Guid.NewGuid();
-                    // now save meta-parameters to the main table
+                    // transfer all of the data into the DataRow object
                     currentRow["Guid"] = Id;
                     currentRow["TimeStepUnit"] = (short)TimeStepUnit;
                     currentRow["TimeStepQuantity"] = TimeStepQuantity;
                     currentRow["TimeStepCount"] = nOutValues;
                     currentRow["StartDate"] = OutStartDate;
                     currentRow["EndDate"] = OutEndDate;
-                    currentRow["Checksum"] = ".";
-                    currentRow["ValueBlob"] = blobData;
+                    currentRow["Checksum"] = checksum;
+                    currentRow["ValueBlob"] = new ArraySegment<byte>(blobData, blobPadForChecksumLength, nBin);
                     dTable.Rows.Add(currentRow);
+                    // Save the DataRow object to the database
                     adp.Update(dTable);
                 }
             }
@@ -434,7 +516,7 @@ namespace TimeSeriesLibrary
                     currentRow["TimeStepCount"] = nOutValues;
                     currentRow["StartDate"] = OutStartDate;
                     currentRow["EndDate"] = OutEndDate;
-                    currentRow["Checksum"] = ".";
+                    currentRow["Checksum"] = new Byte[16];
                     currentRow["ValueBlob"] = blobData;
                     dTable.Rows.Add(currentRow);
                     adp.Update(dTable);
