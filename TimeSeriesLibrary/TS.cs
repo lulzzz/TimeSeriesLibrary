@@ -29,7 +29,7 @@ namespace TimeSeriesLibrary
 
         public Boolean IsInitialized;
 
-        public static int blobPadForChecksumLength;
+        public static int LengthOfParamInputForChecksum;
 
 
 
@@ -41,17 +41,12 @@ namespace TimeSeriesLibrary
         /// </summary>
         static TS()
         {
-            // The binary array that the 'Write' methods build has padding at the front.  
-            // The BLOB (representing the timeseries values) that is saved to the database only
-            // includes the portion of the binary array that follows a padding at the front.
-            // The padding at the front is filled with the values of meta parameters that
-            // are needed to define the time series.  The full binary array--the BLOB data plus
-            // the padding--is used to compute an MD5 checksum to fingerprint this timeseries.
-
+            // This static integer represents the length of a binary array that contains the meta
+            // parameters of the time series (i.e., not including the BLOB of time series values)
+            // which are included in the calculation of an MD5 checksum for the time series.
             // It is crucial that the the meta parameters provided for in the padding as defined
-            // here be consistent
-            // with methods BuildStringForEmptyDataTable() and PadBlobForChecksum()
-            blobPadForChecksumLength =
+            // here be consistent with methods BuildStringForEmptyDataTable() and ComputeChecksum()
+            LengthOfParamInputForChecksum =
                 // TimeStepUnit
                 sizeof(TSDateCalculator.TimeStepUnitCode) +
                 // TimeStepQuantity
@@ -65,44 +60,41 @@ namespace TimeSeriesLibrary
 
 
         #region ComputeChecksum() Method
-        byte[] ComputeChecksum(byte[] blobData)
+        /// <summary>
+        /// Method computes the checksum for the timeseries, using the information in class-level fields
+        /// and in the given BLOB (byte array) of timeseries values.
+        /// </summary>
+        /// <param name="blobData">the BLOB (byte array) of timeseries values</param>
+        /// <returns>the checksum</returns>
+        private byte[] ComputeChecksum(byte[] blobData)
         {
-            // The binary array that the 'Write' methods build has padding at the front.  
-            // The BLOB (representing the timeseries values) that is saved to the database only
-            // includes the portion of the binary array that follows a padding at the front.
-            // The padding at the front is filled with the values of meta parameters that
-            // are needed to define the time series.  The full binary array--the BLOB data plus
-            // the padding--is used to compute an MD5 checksum to fingerprint this timeseries.
+            // It is crucial that the the meta parameters written here into binArray be
+            // consistent with method BuildStringForEmptyDataTable() and the calculation
+            // of static field LengthOfParamInputForChecksum in this class's static constructor.
+            byte[] binArray = new byte[LengthOfParamInputForChecksum];
+            MemoryStream binStream = new MemoryStream();
+            BinaryWriter binWriter = new BinaryWriter(binStream);
 
-            // It is crucial that the the meta parameters provided for in the padding as defined
-            // here be consistent with method BuildStringForEmptyDataTable() and the calculation
-            // of static field blobPadForChecksumLength in this class's static constructor.
-
-
-            MemoryStream blobStream = new MemoryStream(blobData);
-            BinaryWriter blobWriter = new BinaryWriter(blobStream);
+            // Write relevant meta-parameters (not including the BLOB itself) into a short byte array
 
             // TimeStepUnit
-            blobWriter.Write((short)TimeStepUnit);
+            binWriter.Write((short)TimeStepUnit);
             // TimeStepQuantity
-            blobWriter.Write(TimeStepQuantity);
+            binWriter.Write(TimeStepQuantity);
             // TimeStepCount
-            blobWriter.Write(TimeStepCount);
+            binWriter.Write(TimeStepCount);
             // StartDate and EndDate
-            blobWriter.Write(BlobStartDate.ToBinary());
-            blobWriter.Write(BlobEndDate.ToBinary());
+            binWriter.Write(BlobStartDate.ToBinary());
+            binWriter.Write(BlobEndDate.ToBinary());
 
-            // For security, ensure that the padding for the meta parameters does not run into
-            // the part of the array that is reserved for the BLOB.  This would indicate a coding error.
-            if (blobWriter.BaseStream.Position > blobPadForChecksumLength)
-            {
-                throw new TSLibraryException(ErrCode.Enum.Internal_Error,
-                                "INTERNAL ERROR: The padding for checksum data has been overrun.");
-            }
             // MD5CryptoServiceProvider object has methods to compute the checksum
             MD5CryptoServiceProvider md5Hasher = new MD5CryptoServiceProvider();
-            // compute and return the checksum
-            return md5Hasher.ComputeHash(blobData);
+            // feed the short byte array of meta-parameters into the MD5 hash computer
+            md5Hasher.TransformBlock(binArray, 0, LengthOfParamInputForChecksum, binArray, 0);
+            // feed the BLOB of timeseries values into the MD5 hash computer
+            md5Hasher.TransformFinalBlock(blobData, 0, blobData.Length);
+            // return the hash (checksum) value
+            return md5Hasher.Hash;
         }
         #endregion
 
@@ -365,22 +357,19 @@ namespace TimeSeriesLibrary
         /// For instance, if the time step is 6 hours long, then this value is 6.</param>
         /// <param name="nOutValues">The number of values in the array to be written to the database</param>
         /// <param name="valueArray">The array of values to be written to the database</param>
-        /// <param name="OutStartDate">The date of the first time step</param>
+        /// <param name="outStartDate">The date of the first time step</param>
         /// <returns>GUID value identifying the database record that was created</returns>
         public unsafe Guid WriteValuesRegular(
                     short timeStepUnit, short timeStepQuantity,
-                    int nOutValues, double[] valueArray, DateTime OutStartDate)
+                    int nOutValues, double[] valueArray, DateTime outStartDate)
         {
             // Record values from function parameters
             TimeStepUnit = (TSDateCalculator.TimeStepUnitCode)timeStepUnit;
             TimeStepQuantity = timeStepQuantity;
-
+            TimeStepCount = nOutValues;
+            BlobStartDate = outStartDate;
             // Determine the date of the last time step
-            DateTime OutEndDate
-                = TSDateCalculator.IncrementDate(OutStartDate, TimeStepUnit, TimeStepQuantity, nOutValues);
-
-            //
-            // Start the DataTable
+            BlobEndDate = TSDateCalculator.IncrementDate(outStartDate, TimeStepUnit, TimeStepQuantity, TimeStepCount);
 
             // SQL statement that gives us a resultset for the DataTable object.  Note that
             // this query is rigged so that it will always return 0 records.  This is because
@@ -411,13 +400,13 @@ namespace TimeSeriesLibrary
                     DataRow currentRow = dTable.NewRow();
 
                     // The number of bytes required for the BLOB
-                    int nBin = nOutValues * sizeof(double);
+                    int nBin = TimeStepCount * sizeof(double);
                     // Allocate an array for the BLOB--plus a bit of padding that is used to compute the checksum
-                    Byte[] blobData = new Byte[nBin + blobPadForChecksumLength];
+                    Byte[] blobData = new Byte[nBin];
                     // Copy the array of doubles that was passed to the method into the byte array.  We skip
                     // a bit of padding at the beginning that is used to compute the checksum.  Thus, the
                     // byte array (without the padding for checksum) becomes the BLOB.
-                    Buffer.BlockCopy(valueArray, 0, blobData, blobPadForChecksumLength, nBin);
+                    Buffer.BlockCopy(valueArray, 0, blobData, 0, nBin);
                     // compute the checksum
                     Byte[] checksum = ComputeChecksum(blobData);
 
@@ -427,11 +416,11 @@ namespace TimeSeriesLibrary
                     currentRow["Guid"] = Id;
                     currentRow["TimeStepUnit"] = (short)TimeStepUnit;
                     currentRow["TimeStepQuantity"] = TimeStepQuantity;
-                    currentRow["TimeStepCount"] = nOutValues;
-                    currentRow["StartDate"] = OutStartDate;
-                    currentRow["EndDate"] = OutEndDate;
+                    currentRow["TimeStepCount"] = TimeStepCount;
+                    currentRow["StartDate"] = BlobStartDate;
+                    currentRow["EndDate"] = BlobEndDate;
                     currentRow["Checksum"] = checksum;
-                    currentRow["ValueBlob"] = new ArraySegment<byte>(blobData, blobPadForChecksumLength, nBin);
+                    currentRow["ValueBlob"] = blobData;
                     dTable.Rows.Add(currentRow);
                     // Save the DataRow object to the database
                     adp.Update(dTable);
@@ -445,22 +434,23 @@ namespace TimeSeriesLibrary
 
         #region WriteValuesIrregular() Method
         /// <summary>
-        /// Method writes the given array of values as a timeseries to the database with the given
-        /// start date and time step descriptors.
+        /// Method writes the given array of date/value pairs as an irregular timeseries to the database.
+        /// The method determines the start and end date of the timeseries using the given array of 
+        /// date/value pairs.  
         /// </summary>
-        /// <param name="timeStepUnit">TSDateCalculator.TimeStepUnitCode value for Minute,Hour,Day,Week,Month, or Year</param>
-        /// <param name="timeStepQuantity">The number of the given unit that defines the time step.
-        /// For instance, if the time step is 6 hours long, then this value is 6.</param>
         /// <param name="nOutValues">The number of values in the array to be written to the database</param>
-        /// <param name="valueArray">The array of values to be written to the database</param>
-        /// <param name="OutStartDate">The date of the first time step</param>
+        /// <param name="dateValueArray">The array of values to be written to the database</param>
         /// <returns>GUID value identifying the database record that was created</returns>
         public unsafe Guid WriteValuesIrregular(
                     int nOutValues, TimeSeriesValue[] dateValueArray)
         {
-            // Determine the date of the first and last time step
-            DateTime OutStartDate = dateValueArray[0].Date;
-            DateTime OutEndDate = dateValueArray[nOutValues-1].Date;
+            // Fill in the class-level fields
+            TimeStepUnit = TSDateCalculator.TimeStepUnitCode.Irregular;
+            TimeStepQuantity = 0;
+            TimeStepCount = nOutValues;
+            // Determine the date of the first and last time step from the input array
+            BlobStartDate = dateValueArray[0].Date;
+            BlobEndDate = dateValueArray[TimeStepCount-1].Date;
 
             //
             // Start the DataTable
@@ -497,25 +487,28 @@ namespace TimeSeriesLibrary
                     // Fill the values into the DataTable's records
 
                     // start at first record
-                    int nBin = nOutValues * sizeof(TimeSeriesValue);
+                    int nBin = TimeStepCount * sizeof(TimeSeriesValue);
                     Byte[] blobData = new Byte[nBin];
 
                     MemoryStream blobStream = new MemoryStream(blobData);
                     BinaryWriter blobWriter = new BinaryWriter(blobStream);
-                    for (int i = 0; i < nOutValues; i++)
+                    for (int i = 0; i < TimeStepCount; i++)
                     {
                         blobWriter.Write(dateValueArray[i].Date.ToBinary());
                         blobWriter.Write(dateValueArray[i].Value);
                     }
+                    // compute the checksum
+                    Byte[] checksum = ComputeChecksum(blobData);
+
                     // NewGuid method generates a GUID value that is virtually guaranteed to be unique
                     Id = Guid.NewGuid();
                     // now save meta-parameters to the main table
                     currentRow["Guid"] = Id;
-                    currentRow["TimeStepUnit"] = (short)TSDateCalculator.TimeStepUnitCode.Irregular;
-                    currentRow["TimeStepQuantity"] = 1;
-                    currentRow["TimeStepCount"] = nOutValues;
-                    currentRow["StartDate"] = OutStartDate;
-                    currentRow["EndDate"] = OutEndDate;
+                    currentRow["TimeStepUnit"] = (short)TimeStepUnit;
+                    currentRow["TimeStepQuantity"] = TimeStepQuantity;
+                    currentRow["TimeStepCount"] = TimeStepCount;
+                    currentRow["StartDate"] = BlobStartDate;
+                    currentRow["EndDate"] = BlobEndDate;
                     currentRow["Checksum"] = new Byte[16];
                     currentRow["ValueBlob"] = blobData;
                     dTable.Rows.Add(currentRow);

@@ -18,6 +18,8 @@ using System.Data.SqlClient;
 
 using System.IO;
 
+using System.Security.Cryptography;
+
 using TimeSeriesLibrary;
 
 namespace Sandbox
@@ -27,7 +29,7 @@ namespace Sandbox
     /// </summary>
     public partial class MainWindow : Window
     {
-        const int nVals = 10, nIter = 1000;
+        const int nVals = 30000, nIter = 1200;
 
         int connNumber;
         TSLibrary tsLib = new TSLibrary();
@@ -42,9 +44,10 @@ namespace Sandbox
             connNumber = tsLib.OpenConnection(
                 "Data Source=.; Database=OasisOutput; Trusted_Connection=yes;");
 
-            WriteOneSeriesIrreg();
-            WriteOneSeriesArray();
-            ReadOneSeriesModel();
+            //HashTest();
+            //WriteOneSeriesIrreg();
+            //WriteOneSeriesArray();
+            //ReadOneSeriesModel();
             //WriteOneSeriesList();
             //ReadOneSeriesArray();
         }
@@ -62,6 +65,56 @@ namespace Sandbox
             //WriteArrayTest();
             //WriteListTest();
             //DeleteTest();
+            HashTimer();
+
+        }
+
+        void HashTest()
+        {
+            byte[] inArray1 = new ASCIIEncoding().GetBytes("PartA");
+            byte[] inArray2 = new ASCIIEncoding().GetBytes("PartB");
+            byte[] inArray3 = new ASCIIEncoding().GetBytes("PartAPartC");
+            byte[] hash1 =new byte[16], hash2 = new byte[16];
+
+            MD5CryptoServiceProvider md5Hasher = new MD5CryptoServiceProvider();
+
+            md5Hasher.TransformBlock(inArray1, 0, inArray1.Length, inArray1, 0);
+            md5Hasher.TransformFinalBlock(inArray2, 0, inArray2.Length);
+            hash1 = md5Hasher.Hash;
+
+            md5Hasher = new MD5CryptoServiceProvider();
+            md5Hasher.TransformFinalBlock(inArray3, 0, inArray3.Length);
+            hash2 = md5Hasher.Hash;
+            
+
+        }
+        void HashTimer()
+        {
+            byte[] inArray1 = new byte[24];
+            byte[] inArray2 = new byte[30000*sizeof(double)];
+            int i;
+
+            for (i = 0; i < 24; i++)
+                inArray1[i] = (byte)(23 + i*2);
+
+            MemoryStream binStream = new MemoryStream(inArray2);
+            BinaryWriter binWriter = new BinaryWriter(binStream);
+            for (i = 0; i < 30000; i++)
+                binWriter.Write(i * (double)2.2);
+
+            DateTime timerStart = DateTime.Now;
+            for (i = 0; i < nIter; i++)
+            {
+                MD5CryptoServiceProvider md5Hasher = new MD5CryptoServiceProvider();
+                md5Hasher.TransformBlock(inArray1, 0, inArray1.Length, inArray1, 0);
+                md5Hasher.TransformFinalBlock(inArray2, 0, inArray2.Length);
+                byte[] hash1 = md5Hasher.Hash;
+            }
+            DateTime timerEnd = DateTime.Now;
+            TimeSpan timerDiff = timerEnd - timerStart;
+            TimeLabelBlob.Content = String.Format("ChkSum --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
+
+            i = 3;
 
         }
 
@@ -233,7 +286,7 @@ namespace Sandbox
             double[] valArray = new double[nVals];
 
             for (i = 0; i < nVals; i++)
-                valArray[i] = i * 25;
+                valArray[i] = i * 3;
 
             DateTime timerStart = DateTime.Now;
             for (i = 0; i < nIter; i++)
