@@ -47,6 +47,7 @@ namespace TimeSeriesLibrary
         public int ReadAndStore(String xmlFileName, List<TSImport> tsImportList)
         {
             String s;       // ephemeral String object
+            String DataString="";  // String that holds the unparsed DataSeries
             int numTs = 0;  // The # of time series successfuly processed by this method
             
             TSDateCalculator.TimeStepUnitCode TimeStepUnit = TSDateCalculator.TimeStepUnitCode.Day; // to be read from XML
@@ -114,6 +115,14 @@ namespace TimeSeriesLibrary
                                     TimeStepUnit = (TSDateCalculator.TimeStepUnitCode)
                                                         Enum.Parse(typeof(TSDateCalculator.TimeStepUnitCode), s);
                                     foundTimeStepUnit = true;
+                                    // If it is an irregular time series
+                                    if (TimeStepUnit == TSDateCalculator.TimeStepUnitCode.Irregular)
+                                    {
+                                        // <TimeStepQuantity> and <StartDate> are unnecessary and irrelevant
+                                        // to irregular time series
+                                        foundTimeStepQuantity = true;
+                                        foundStartDate = true;
+                                    }
                                     break;
 
                                 case "TimeStepQuantity":
@@ -124,10 +133,7 @@ namespace TimeSeriesLibrary
 
                                 case "Data":
                                     // <Data> contains a whitespace-deliminted string of values that comprise the time series
-                                    s = oneSeriesXmlReader.ReadElementContentAsString();
-                                    // Fancy LINQ statement turn the String object into an array of double[]
-                                    valueArray = s.Split(new char[] { }, StringSplitOptions.RemoveEmptyEntries)
-                                                    .Select(z => double.Parse(z)).ToArray();
+                                    DataString = oneSeriesXmlReader.ReadElementContentAsString();
                                     foundValueArray = true;
                                     break;
 
@@ -163,13 +169,45 @@ namespace TimeSeriesLibrary
                         if (!foundValueArray) errorList += "\n<Data> was not found";
                         throw new TSLibraryException(ErrCode.Enum.Xml_File_Incomplete, errorList);
                     }
-                    // The TS object is used to save one record to the database table
-                    TS ts = new TS(Connx, TableName);
-                    // save the record
-                    tsImport.Id = ts.WriteValuesRegular((short)TimeStepUnit, TimeStepQuantity, 
-                                            valueArray.Length, valueArray, StartDate);
-                    // Done with the TS object.
-                    ts = null;
+                    // Now that we've established that all fields have been read, we can parse the 
+                    // string of timeseries values into an array, and save the array to the database.
+                    if (TimeStepUnit == TSDateCalculator.TimeStepUnitCode.Irregular)
+                    {
+                        // Split the big data string into an array of strings.  The date/time/value triplets will be
+                        // all collated together.
+                        String[] stringArray = DataString.Split(new char[] { }, StringSplitOptions.RemoveEmptyEntries);
+                        // We'll use this date/value structure to build each item of the date/value array
+                        TimeSeriesValue tsv = new TimeSeriesValue();
+                        // allocate the array of date/value pairs
+                        TimeSeriesValue[] dateValueArray = new TimeSeriesValue[stringArray.Length/3];
+                        // Loop through the array of strings, 3 elements at a time
+                        for (int i = 2; i < stringArray.Length; i += 3)
+                        {
+                            s = stringArray[i - 2] + " " + stringArray[i - 1];
+                            tsv.Date = DateTime.Parse(s);
+                            tsv.Value = double.Parse(stringArray[i]);
+                            dateValueArray[i/3] = tsv;
+                        }
+                        // The TS object is used to save one record to the database table
+                        TS ts = new TS(Connx, TableName);
+                        // save the record
+                        tsImport.Id = ts.WriteValuesIrregular(dateValueArray.Length, dateValueArray);
+                        // Done with the TS object.
+                        ts = null;
+                    }
+                    else
+                    {
+                        // Fancy LINQ statement turns the String object into an array of double[]
+                        valueArray = DataString.Split(new char[] { }, StringSplitOptions.RemoveEmptyEntries)
+                                        .Select(z => double.Parse(z)).ToArray();
+                        // The TS object is used to save one record to the database table
+                        TS ts = new TS(Connx, TableName);
+                        // save the record
+                        tsImport.Id = ts.WriteValuesRegular((short)TimeStepUnit, TimeStepQuantity,
+                                                valueArray.Length, valueArray, StartDate);
+                        // Done with the TS object.
+                        ts = null;
+                    }
                     
                     // the TSImport object contains data for this timeseries that TSLibrary does not process.
                     // Add the TSImport object to a list that the calling process can read and use.

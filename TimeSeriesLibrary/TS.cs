@@ -509,7 +509,7 @@ namespace TimeSeriesLibrary
                     currentRow["TimeStepCount"] = TimeStepCount;
                     currentRow["StartDate"] = BlobStartDate;
                     currentRow["EndDate"] = BlobEndDate;
-                    currentRow["Checksum"] = new Byte[16];
+                    currentRow["Checksum"] = checksum;
                     currentRow["ValueBlob"] = blobData;
                     dTable.Rows.Add(currentRow);
                     adp.Update(dTable);
@@ -600,24 +600,22 @@ namespace TimeSeriesLibrary
             if (!IsInitialized) Initialize(id);
 
             int i;
+            DateTime revisedStartDate;
             // The time steps boundaries are defined by the database record, so
             // we can't rely on the reqStartDate to have the correct time step boundary.
             // Therefore, begin counting at the first date in the database record.
             if (reqStartDate > BlobStartDate)
             {
                 i = TSDateCalculator.CountSteps(BlobStartDate, reqStartDate, TimeStepUnit, TimeStepQuantity);
-                dateArray[0] = TSDateCalculator.IncrementDate(BlobStartDate, TimeStepUnit, TimeStepQuantity, i);
+                revisedStartDate = TSDateCalculator.IncrementDate(BlobStartDate, TimeStepUnit, TimeStepQuantity, i);
             }
             else
             {
-                dateArray[0] = BlobStartDate;
+                revisedStartDate = BlobStartDate;
             }
 
-            // Loop through the length of the array and fill in the date values
-            for (i = 1; i < nReqValues; i++)
-            {
-                dateArray[i] = TSDateCalculator.IncrementDate(dateArray[i-1], TimeStepUnit, TimeStepQuantity, 1);
-            }
+            TSDateCalculator.FillDateArray(TimeStepUnit, TimeStepQuantity,
+                                nReqValues, dateArray, revisedStartDate);
         }
         #endregion
 

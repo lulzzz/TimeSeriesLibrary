@@ -129,5 +129,18 @@ namespace TimeSeriesLibrary
             }
             return i;
         }
+
+        public static void FillDateArray(
+                    TimeStepUnitCode timeStepUnit, short timeStepQuantity,
+                    int nReqValues, DateTime[] dateArray, DateTime reqStartDate)
+        {
+            dateArray[0] = reqStartDate;
+            // Loop through the length of the array and fill in the date values
+            for (int i = 1; i < nReqValues; i++)
+            {
+                dateArray[i] = IncrementDate(dateArray[i - 1], timeStepUnit, timeStepQuantity, 1);
+            }
+        }
+
     }
 }

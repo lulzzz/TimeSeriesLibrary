@@ -41,4 +41,25 @@
 12.2
 		</Data>
 	</TimeSeries>
+	<TimeSeries>
+		<Name>IRREGULARCLARENCE</Name>
+		<Units>AFD</Units>
+		<TimeSeriesType>INST-VAL</TimeSeriesType>
+		<TraceNumber>22</TraceNumber>
+		<StartDate>1/01/1930 11:59:00</StartDate>
+		<TimeStepUnit>Irregular</TimeStepUnit>
+		<TimeStepQuantity>337</TimeStepQuantity>
+		<Data>
+01/01/1930 11:59:00 312.5
+01/01/1930 23:59:00 321.7
+01/02/1930 11:59:00 332.8
+01/02/1930 23:59:00 399.8
+01/03/1930 11:59:00 390.8
+01/03/1930 23:59:00 360.8
+01/04/1930 11:59:00 350.8
+01/04/1930 23:59:00 320.8
+01/05/1930 11:59:00 320.2
+01/05/1930 23:59:00 312.2
+		</Data>
+	</TimeSeries>
 </Import>

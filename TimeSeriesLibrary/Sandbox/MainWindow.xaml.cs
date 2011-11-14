@@ -29,7 +29,7 @@ namespace Sandbox
     /// </summary>
     public partial class MainWindow : Window
     {
-        const int nVals = 30000, nIter = 1200;
+        const int nVals = 30000, nIter = 500;
 
         int connNumber;
         TSLibrary tsLib = new TSLibrary();
@@ -59,13 +59,13 @@ namespace Sandbox
 
         private void GoButtonClick(object sender, RoutedEventArgs e)
         {
-            //ImportTest();
+            ImportTest();
             //ReadArrayTest();
             //ReadListTest();
             //WriteArrayTest();
             //WriteListTest();
             //DeleteTest();
-            HashTimer();
+            //HashTimer();
 
         }
 
@@ -168,10 +168,10 @@ namespace Sandbox
             List<TSImport> l = new List<TSImport>();
 
             DateTime timerStart = DateTime.Now;
-            for (i = 0; i < 6; i++)
+            for (i = 0; i < nIter; i++)
             {
                 tsLib.XmlImportWithList(connNumber, "FileStrm2",
-                            "D:\\OASIS\\_Build\\TimeSeriesLibrary\\TimeSeriesLibrary\\Sandbox\\test4.xml", l);
+                            "D:\\OASIS\\_Build\\TimeSeriesLibrary\\TimeSeriesLibrary\\Sandbox\\test2irreg.xml", l);
             }
             DateTime timerEnd = DateTime.Now;
             TimeSpan timerDiff = timerEnd - timerStart;
