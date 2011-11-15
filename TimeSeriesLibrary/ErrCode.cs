@@ -23,6 +23,8 @@ namespace TimeSeriesLibrary
             Missing_Fields_From_Table = -102,
             Could_Not_Open_Values_Table = -103,
             Sql_Syntax_Error = -104,
+            Record_Not_Regular = -105,
+            Record_Not_Irregular = -106,
 
             Array_Length_Less_Than_One = -300,
             End_Date_Precedes_Start_Date = -301,

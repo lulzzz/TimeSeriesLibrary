@@ -203,9 +203,13 @@ namespace TimeSeriesLibrary
             // Initialize class fields other than the BLOB of data values
             if (!IsInitialized) Initialize(id);
 
-            // Using the start date and number of values, compute the requested end date.
-            //DateTime reqEndDate
-            //    = TSDateCalculator.IncrementDate(reqStartDate, TimeStepUnit, TimeStepQuantity, nReqValues);
+            // This method can only process regular-time-step series
+            if (TimeStepUnit == TSDateCalculator.TimeStepUnitCode.Irregular)
+            {
+                throw new TSLibraryException(ErrCode.Enum.Record_Not_Regular,
+                                String.Format("The method can only process regular time series, but" +
+                                "the record with Guid {0} is irregular.", id));
+            }
 
             //
             // Start the DataTable
@@ -281,6 +285,14 @@ namespace TimeSeriesLibrary
             int numReadValues = 0;
             // Initialize class fields other than the BLOB of data values
             if (!IsInitialized) Initialize(id);
+
+            // This method can only process irregular-time-step series
+            if (TimeStepUnit != TSDateCalculator.TimeStepUnitCode.Irregular)
+            {
+                throw new TSLibraryException(ErrCode.Enum.Record_Not_Irregular,
+                                String.Format("The method can only process irregular time series, but" +
+                                "the record with Guid {0} is regular.", id));
+            }
 
             // If the start or end date requested by the caller are such that the stored time series
             // does not overlap, then we don't need to go any further.

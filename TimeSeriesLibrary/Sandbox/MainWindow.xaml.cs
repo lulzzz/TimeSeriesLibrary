@@ -48,7 +48,7 @@ namespace Sandbox
             //WriteOneSeriesIrreg();
             //WriteOneSeriesArray();
             //ReadOneSeriesModel();
-            //WriteOneSeriesList();
+            WriteOneSeriesList();
             //ReadOneSeriesArray();
         }
         private void MainWindowClosed(object sender, EventArgs e)
@@ -207,7 +207,7 @@ namespace Sandbox
 
             for (i = 0; i < nVals; i++)
                 valArray[i] = i * 3;
-            testId2 = tsLib.WriteValuesUnsafe(connNumber, "FileStrm2",
+            testId2 = tsLib.WriteValuesRegularUnsafe(connNumber, "FileStrm2",
                        3, 1, nVals, valArray, StartDate);
 
             //List<TimeSeriesValue> tsvList = new List<TimeSeriesValue>();
@@ -222,11 +222,32 @@ namespace Sandbox
             int i;
 
             List<double> valList = new List<double>();
+            List<TimeSeriesValue> dateValList = new List<TimeSeriesValue>();
+            DateTime date = StartDate;
 
+            TimeSeriesValue tsv;
             for (i = 0; i < nVals; i++)
+            {
                 valList.Add(i * 10);
+                tsv.Date = date;
+                tsv.Value = i * 10;
+                dateValList.Add(tsv);
+                date = date.AddDays(3);
+            }
+
+            //testId2 = tsLib.WriteValuesRegular(connNumber, "FileStrm2",
+            //           3, 1, nVals, valList, StartDate);
+
+            //testId2 = tsLib.WriteValues(connNumber, "FileStrm2",
+            //                (short)TSDateCalculator.TimeStepUnitCode.Irregular, 0, dateValList);
+
             testId2 = tsLib.WriteValues(connNumber, "FileStrm2",
-                       3, 1, nVals, valList, StartDate);
+                            (short)TSDateCalculator.TimeStepUnitCode.Day, 3, dateValList);
+
+            
+            List<TimeSeriesValue> dv = new List<TimeSeriesValue>();
+            i = tsLib.ReadAllDatesValues(connNumber, "FileStrm2", testId2, ref dv);
+            i = 3;
         }
         void ReadOneSeriesArray()
         {
@@ -234,10 +255,10 @@ namespace Sandbox
 
             double[] valArray = new double[nVals];
 
-            ret = tsLib.ReadValuesUnsafe(connNumber, "FileStrm2",
+            ret = tsLib.ReadValuesRegularUnsafe(connNumber, "FileStrm2",
                             testId1, nVals, valArray, StartDate);
 
-            ret = tsLib.ReadValuesUnsafe(connNumber, "FileStrm2",
+            ret = tsLib.ReadValuesRegularUnsafe(connNumber, "FileStrm2",
                             testId2, nVals, valArray, StartDate);
 
             ret = 3;
@@ -253,7 +274,7 @@ namespace Sandbox
             for (i = 0; i < nIter; i++)
             {
                 TimeLabelBlob.Content = String.Format("Iteration {0}", i);
-                ret = tsLib.ReadValuesUnsafe(connNumber, "FileStrm2",
+                ret = tsLib.ReadValuesRegularUnsafe(connNumber, "FileStrm2",
                                 testId1, nVals, valArray, StartDate);
             }
             DateTime timerEnd = DateTime.Now;
@@ -270,7 +291,7 @@ namespace Sandbox
             for (i = 0; i < nIter; i++)
             {
                 TimeLabelBlob.Content = String.Format("Iteration {0}", i);
-                ret = tsLib.ReadValues(connNumber, "FileStrm2",
+                ret = tsLib.ReadValuesRegular(connNumber, "FileStrm2",
                                 testId1, nVals, ref valList, StartDate);
             }
             DateTime timerEnd = DateTime.Now;
@@ -292,7 +313,7 @@ namespace Sandbox
             for (i = 0; i < nIter; i++)
             {
                 TimeLabelBlob.Content = String.Format("Iteration {0}", i);
-                tsLib.WriteValuesUnsafe(connNumber, "FileStrm2",
+                tsLib.WriteValuesRegularUnsafe(connNumber, "FileStrm2",
                            3, 1, nVals, valArray, StartDate);
             }
             DateTime timerEnd = DateTime.Now;
@@ -312,7 +333,7 @@ namespace Sandbox
             for (i = 0; i < nIter; i++)
             {
                 TimeLabelBlob.Content = String.Format("Iteration {0}", i);
-                tsLib.WriteValues(connNumber, "FileStrm2",
+                tsLib.WriteValuesRegular(connNumber, "FileStrm2",
                            3, 1, nVals, valList, StartDate);
             }
             DateTime timerEnd = DateTime.Now;
