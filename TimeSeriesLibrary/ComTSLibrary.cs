@@ -5,18 +5,74 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Text;
 using System.IO;
+using System.Runtime.InteropServices;  // for the COM callable wrapper
 
 namespace TimeSeriesLibrary
 {
     /// <summary>
-    /// This class contains the callable functions of the library for .NET code.
+    /// This interface gives the signatures of methods in the ComTSLibrary class
+    /// for the COM callable wrapper.  The interface should have the same name
+    /// as the class that implements it, with _ added to the beginning.
     /// </summary>
-    public class TSLibrary
+    [Guid("752F96CB-377C-41fe-8FB0-2045C69DA0D3")]
+    [InterfaceType(ComInterfaceType.InterfaceIsIDispatch)]
+    public interface _ComTSLibrary
     {
+        int OpenConnection(string connectionString);
+        void CloseConnection(int connectionNumber);
+        System.Data.SqlClient.SqlConnection GetConnectionFromId(int connectionNumber);
+
+        int ReadDatesValuesUnsafe(int connectionNumber, string tableName, Guid id, int nReqValues, TimeSeriesValue[] dateValueArray, DateTime reqStartDate, DateTime reqEndDate);
+        int ReadValuesRegularUnsafe(int connectionNumber, string tableName, Guid id, int nReqValues, double[] valueArray, DateTime reqStartDate);
+
+        Guid WriteValuesIrregularUnsafe(int connectionNumber, string tableName, int nOutValues, TimeSeriesValue[] dateValueArray);
+        Guid WriteValuesRegularUnsafe(int connectionNumber, string tableName, short timeStepUnit, short timeStepQuantity, int nOutValues, double[] valueArray, DateTime outStartDate);
+
+        bool DeleteMatchingSeries(int connectionNumber, string tableName, string whereClause);
+        bool DeleteSeries(int connectionNumber, string tableName, Guid id);
+
+        int XmlImport(int connectionNumber, string tableName, string xmlFileName);
+        int XmlImportWithList(int connectionNumber, string tableName, string xmlFileName, System.Collections.Generic.List<TSImport> tsImportList);
+
+        DateTime IncrementDate(DateTime startDate, short unit, short stepSize, int numSteps);
+        void FillDateArray(short timeStepUnit, short timeStepQuantity, int nReqValues, DateTime[] dateArray, DateTime reqStartDate);
+        void FillSeriesDateArray(int connectionNumber, string tableName, Guid id, int nReqValues, DateTime[] dateArray, DateTime reqStartDate);
+        int CountTimeSteps(DateTime startDate, DateTime endDate, short unit, short stepSize);
+    } 
+    
+    /// <summary>
+    /// This class contains the callable functions of the library for COM code.
+    /// As such, it actually wraps an object of the TSLibrary class, in which
+    /// the callable functions are designed to be called by .NET code.
+    /// The class implements an interface in order to use the COM callable wrapper.
+    /// </summary>
+    [Guid("6AC55A17-C27E-4a53-9D2A-8A9F9369070D")]
+    [ClassInterface(ClassInterfaceType.None)]
+    [ProgId("TimeSeriesLibrary.ComTSLibrary")]
+    public class ComTSLibrary : _ComTSLibrary
+    {
+        /// <summary>
+        /// The ComTSLibrary class wraps an instance of the TSLibrary class.
+        /// </summary>
+        private TSLibrary TSLib;
         /// <summary>
         /// TSConnection object maintains a list of connections that have been opened by the library
         /// </summary>
-        public TSConnection ConnxObject = new TSConnection();
+        public TSConnection ConnxObject;
+
+        /// <summary>
+        /// Class constructor.
+        /// In accord with the COM callable wrapper, this constructor can not take any parameters,
+        /// and there can be no other constructors besides this one.
+        /// </summary>
+        public ComTSLibrary()
+        {
+            // The ComTSLibrary class wraps an instance of the TSLibrary class
+            TSLib = new TSLibrary();
+            // This class's ConnxObject field is simply a reference to the ConnxObject
+            // field in the TSLibrary object that this class wraps.
+            ConnxObject = TSLib.ConnxObject;
+        }
 
         #region Public Methods for Connection
         /// <summary>
@@ -28,8 +84,8 @@ namespace TimeSeriesLibrary
         /// <returns>The serial number that was automatically assigned to the new connection.</returns>
         public int OpenConnection(String connectionString)
         {
-            // all the logic is found in the TSConnection object.
-            return ConnxObject.OpenConnection(connectionString);
+            // let the sibling method in the wrapped TSLibrary object contain the logic
+            return TSLib.OpenConnection(connectionString);
         }
         /// <summary>
         /// Closes the connection identified with the given serial number.  When the
@@ -40,8 +96,8 @@ namespace TimeSeriesLibrary
         /// <param name="connectionNumber">The serial number of the connection to be closed</param>
         public void CloseConnection(int connectionNumber)
         {
-            // all the logic is found in the TSConnection object.
-            ConnxObject.CloseConnection(connectionNumber);
+            // let the sibling method in the wrapped TSLibrary object contain the logic
+            TSLib.CloseConnection(connectionNumber);
         }
         /// <summary>
         /// Returns the SqlConnection object corresponding to the given connection number.
@@ -50,18 +106,8 @@ namespace TimeSeriesLibrary
         /// <returns>The SqlConnection object corresponding to the given connection number</returns>
         public SqlConnection GetConnectionFromId(int connectionNumber)
         {
-            SqlConnection connx;
-            try
-            {
-                connx = ConnxObject.TSConnectionsCollection[connectionNumber];
-            }
-            catch
-            {
-                throw new TSLibraryException(ErrCode.Enum.Connection_Not_Found,
-                                String.Format("TimeSeriesLibrary does not have an open connection number {0}", 
-                                connectionNumber));
-            }
-            return connx;
+            // let the sibling method in the wrapped TSLibrary object contain the logic
+            return TSLib.GetConnectionFromId(connectionNumber);
         }
         #endregion
 
@@ -71,96 +117,54 @@ namespace TimeSeriesLibrary
         /// <summary>
         /// This method reads the time series matching the given GUID, using the given
         /// database connection number and database table name, and stores the values into
-        /// the given List of double-precision floats.  The method starts populating the
-        /// list at the given start date, filling in no more than the number of values
+        /// the given array of double-precision floats.  The method starts populating the
+        /// array at the given start date, filling in no more than the number of values
         /// that are requested.  An exception is thrown if the time series is not found
         /// to have regular time steps.
         /// 
-        /// This method is designed to be used from managed code such as C#.  This method
+        /// This method is designed to be used from unmanaged code such as C/C++.  This method
         /// does not return values for the dates of each time step.
         /// </summary>
         /// <param name="connectionNumber">The serial number of the connection that is used to read the time series</param>
         /// <param name="tableName">The name of the database table that contains the time series</param>
         /// <param name="id">GUID value identifying the time series to read</param>
-        /// <param name="nReqValues">The maximum number of values that the method will fill into the list</param>
-        /// <param name="valueList">The List that the method will fill</param>
-        /// <param name="reqStartDate">The earliest date that the method will enter into the list</param>
-        /// <returns>The number of values that the method added to the list</returns>
-        // usage: perhaps none?
-        public int ReadValuesRegular(
-                int connectionNumber, String tableName, Guid id,
-                int nReqValues, ref List<double> valueList, DateTime reqStartDate)
-        {
-            // Get the connection that we'll pass along.
-            SqlConnection connx = GetConnectionFromId(connectionNumber);
-            // Construct new TS object with SqlConnection object and table name
-            TS ts = new TS(connx, tableName);
-
-            double[] valueArray = new double[nReqValues];
-            int ret = ts.ReadValuesRegular(id, nReqValues, valueArray, reqStartDate);
-            valueList = valueArray.ToList<double>();
-            return ret;
-        }
-
-        /// <summary>
-        /// This method reads the time series matching the given GUID, using the given
-        /// database connection number and database table name, and stores the values into
-        /// the given list of TimeSeriesValue structs (date/value pairs).  The method will 
-        /// read regular or irregular time series.
-        /// 
-        /// This method is designed to be used from managed code such as C#.  This
-        /// method makes the list as long as is needed to store every time step value that
-        /// is stored in the database.
-        /// </summary>
-        /// <param name="connectionNumber">The serial number of the connection that is used to read the time series</param>
-        /// <param name="tableName">The name of the database table that contains the time series</param>
-        /// <param name="id">GUID value identifying the time series to read</param>
-        /// <param name="dateValueList">The list that the method will fill</param>
-        /// <returns>The number of values that the method added to the list</returns>
-        // usage: for GUI to retrieve an entire time series.  The length of the list is allocated in this method.
-        public int ReadAllDatesValues(
-                int connectionNumber, String tableName, Guid id,
-                ref List<TimeSeriesValue> dateValueList)
-        {
-            // Get the connection that we'll pass along.
-            SqlConnection connx = GetConnectionFromId(connectionNumber);
-            // Construct new TS object with SqlConnection object and table name
-            TS ts = new TS(connx, tableName);
-
-            // Read the meta-parameters of the time series so that we'll know its date and list-length limits
-            if (!ts.IsInitialized) ts.Initialize(id);
-
-            // let the sister function do the rest of the work
-            return ReadLimitedDatesValues(connectionNumber, tableName, id,
-                        ts.TimeStepCount, ref dateValueList, ts.BlobStartDate, ts.BlobEndDate);
-        }
-
-        /// <summary>
-        /// This method reads the time series matching the given GUID, using the given
-        /// database connection number and database table name, and stores the values into
-        /// the given list of TimeSeriesValue structs (date/value pairs).  The method starts populating the
-        /// array at the given start date, filling in no more than the number of values
-        /// that are requested, and will not add any values that come after the given end date.
-        /// The method will read regular or irregular time series.
-        /// 
-        /// This method is designed to be used from managed code such as C#.  This
-        /// method will not add any values to the list that are earlier than the given start date,
-        /// later than the given end date, or that exceed the given list length.  The given
-        /// list is instantiated by the method.
-        /// </summary>
-        /// <param name="connectionNumber">The serial number of the connection that is used to read the time series</param>
-        /// <param name="tableName">The name of the database table that contains the time series</param>
-        /// <param name="id">GUID value identifying the time series to read</param>
-        /// <param name="nReqValues">The maximum number of values that the method will fill into the array.
-        /// If zero is given, then no maximum number of values is applied.</param>
-        /// <param name="dateValueList">The list that the method will fill</param>
+        /// <param name="nReqValues">The maximum number of values that the method will fill into the array</param>
+        /// <param name="valueArray">The array that the method will fill</param>
         /// <param name="reqStartDate">The earliest date that the method will enter into the array</param>
-        /// <param name="reqEndDate">The latest date that the method will enter into the array</param>
-        /// <returns>The number of values that the method added to the list</returns>
-        // usage: for GUI to retrieve a time series, with date and list-length limits.
-        public int ReadLimitedDatesValues(
+        /// <returns>The number of values that the method added to the array</returns>
+        // usage: for onevar to read model output, b/c it does not need dates for each timeseries
+        public unsafe int ReadValuesRegularUnsafe(
                 int connectionNumber, String tableName, Guid id,
-                int nReqValues, ref List<TimeSeriesValue> dateValueList, DateTime reqStartDate, DateTime reqEndDate)
+                int nReqValues, double[] valueArray, DateTime reqStartDate)
+        {
+            // Get the connection that we'll pass along.
+            SqlConnection connx = GetConnectionFromId(connectionNumber);
+            // Construct new TS object with SqlConnection object and table name
+            TS ts = new TS(connx, tableName);
+
+            return ts.ReadValuesRegular(id, nReqValues, valueArray, reqStartDate);
+        }
+
+        /// <summary>
+        /// This method reads the time series matching the given GUID, using the given
+        /// database connection number and database table name, and stores the values into
+        /// the given array of TimeSeriesValue structs (date/value pairs).  The method starts populating the
+        /// array at the given start date, filling in no more than the number of values
+        /// that are requested.  The method will read regular or irregular time series.
+        /// 
+        /// This method is designed to be used from unmanaged code such as C/C++.
+        /// </summary>
+        /// <param name="connectionNumber">The serial number of the connection that is used to read the time series</param>
+        /// <param name="tableName">The name of the database table that contains the time series</param>
+        /// <param name="id">GUID value identifying the time series to read</param>
+        /// <param name="nReqValues">The maximum number of values that the method will fill into the array</param>
+        /// <param name="dateValueArray">The array that the method will fill</param>
+        /// <param name="reqStartDate">The earliest date that the method will enter into the array</param>
+        /// <returns>The number of values that the method added to the array</returns>
+        // usage: general model/onevar input
+        public unsafe int ReadDatesValuesUnsafe(
+                int connectionNumber, String tableName, Guid id,
+                int nReqValues, TimeSeriesValue[] dateValueArray, DateTime reqStartDate, DateTime reqEndDate)
         {
             // Get the connection that we'll pass along.
             SqlConnection connx = GetConnectionFromId(connectionNumber);
@@ -169,26 +173,15 @@ namespace TimeSeriesLibrary
 
             int nValuesRead = 0;
             // Read the meta-parameters of the time series so that we'll know if it's regular or irregular
-            if(!ts.IsInitialized) ts.Initialize(id);
-
-            // Caller has the option of passing nReqValues==0, indicating that there should be no
-            // limit on the list length
-            if (nReqValues == 0) nReqValues = ts.TimeStepCount;
+            if (!ts.IsInitialized) ts.Initialize(id);
 
             // The operations will differ for regular and irregular time series
             if (ts.TimeStepUnit == TSDateCalculator.TimeStepUnitCode.Irregular)
             {
                 // IRREGULAR TIME SERIES
 
-                // Allocate an array of date/value pairs that will be used by the caller
-                TimeSeriesValue[] dateValueArray = new TimeSeriesValue[nReqValues];
-                // Read the date/value list from the database
+                // Read the date/value array from the database
                 nValuesRead = ts.ReadValuesIrregular(id, nReqValues, dateValueArray, reqStartDate, reqEndDate);
-                // resize the array so that the list that we make from it will have exactly the right size
-                if(nValuesRead!=nReqValues)
-                    Array.Resize<TimeSeriesValue>(ref dateValueArray, nValuesRead);
-                // Convert the array of date/value pairs into the list that will be used by the caller
-                dateValueList = dateValueArray.ToList<TimeSeriesValue>();
             }
             else
             {
@@ -203,35 +196,27 @@ namespace TimeSeriesLibrary
                 // Fill the array with the date values corresponding to the time steps defined
                 // for this time series in the database.
                 ts.FillDateArray(id, nValuesRead, dateArray, reqStartDate);
-                // Allocate a list of date/value pairs that will be used by the caller
-                dateValueList = new List<TimeSeriesValue>(nValuesRead);
-                // Loop through all values, building the list of date/value pairs out of the
+                // Loop through all values, filling the array of date/value pairs from the
                 // primitive array of dates and primitive array of values.
-                TimeSeriesValue tsv = new TimeSeriesValue();
                 int i;
                 for (i = 0; i < nValuesRead; i++)
                 {
-                    tsv.Date = dateArray[i];
-                    tsv.Value = valueArray[i];
-                    dateValueList.Add(tsv);
+                    dateValueArray[i].Date = dateArray[i];
+                    dateValueArray[i].Value = valueArray[i];
                     // So far we have ignored the requested end date.  However, at this
                     // stage we won't make the list any longer than was requested by the caller.
-                    if (tsv.Date >= reqEndDate)
+                    if (dateValueArray[i].Date >= reqEndDate)
                     {
                         i++;
                         break;
                     }
                 }
-                // If the number of requested values is much smaller than the capacity of the list,
-                // then we'll reallocate the list so as not to waste memory.
-                if (i < nValuesRead * 0.4)
-                {
-                    dateValueList.TrimExcess();
-                }
                 nValuesRead = i;
             }
+            //return ts.ReadValuesRegular(id, nReqValues, valueArray, reqStartDate);
             return nValuesRead;
         }
+
 
         #endregion
 
@@ -242,81 +227,59 @@ namespace TimeSeriesLibrary
         // TODO: Create methods WriteValues (take list of date/value pairs)
 
         /// <summary>
-        /// This method saves the given time series list as a new database record, using the given
+        /// This method saves the given time series array as a new database record, using the given
         /// database connection number and database table name.  The method only writes regular
-        /// time series.  The given list is expressed only as values without explicit dates, so
+        /// time series.  The given array is expressed only as values without explicit dates, so
         /// the method requires that the dates be defined by a given time step unit, quanitity
         /// of units per time step, the number of time steps in the array, and the date of the first
         /// time step.
         /// 
-        /// This method is designed to be used from managed code such as C#.
+        /// This method is designed to be used from unmanaged code such as C/C++.
         /// </summary>
         /// <param name="connectionNumber">The serial number of the connection that is used to write the time series</param>
         /// <param name="tableName">The name of the database table that time series will be written to</param>
         /// <param name="timeStepUnit">TSDateCalculator.TimeStepUnitCode value for Minute,Hour,Day,Week,Month, or Year</param>
         /// <param name="timeStepQuantity">The number of the given unit that defines the time step.
         /// For instance, if the time step is 6 hours long, then this value is 6.</param>
-        /// <param name="nOutValues">The number of values in the list to be written to the database</param>
-        /// <param name="valueArray">list of time series values to be written to database</param>
+        /// <param name="nOutValues">The number of values in the array to be written to the database</param>
+        /// <param name="valueArray">array of time series values to be written to database</param>
         /// <param name="outStartDate">date of the first time step in the series</param>
         /// <returns>GUID value identifying the database record that was created</returns>
-        public Guid WriteValuesRegular(
+        public unsafe Guid WriteValuesRegularUnsafe(
                     int connectionNumber, String tableName,
                     short timeStepUnit, short timeStepQuantity,
-                    int nOutValues, List<double> valueList, DateTime outStartDate)
+                    int nOutValues, double[] valueArray, DateTime outStartDate)
         {
             // Get the connection that we'll pass along.
             SqlConnection connx = GetConnectionFromId(connectionNumber);
             // Construct new TS object with SqlConnection object and table name
             TS ts = new TS(connx, tableName);
 
-            return ts.WriteValuesRegular(timeStepUnit, timeStepQuantity, nOutValues, valueList.ToArray<double>(), outStartDate);
+            return ts.WriteValuesRegular(timeStepUnit, timeStepQuantity, nOutValues, valueArray, outStartDate);
         }
-        
+
         /// <summary>
-        /// This method saves the given time series as a new database record, using the given
-        /// database connection number and database table name.  The given time series can be
-        /// either regular or irregular.  The caller must pass in the parameters for the time step
-        /// unit type, and the number of units per time step.  If the series is irregular, then
-        /// the parameter for the number of units per time step is ignored.  The time series is
-        /// given as a list of date/value pairs, so it determines all date parameters from the
-        /// list itself.
+        /// This method saves the given time series array as a new database record, using the given
+        /// database connection number and database table name.  The method only writes irregular
+        /// time series.
         /// 
-        /// This method is designed to be used from managed code such as C#.  The method can write
-        /// either regular or irregular time series.
+        /// This method is designed to be used from unmanaged code such as C/C++.
         /// </summary>
         /// <param name="connectionNumber">The serial number of the connection that is used to write the time series</param>
         /// <param name="tableName">The name of the database table that time series will be written to</param>
-        /// <param name="timeStepUnit">TSDateCalculator.TimeStepUnitCode value for Minute,Hour,Day,Week,Month, Year, or Irregular</param>
-        /// <param name="timeStepQuantity">The number of the given unit that defines the time step.
-        /// For instance, if the time step is 6 hours long, then this value is 6.  If the timeStepUnit is Irregular, then
-        /// the method will ignore the timeStepQuantity value.</param>
-        /// <param name="dateValueArray">the list of time series date/value pairs to be written to database</param>
+        /// <param name="nOutValues">The number of values in the array to be written to the database</param>
+        /// <param name="dateValueArray">the array of time series date/value pairs to be written to database</param>
         /// <returns>GUID value identifying the database record that was created</returns>
-        public Guid WriteValues(
+        public unsafe Guid WriteValuesIrregularUnsafe(
                     int connectionNumber, String tableName,
-                    short timeStepUnit, short timeStepQuantity,
-                    List<TimeSeriesValue> dateValueList)
+                    int nOutValues, TimeSeriesValue[] dateValueArray)
         {
             // Get the connection that we'll pass along.
             SqlConnection connx = GetConnectionFromId(connectionNumber);
             // Construct new TS object with SqlConnection object and table name
             TS ts = new TS(connx, tableName);
 
-            // The TS object's methods will require certain parameter values which we can
-            // determine from the list of date/value pairs.
-            int nOutValues = dateValueList.Count;
-            DateTime outStartDate = dateValueList[0].Date;
-
-            if ((TSDateCalculator.TimeStepUnitCode)timeStepUnit == TSDateCalculator.TimeStepUnitCode.Irregular)
-            {
-                return ts.WriteValuesIrregular(nOutValues, dateValueList.ToArray());
-            }
-            else
-            {
-                double[] valueArray = dateValueList.Select(dv => dv.Value).ToArray();
-                return ts.WriteValuesRegular(timeStepUnit, timeStepQuantity, nOutValues, valueArray, outStartDate);
-            }
+            return ts.WriteValuesIrregular(nOutValues, dateValueArray);
         }
 
         #endregion
@@ -412,16 +375,16 @@ namespace TimeSeriesLibrary
 
 
         #region Public methods for computing date values
-        DateTime IncrementDate(DateTime startDate, TSDateCalculator.TimeStepUnitCode unit,
+        public DateTime IncrementDate(DateTime startDate, short unit,
                     short stepSize, int numSteps)
         {
-            return TSDateCalculator.IncrementDate(startDate, unit, stepSize, numSteps);
+            return TSDateCalculator.IncrementDate(startDate, (TSDateCalculator.TimeStepUnitCode)unit, stepSize, numSteps);
         }
         public void FillDateArray(
-                    TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
+                    short timeStepUnit, short timeStepQuantity,
                     int nReqValues, DateTime[] dateArray, DateTime reqStartDate)
         {
-            TSDateCalculator.FillDateArray(timeStepUnit, timeStepQuantity, 
+            TSDateCalculator.FillDateArray((TSDateCalculator.TimeStepUnitCode)timeStepUnit, timeStepQuantity,
                                 nReqValues, dateArray, reqStartDate);
         }
         public void FillSeriesDateArray(
