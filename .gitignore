@@ -1,9 +1,18 @@
 
 obj
 bin
+ipch
 *.user
 *.datasource
 *.sql
 *.orig
 TimeSeriesLibrary.suo
 **/*.orig
+*.ipch
+*.obj
+*.pdb
+*.aps
+*.pch
+*.cache
+*.ilk
+*.log
