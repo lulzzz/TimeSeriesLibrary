@@ -48,7 +48,7 @@ namespace Sandbox
             //WriteOneSeriesIrreg();
             //WriteOneSeriesArray();
             //ReadOneSeriesModel();
-            WriteOneSeriesList();
+            //WriteOneSeriesList();
             //ReadOneSeriesArray();
         }
         private void MainWindowClosed(object sender, EventArgs e)

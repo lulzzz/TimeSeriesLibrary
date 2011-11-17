@@ -1,0 +1,24 @@
+﻿// Created by Microsoft (R) C/C++ Compiler Version 10.00.30319.01 (84983e59).
+//
+// d:\oasis\_build\timeserieslibrary\timeserieslibrary\comsandbox\debug\timeserieslibrary.tlh
+//
+// C++ source equivalent of Win32 type library ..\bin\Release\TimeSeriesLibrary.tlb
+// compiler-generated file created 11/17/11 at 10:35:10 - DO NOT EDIT!
+
+#pragma once
+#pragma pack(push, 8)
+
+#include <comdef.h>
+
+namespace TimeSeriesLibrary {
+
+//
+// Forward references and typedefs
+//
+
+struct __declspec(uuid("114ff888-bee2-4d0c-8839-57cd8c708597"))
+/* LIBID */ __TimeSeriesLibrary;
+
+} // namespace TimeSeriesLibrary
+
+#pragma pack(pop)
