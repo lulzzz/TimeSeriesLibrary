@@ -9,6 +9,6 @@ void main()
 {
     //CoInitialize(NULL);
 
-    //TimeSeriesLibrary::ComTSLibraryPtr p(__uuidof(TimeSeriesLibrary::ComTSLibrary));;
+    //TimeSeriesLibrary::ComTSLibrary __uuidof(TimeSeriesLibrary::ComTSLibrary);
 
 }

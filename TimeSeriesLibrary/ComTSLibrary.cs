@@ -15,28 +15,44 @@ namespace TimeSeriesLibrary
     /// as the class that implements it, with _ added to the beginning.
     /// </summary>
     [Guid("752F96CB-377C-41fe-8FB0-2045C69DA0D3")]
-    [InterfaceType(ComInterfaceType.InterfaceIsIDispatch)]
+    [InterfaceType(ComInterfaceType.InterfaceIsDual)]
+    [ComVisible(true)]
     public interface _ComTSLibrary
     {
+        [ComVisible(true)]
         int OpenConnection(string connectionString);
+        [ComVisible(true)]
         void CloseConnection(int connectionNumber);
+        [ComVisible(true)]
         System.Data.SqlClient.SqlConnection GetConnectionFromId(int connectionNumber);
 
+        [ComVisible(true)]
         int ReadDatesValuesUnsafe(int connectionNumber, string tableName, Guid id, int nReqValues, TimeSeriesValue[] dateValueArray, DateTime reqStartDate, DateTime reqEndDate);
+        [ComVisible(true)]
         int ReadValuesRegularUnsafe(int connectionNumber, string tableName, Guid id, int nReqValues, double[] valueArray, DateTime reqStartDate);
 
+        [ComVisible(true)]
         Guid WriteValuesIrregularUnsafe(int connectionNumber, string tableName, int nOutValues, TimeSeriesValue[] dateValueArray);
+        [ComVisible(true)]
         Guid WriteValuesRegularUnsafe(int connectionNumber, string tableName, short timeStepUnit, short timeStepQuantity, int nOutValues, double[] valueArray, DateTime outStartDate);
 
+        [ComVisible(true)]
         bool DeleteMatchingSeries(int connectionNumber, string tableName, string whereClause);
+        [ComVisible(true)]
         bool DeleteSeries(int connectionNumber, string tableName, Guid id);
 
+        [ComVisible(true)]
         int XmlImport(int connectionNumber, string tableName, string xmlFileName);
-        int XmlImportWithList(int connectionNumber, string tableName, string xmlFileName, System.Collections.Generic.List<TSImport> tsImportList);
+        //[ComVisible(true)]
+        //int XmlImportWithList(int connectionNumber, string tableName, string xmlFileName, System.Collections.Generic.List<TSImport> tsImportList);
 
+        [ComVisible(true)]
         DateTime IncrementDate(DateTime startDate, short unit, short stepSize, int numSteps);
+        [ComVisible(true)]
         void FillDateArray(short timeStepUnit, short timeStepQuantity, int nReqValues, DateTime[] dateArray, DateTime reqStartDate);
+        [ComVisible(true)]
         void FillSeriesDateArray(int connectionNumber, string tableName, Guid id, int nReqValues, DateTime[] dateArray, DateTime reqStartDate);
+        [ComVisible(true)]
         int CountTimeSteps(DateTime startDate, DateTime endDate, short unit, short stepSize);
     } 
     
@@ -48,7 +64,7 @@ namespace TimeSeriesLibrary
     /// </summary>
     [Guid("6AC55A17-C27E-4a53-9D2A-8A9F9369070D")]
     [ClassInterface(ClassInterfaceType.None)]
-    [ProgId("TimeSeriesLibrary.ComTSLibrary")]
+    [ComVisible(true)]
     public class ComTSLibrary : _ComTSLibrary
     {
         /// <summary>
@@ -82,6 +98,7 @@ namespace TimeSeriesLibrary
         /// </summary>
         /// <param name="connectionString">The connection string used to open the connection.</param>
         /// <returns>The serial number that was automatically assigned to the new connection.</returns>
+        [ComVisible(true)]
         public int OpenConnection(String connectionString)
         {
             // let the sibling method in the wrapped TSLibrary object contain the logic
@@ -94,6 +111,7 @@ namespace TimeSeriesLibrary
         /// connection.
         /// </summary>
         /// <param name="connectionNumber">The serial number of the connection to be closed</param>
+        [ComVisible(true)]
         public void CloseConnection(int connectionNumber)
         {
             // let the sibling method in the wrapped TSLibrary object contain the logic
@@ -104,6 +122,7 @@ namespace TimeSeriesLibrary
         /// </summary>
         /// <param name="connectionNumber">serial number of the connection within the collection</param>
         /// <returns>The SqlConnection object corresponding to the given connection number</returns>
+        [ComVisible(true)]
         public SqlConnection GetConnectionFromId(int connectionNumber)
         {
             // let the sibling method in the wrapped TSLibrary object contain the logic
@@ -133,6 +152,7 @@ namespace TimeSeriesLibrary
         /// <param name="reqStartDate">The earliest date that the method will enter into the array</param>
         /// <returns>The number of values that the method added to the array</returns>
         // usage: for onevar to read model output, b/c it does not need dates for each timeseries
+        [ComVisible(true)]
         public unsafe int ReadValuesRegularUnsafe(
                 int connectionNumber, String tableName, Guid id,
                 int nReqValues, double[] valueArray, DateTime reqStartDate)
@@ -162,6 +182,7 @@ namespace TimeSeriesLibrary
         /// <param name="reqStartDate">The earliest date that the method will enter into the array</param>
         /// <returns>The number of values that the method added to the array</returns>
         // usage: general model/onevar input
+        [ComVisible(true)]
         public unsafe int ReadDatesValuesUnsafe(
                 int connectionNumber, String tableName, Guid id,
                 int nReqValues, TimeSeriesValue[] dateValueArray, DateTime reqStartDate, DateTime reqEndDate)
@@ -245,6 +266,7 @@ namespace TimeSeriesLibrary
         /// <param name="valueArray">array of time series values to be written to database</param>
         /// <param name="outStartDate">date of the first time step in the series</param>
         /// <returns>GUID value identifying the database record that was created</returns>
+        [ComVisible(true)]
         public unsafe Guid WriteValuesRegularUnsafe(
                     int connectionNumber, String tableName,
                     short timeStepUnit, short timeStepQuantity,
@@ -270,6 +292,7 @@ namespace TimeSeriesLibrary
         /// <param name="nOutValues">The number of values in the array to be written to the database</param>
         /// <param name="dateValueArray">the array of time series date/value pairs to be written to database</param>
         /// <returns>GUID value identifying the database record that was created</returns>
+        [ComVisible(true)]
         public unsafe Guid WriteValuesIrregularUnsafe(
                     int connectionNumber, String tableName,
                     int nOutValues, TimeSeriesValue[] dateValueArray)
@@ -295,6 +318,7 @@ namespace TimeSeriesLibrary
         /// <param name="tableName">The name of the database table that time series will be deleted from</param>
         /// <param name="id">The GUID identifying the record to delete</param>
         /// <returns>true if a record was deleted, false if no records were deleted</returns>
+        [ComVisible(true)]
         public bool DeleteSeries(
                 int connectionNumber, String tableName, Guid id)
         {
@@ -316,6 +340,7 @@ namespace TimeSeriesLibrary
         /// <param name="whereClause">The WHERE clause of a SQL command, not including the word WHERE.
         /// For example, to delete delete all records where Id > 55, use the text "Id > 55".</param>
         /// <returns>true if one or more records were deleted, false if no records were deleted</returns>
+        [ComVisible(true)]
         public bool DeleteMatchingSeries(
                 int connectionNumber, String tableName, String whereClause)
         {
@@ -346,6 +371,8 @@ namespace TimeSeriesLibrary
         /// that is saved to the database.  The List must already be instantiated before calling this method.
         /// The method does not change any items that are already in the List.</param>
         /// <returns>The number of time series records that were successfully stored</returns>
+        //[ComVisible(true)]
+        // TODO: this is not COM friendly due to the List<> object
         public int XmlImportWithList(int connectionNumber, String tableName, String xmlFileName,
                         List<TSImport> tsImportList)
         {
@@ -365,6 +392,7 @@ namespace TimeSeriesLibrary
         /// <param name="tableName">The name of the database table that time series will be written to</param>
         /// <param name="xmlFileName">The file name (with path) of an XML file that defines one or more time series to import</param>
         /// <returns>The number of time series records that were successfully stored</returns>
+        [ComVisible(true)]
         public int XmlImport(int connectionNumber, String tableName, String xmlFileName)
         {
             // Simply let the sister method do all the processing,
@@ -375,11 +403,13 @@ namespace TimeSeriesLibrary
 
 
         #region Public methods for computing date values
+        [ComVisible(true)]
         public DateTime IncrementDate(DateTime startDate, short unit,
                     short stepSize, int numSteps)
         {
             return TSDateCalculator.IncrementDate(startDate, (TSDateCalculator.TimeStepUnitCode)unit, stepSize, numSteps);
         }
+        [ComVisible(true)]
         public void FillDateArray(
                     short timeStepUnit, short timeStepQuantity,
                     int nReqValues, DateTime[] dateArray, DateTime reqStartDate)
@@ -387,6 +417,7 @@ namespace TimeSeriesLibrary
             TSDateCalculator.FillDateArray((TSDateCalculator.TimeStepUnitCode)timeStepUnit, timeStepQuantity,
                                 nReqValues, dateArray, reqStartDate);
         }
+        [ComVisible(true)]
         public void FillSeriesDateArray(
                     int connectionNumber, String tableName, Guid id,
                     int nReqValues, DateTime[] dateArray, DateTime reqStartDate)
@@ -398,6 +429,7 @@ namespace TimeSeriesLibrary
 
             ts.FillDateArray(id, nReqValues, dateArray, reqStartDate);
         }
+        [ComVisible(true)]
         public int CountTimeSteps(DateTime startDate, DateTime endDate,
             short unit, short stepSize)
         {

@@ -16,3 +16,9 @@ TimeSeriesLibrary.suo
 *.cache
 *.ilk
 *.log
+[Rr]elease*/
+[Dd]ebug*/
+*.exe
+*.tlog
+*.sdf
+*.opensdf
