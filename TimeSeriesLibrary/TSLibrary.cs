@@ -222,9 +222,6 @@ namespace TimeSeriesLibrary
 
         #region Public methods for WRITING time series
 
-        // TODO: test the effectiveness of safe/unsafe versions by making a C++ sandbox.
-        // TODO: Create methods WriteValues (take list of date/value pairs)
-
         /// <summary>
         /// This method saves the given time series list as a new database record, using the given
         /// database connection number and database table name.  The method only writes regular
@@ -241,7 +238,7 @@ namespace TimeSeriesLibrary
         /// <param name="timeStepQuantity">The number of the given unit that defines the time step.
         /// For instance, if the time step is 6 hours long, then this value is 6.</param>
         /// <param name="nOutValues">The number of values in the list to be written to the database</param>
-        /// <param name="valueArray">list of time series values to be written to database</param>
+        /// <param name="valueList">list of time series values to be written to database</param>
         /// <param name="outStartDate">date of the first time step in the series</param>
         /// <returns>GUID value identifying the database record that was created</returns>
         public Guid WriteValuesRegular(
@@ -275,12 +272,12 @@ namespace TimeSeriesLibrary
         /// <param name="timeStepQuantity">The number of the given unit that defines the time step.
         /// For instance, if the time step is 6 hours long, then this value is 6.  If the timeStepUnit is Irregular, then
         /// the method will ignore the timeStepQuantity value.</param>
-        /// <param name="dateValueArray">the list of time series date/value pairs to be written to database</param>
+        /// <param name="dateValueList">the list of time series date/value pairs to be written to database</param>
         /// <returns>GUID value identifying the database record that was created</returns>
         public Guid WriteValues(
                     int connectionNumber, String tableName,
                     short timeStepUnit, short timeStepQuantity,
-                    List<TSDateValueStruct> dateValueList)
+                    List<TimeSeriesValue> dateValueList)
         {
             // Get the connection that we'll pass along.
             SqlConnection connx = GetConnectionFromId(connectionNumber);
@@ -294,7 +291,8 @@ namespace TimeSeriesLibrary
 
             if ((TSDateCalculator.TimeStepUnitCode)timeStepUnit == TSDateCalculator.TimeStepUnitCode.Irregular)
             {
-                return ts.WriteValuesIrregular(nOutValues, dateValueList.ToArray());
+                return ts.WriteValuesIrregular(nOutValues, 
+                            dateValueList.Select(tsv => (TSDateValueStruct)tsv).ToArray());
             }
             else
             {

@@ -1,0 +1,63 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<TestRun id="47d84202-c5a9-4dd1-8132-5d67037ccd1d" name="Tony@TONY-W520 2011-11-18 11:57:52" runUser="TONY-W520\Tony" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <TestSettings name="Local" id="9b4d995d-fd84-4ec8-8a52-82515a783bf1">
+    <Description>These are default test settings for a local test run.</Description>
+    <Deployment enabled="false" runDeploymentRoot="Tony_TONY-W520 2011-11-18 11_57_52">
+      <DeploymentItem filename="D:\OASIS\_Build\TimeSeriesLibrary\TimeSeriesLibrary\bin\Debug\TimeSeriesLibrary.dll" />
+    </Deployment>
+    <Execution>
+      <TestTypeSpecific />
+      <AgentRule name="Execution Agents">
+      </AgentRule>
+    </Execution>
+  </TestSettings>
+  <Times creation="2011-11-18T11:57:52.5472758-08:00" queuing="2011-11-18T11:57:52.5582764-08:00" start="2011-11-18T11:57:52.5632767-08:00" finish="2011-11-18T11:57:52.7472872-08:00" />
+  <ResultSummary outcome="Failed">
+    <Counters total="4" executed="4" passed="3" error="0" failed="1" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+  </ResultSummary>
+  <TestDefinitions>
+    <UnitTest name="ConvertToStruct1" storage="d:\oasis\_build\timeserieslibrary\timeserieslibrary\timeserieslibrary_test\bin\debug\timeserieslibrary_test.dll" id="f7938b3a-5bda-6739-7530-46718b400eb5">
+      <Execution id="b4edb057-1c56-401b-80ab-0415f180ff6a" />
+      <TestMethod codeBase="D:/OASIS/_Build/TimeSeriesLibrary/TimeSeriesLibrary/TimeSeriesLibrary_Test/bin/Debug/TimeSeriesLibrary_Test.DLL" adapterTypeName="Microsoft.VisualStudio.TestTools.TestTypes.Unit.UnitTestAdapter, Microsoft.VisualStudio.QualityTools.Tips.UnitTest.Adapter, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" className="TimeSeriesLibrary_Test.TimeSeriesValueTest, TimeSeriesLibrary_Test, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null" name="ConvertToStruct1" />
+    </UnitTest>
+    <UnitTest name="ConvertFromStruct1" storage="d:\oasis\_build\timeserieslibrary\timeserieslibrary\timeserieslibrary_test\bin\debug\timeserieslibrary_test.dll" id="c56a5212-b401-6703-cdbe-566fa83c116c">
+      <Execution id="151c20c7-bfcf-40f9-80c0-11bd57a07933" />
+      <TestMethod codeBase="D:/OASIS/_Build/TimeSeriesLibrary/TimeSeriesLibrary/TimeSeriesLibrary_Test/bin/Debug/TimeSeriesLibrary_Test.DLL" adapterTypeName="Microsoft.VisualStudio.TestTools.TestTypes.Unit.UnitTestAdapter, Microsoft.VisualStudio.QualityTools.Tips.UnitTest.Adapter, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" className="TimeSeriesLibrary_Test.TimeSeriesValueTest, TimeSeriesLibrary_Test, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null" name="ConvertFromStruct1" />
+    </UnitTest>
+    <UnitTest name="ConvertFromStruct2" storage="d:\oasis\_build\timeserieslibrary\timeserieslibrary\timeserieslibrary_test\bin\debug\timeserieslibrary_test.dll" id="7de86aa9-89fa-ba6c-ca41-eb9d58ae30fe">
+      <Execution id="7a7d5c40-7194-43ca-b0e7-ef4e7e567c6d" />
+      <TestMethod codeBase="D:/OASIS/_Build/TimeSeriesLibrary/TimeSeriesLibrary/TimeSeriesLibrary_Test/bin/Debug/TimeSeriesLibrary_Test.DLL" adapterTypeName="Microsoft.VisualStudio.TestTools.TestTypes.Unit.UnitTestAdapter, Microsoft.VisualStudio.QualityTools.Tips.UnitTest.Adapter, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" className="TimeSeriesLibrary_Test.TimeSeriesValueTest, TimeSeriesLibrary_Test, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null" name="ConvertFromStruct2" />
+    </UnitTest>
+    <UnitTest name="ConvertToStruct2" storage="d:\oasis\_build\timeserieslibrary\timeserieslibrary\timeserieslibrary_test\bin\debug\timeserieslibrary_test.dll" id="03dc22af-dea8-c1c6-7cc5-2b1902cf5d94">
+      <Execution id="860c9321-7ef3-4f4f-9d14-d790d7adb26d" />
+      <TestMethod codeBase="D:/OASIS/_Build/TimeSeriesLibrary/TimeSeriesLibrary/TimeSeriesLibrary_Test/bin/Debug/TimeSeriesLibrary_Test.DLL" adapterTypeName="Microsoft.VisualStudio.TestTools.TestTypes.Unit.UnitTestAdapter, Microsoft.VisualStudio.QualityTools.Tips.UnitTest.Adapter, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" className="TimeSeriesLibrary_Test.TimeSeriesValueTest, TimeSeriesLibrary_Test, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null" name="ConvertToStruct2" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <TestEntries>
+    <TestEntry testId="f7938b3a-5bda-6739-7530-46718b400eb5" executionId="b4edb057-1c56-401b-80ab-0415f180ff6a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="03dc22af-dea8-c1c6-7cc5-2b1902cf5d94" executionId="860c9321-7ef3-4f4f-9d14-d790d7adb26d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c56a5212-b401-6703-cdbe-566fa83c116c" executionId="151c20c7-bfcf-40f9-80c0-11bd57a07933" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7de86aa9-89fa-ba6c-ca41-eb9d58ae30fe" executionId="7a7d5c40-7194-43ca-b0e7-ef4e7e567c6d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <Results>
+    <UnitTestResult executionId="b4edb057-1c56-401b-80ab-0415f180ff6a" testId="f7938b3a-5bda-6739-7530-46718b400eb5" testName="ConvertToStruct1" computerName="TONY-W520" duration="00:00:00.0227377" startTime="2011-11-18T11:57:52.5652768-08:00" endTime="2011-11-18T11:57:52.7232858-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b4edb057-1c56-401b-80ab-0415f180ff6a">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.AreEqual failed. Expected:&lt;TimeSeriesLibrary.TimeSeriesValue&gt;. Actual:&lt;TimeSeriesLibrary.TimeSeriesValue&gt;. </Message>
+          <StackTrace>   at TimeSeriesLibrary_Test.TimeSeriesValueTest.ConvertToStruct1() in D:\OASIS\_Build\TimeSeriesLibrary\TimeSeriesLibrary\TimeSeriesLibrary_Test\TimeSeriesValueTest.cs:line 82
+</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="860c9321-7ef3-4f4f-9d14-d790d7adb26d" testId="03dc22af-dea8-c1c6-7cc5-2b1902cf5d94" testName="ConvertToStruct2" computerName="TONY-W520" duration="00:00:00.0002434" startTime="2011-11-18T11:57:52.7252859-08:00" endTime="2011-11-18T11:57:52.7282861-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="860c9321-7ef3-4f4f-9d14-d790d7adb26d">
+    </UnitTestResult>
+    <UnitTestResult executionId="151c20c7-bfcf-40f9-80c0-11bd57a07933" testId="c56a5212-b401-6703-cdbe-566fa83c116c" testName="ConvertFromStruct1" computerName="TONY-W520" duration="00:00:00.0009160" startTime="2011-11-18T11:57:52.7302862-08:00" endTime="2011-11-18T11:57:52.7332864-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="151c20c7-bfcf-40f9-80c0-11bd57a07933">
+    </UnitTestResult>
+    <UnitTestResult executionId="7a7d5c40-7194-43ca-b0e7-ef4e7e567c6d" testId="7de86aa9-89fa-ba6c-ca41-eb9d58ae30fe" testName="ConvertFromStruct2" computerName="TONY-W520" duration="00:00:00.0002215" startTime="2011-11-18T11:57:52.7352865-08:00" endTime="2011-11-18T11:57:52.7382867-08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="7a7d5c40-7194-43ca-b0e7-ef4e7e567c6d">
+    </UnitTestResult>
+  </Results>
+</TestRun>

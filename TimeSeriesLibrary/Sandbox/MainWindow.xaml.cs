@@ -137,7 +137,7 @@ namespace Sandbox
         {
             int ret;
 
-            List<TSDateValueStruct> dateValueList = new List<TSDateValueStruct>();
+            List<TimeSeriesValue> dateValueList = new List<TimeSeriesValue>();
 
             ret = tsLib.ReadAllDatesValues(connNumber, "FileStrm2",
                             testId1, ref dateValueList);
@@ -222,30 +222,31 @@ namespace Sandbox
             int i;
 
             List<double> valList = new List<double>();
-            List<TSDateValueStruct> dateValList = new List<TSDateValueStruct>();
+            List<TimeSeriesValue> dateValList = new List<TimeSeriesValue>();
             DateTime date = StartDate;
 
-            TSDateValueStruct tsv;
             for (i = 0; i < nVals; i++)
             {
                 valList.Add(i * 10);
-                tsv.Date = date;
-                tsv.Value = i * 10;
-                dateValList.Add(tsv);
+                dateValList.Add(new TimeSeriesValue { Date = date, Value = i * 10 });
                 date = date.AddDays(3);
             }
 
             //testId2 = tsLib.WriteValuesRegular(connNumber, "FileStrm2",
             //           3, 1, nVals, valList, StartDate);
 
-            //testId2 = tsLib.WriteValues(connNumber, "FileStrm2",
-            //                (short)TSDateCalculator.TimeStepUnitCode.Irregular, 0, dateValList);
+            testId1 = tsLib.WriteValues(connNumber, "FileStrm2",
+                            (short)TSDateCalculator.TimeStepUnitCode.Irregular, 0, dateValList);
 
             testId2 = tsLib.WriteValues(connNumber, "FileStrm2",
                             (short)TSDateCalculator.TimeStepUnitCode.Day, 3, dateValList);
 
-            
-            List<TSDateValueStruct> dv = new List<TSDateValueStruct>();
+
+            List<TimeSeriesValue> dv = new List<TimeSeriesValue>();
+            i = tsLib.ReadAllDatesValues(connNumber, "FileStrm2", testId1, ref dv);
+            i = 3;
+
+            dv = new List<TimeSeriesValue>();
             i = tsLib.ReadAllDatesValues(connNumber, "FileStrm2", testId2, ref dv);
             i = 3;
         }
