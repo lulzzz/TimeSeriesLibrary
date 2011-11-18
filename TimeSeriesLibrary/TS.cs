@@ -5,7 +5,6 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Text;
 using System.IO;
-using System.Security.Cryptography;
 
 namespace TimeSeriesLibrary
 {
@@ -29,7 +28,6 @@ namespace TimeSeriesLibrary
 
         public Boolean IsInitialized;
 
-        public static int LengthOfParamInputForChecksum;
 
 
 
@@ -41,60 +39,7 @@ namespace TimeSeriesLibrary
         /// </summary>
         static TS()
         {
-            // This static integer represents the length of a binary array that contains the meta
-            // parameters of the time series (i.e., not including the BLOB of time series values)
-            // which are included in the calculation of an MD5 checksum for the time series.
-            // It is crucial that the the meta parameters provided for in the padding as defined
-            // here be consistent with methods BuildStringForEmptyDataTable() and ComputeChecksum()
-            LengthOfParamInputForChecksum =
-                // TimeStepUnit
-                sizeof(TSDateCalculator.TimeStepUnitCode) +
-                // TimeStepQuantity
-                sizeof(short) +
-                // TimeStepCount
-                sizeof(int) +
-                // StartDate and EndDate
-                8 + 8;
-        }
-        #endregion
-
-
-        #region ComputeChecksum() Method
-        /// <summary>
-        /// Method computes the checksum for the timeseries, using the information in class-level fields
-        /// and in the given BLOB (byte array) of timeseries values.
-        /// </summary>
-        /// <param name="blobData">the BLOB (byte array) of timeseries values</param>
-        /// <returns>the checksum</returns>
-        private byte[] ComputeChecksum(byte[] blobData)
-        {
-            // It is crucial that the the meta parameters written here into binArray be
-            // consistent with method BuildStringForEmptyDataTable() and the calculation
-            // of static field LengthOfParamInputForChecksum in this class's static constructor.
-            byte[] binArray = new byte[LengthOfParamInputForChecksum];
-            MemoryStream binStream = new MemoryStream();
-            BinaryWriter binWriter = new BinaryWriter(binStream);
-
-            // Write relevant meta-parameters (not including the BLOB itself) into a short byte array
-
-            // TimeStepUnit
-            binWriter.Write((short)TimeStepUnit);
-            // TimeStepQuantity
-            binWriter.Write(TimeStepQuantity);
-            // TimeStepCount
-            binWriter.Write(TimeStepCount);
-            // StartDate and EndDate
-            binWriter.Write(BlobStartDate.ToBinary());
-            binWriter.Write(BlobEndDate.ToBinary());
-
-            // MD5CryptoServiceProvider object has methods to compute the checksum
-            MD5CryptoServiceProvider md5Hasher = new MD5CryptoServiceProvider();
-            // feed the short byte array of meta-parameters into the MD5 hash computer
-            md5Hasher.TransformBlock(binArray, 0, LengthOfParamInputForChecksum, binArray, 0);
-            // feed the BLOB of timeseries values into the MD5 hash computer
-            md5Hasher.TransformFinalBlock(blobData, 0, blobData.Length);
-            // return the hash (checksum) value
-            return md5Hasher.Hash;
+            // Can be deleted ?  Stuff that we were doing here has be moved elsewhere.
         }
         #endregion
 
@@ -346,57 +291,11 @@ namespace TimeSeriesLibrary
             // Determine the date of the last time step
             BlobEndDate = TSDateCalculator.IncrementDate(outStartDate, TimeStepUnit, TimeStepQuantity, TimeStepCount);
 
-            // SQL statement that gives us a resultset for the DataTable object.  Note that
-            // this query is rigged so that it will always return 0 records.  This is because
-            // we only want the resultset to define the fields of the DataTable object.
-            String comm = BuildStringForEmptyDataTable();
-            // SqlDataAdapter object will use the query to fill the DataTable
-            using (SqlDataAdapter adp = new SqlDataAdapter(comm, Connx))
-            {
-                // SqlCommandBuilder object must be instantiated in order for us to call
-                // the Update method of the SqlDataAdapter.  Interestingly, we only need to
-                // instantiate this object--we don't need to use it in any other way.
-                using (SqlCommandBuilder bld = new SqlCommandBuilder(adp))
-                {
-                    DataTable dTable = new DataTable();
-                    // Execute the query to fill the DataTable object
-                    try
-                    {
-                        adp.Fill(dTable);
-                    }
-                    catch
-                    {   // The query failed
-                        throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
-                                        "Table '" + TableName + "' could not be opened using query:\n\n." + comm);
-                    }
+            // Convert the array of double values into a byte array...a BLOB
+            byte[] blobData = TSBlobCoder.ConvertArrayToBlobRegular(TimeStepCount, valueArray);
 
-                    // DataRow object represents the current row of the DataTable object, which in turn
-                    // represents a record that we will add to the database table.
-                    DataRow currentRow = dTable.NewRow();
-
-                    // Convert the array of double values into a byte array...a BLOB
-                    byte[] blobData = TSBlobCoder.ConvertArrayToBlobRegular(TimeStepCount, valueArray);
-                    // compute the checksum
-                    Byte[] checksum = ComputeChecksum(blobData);
-
-                    // NewGuid method generates a GUID value that is virtually guaranteed to be unique
-                    Id = Guid.NewGuid();
-                    // transfer all of the data into the DataRow object
-                    currentRow["Guid"] = Id;
-                    currentRow["TimeStepUnit"] = (short)TimeStepUnit;
-                    currentRow["TimeStepQuantity"] = TimeStepQuantity;
-                    currentRow["TimeStepCount"] = TimeStepCount;
-                    currentRow["StartDate"] = BlobStartDate;
-                    currentRow["EndDate"] = BlobEndDate;
-                    currentRow["Checksum"] = checksum;
-                    currentRow["ValueBlob"] = blobData;
-                    dTable.Rows.Add(currentRow);
-                    // Save the DataRow object to the database
-                    adp.Update(dTable);
-                }
-            }
-
-            return Id;
+            // WriteValues method will handle all of the database interaction
+            return WriteValues(blobData);
         } 
         #endregion
 
@@ -421,9 +320,18 @@ namespace TimeSeriesLibrary
             BlobStartDate = dateValueArray[0].Date;
             BlobEndDate = dateValueArray[TimeStepCount-1].Date;
 
-            //
-            // Start the DataTable
+            // Convert the array of double values into a byte array...a BLOB
+            Byte[] blobData = TSBlobCoder.ConvertArrayToBlobIrregular(TimeStepCount, dateValueArray);
 
+            // WriteValues method will handle all of the database interaction
+            return WriteValues(blobData);
+        }
+        #endregion
+
+
+        #region WriteValues() Method
+        public unsafe Guid WriteValues(byte[] blobData)
+        {
             // SQL statement that gives us a resultset for the DataTable object.  Note that
             // this query is rigged so that it will always return 0 records.  This is because
             // we only want the resultset to define the fields of the DataTable object.
@@ -452,14 +360,13 @@ namespace TimeSeriesLibrary
                     // represents a record that we will add to the database table.
                     DataRow currentRow = dTable.NewRow();
 
-                    // Convert the array of double values into a byte array...a BLOB
-                    Byte[] blobData = TSBlobCoder.ConvertArrayToBlobIrregular(TimeStepCount, dateValueArray);
                     // compute the checksum
-                    Byte[] checksum = ComputeChecksum(blobData);
+                    Byte[] checksum = TSBlobCoder.ComputeChecksum(TimeStepUnit, TimeStepQuantity,
+                                    TimeStepCount, BlobStartDate, BlobEndDate, blobData);
 
                     // NewGuid method generates a GUID value that is virtually guaranteed to be unique
                     Id = Guid.NewGuid();
-                    // now save meta-parameters to the main table
+                    // transfer all of the data into the DataRow object
                     currentRow["Guid"] = Id;
                     currentRow["TimeStepUnit"] = (short)TimeStepUnit;
                     currentRow["TimeStepQuantity"] = TimeStepQuantity;
@@ -469,6 +376,7 @@ namespace TimeSeriesLibrary
                     currentRow["Checksum"] = checksum;
                     currentRow["ValueBlob"] = blobData;
                     dTable.Rows.Add(currentRow);
+                    // Save the DataRow object to the database
                     adp.Update(dTable);
                 }
             }

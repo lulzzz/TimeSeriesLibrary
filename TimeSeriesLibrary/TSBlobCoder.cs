@@ -3,20 +3,23 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
+using System.Security.Cryptography;
 
 namespace TimeSeriesLibrary
 {
     /// <summary>
-    /// This class contains methods for turning a time series array
-    /// into a BLOB (byte array) and visa-versa.
+    /// This class contains methods for turning a time series array into
+    /// a BLOB (byte array) and visa-versa.  All of this class's methods
+    /// are static, so the class does not need to be instantiated.
     /// </summary>
     class TSBlobCoder
     {
+        #region Method ConvertBlobToArrayRegular
         public static unsafe int ConvertBlobToArrayRegular(
-                    TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
-                    DateTime blobStartDate, DateTime blobEndDate,
-                    int nReqValues, DateTime reqStartDate, DateTime reqEndDate,
-                    Byte[] blobData, double[] valueArray )
+            TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
+            DateTime blobStartDate, DateTime blobEndDate,
+            int nReqValues, DateTime reqStartDate, DateTime reqEndDate,
+            Byte[] blobData, double[] valueArray)
         {
             int numReadValues = 0;
 
@@ -45,14 +48,16 @@ namespace TimeSeriesLibrary
 
             // Transfer the entire array of data as a block
             Buffer.BlockCopy(blobReader.ReadBytes(numBlobBin), numSkipBin, valueArray, 0, numReadBin);
-            
+
             return numReadValues;
-        }
+        } 
+        #endregion
 
 
+        #region Method ConvertBlobToArrayIrregular
         public static unsafe int ConvertBlobToArrayIrregular(
-                    int nReqValues, DateTime reqStartDate, DateTime reqEndDate,
-                    Byte[] blobData, TimeSeriesValue[] dateValueArray )
+            int nReqValues, DateTime reqStartDate, DateTime reqEndDate,
+            Byte[] blobData, TimeSeriesValue[] dateValueArray)
         {
             int numReadValues = 0;
 
@@ -84,11 +89,13 @@ namespace TimeSeriesLibrary
             numReadValues = j;
 
             return numReadValues;
-        }
+        } 
+        #endregion
 
 
+        #region Method ConvertArrayToBlobRegular
         public static unsafe byte[] ConvertArrayToBlobRegular(
-                    int TimeStepCount, double[] valueArray )
+            int TimeStepCount, double[] valueArray)
         {
             // The number of bytes required for the BLOB
             int nBin = TimeStepCount * sizeof(double);
@@ -100,11 +107,13 @@ namespace TimeSeriesLibrary
             Buffer.BlockCopy(valueArray, 0, blobData, 0, nBin);
 
             return blobData;
-        }
+        } 
+        #endregion
 
 
+        #region Method ConvertArrayToBlobIrregular
         public static unsafe byte[] ConvertArrayToBlobIrregular(
-                    int TimeStepCount, TimeSeriesValue[] dateValueArray )
+            int TimeStepCount, TimeSeriesValue[] dateValueArray)
         {
             // The number of bytes required for the BLOB
             int nBin = TimeStepCount * sizeof(TimeSeriesValue);
@@ -119,7 +128,65 @@ namespace TimeSeriesLibrary
                 blobWriter.Write(dateValueArray[i].Value);
             }
             return blobData;
+        } 
+        #endregion
+
+
+        #region ComputeChecksum() Method
+        /// <summary>
+        /// Method computes the checksum for the timeseries, using the information in class-level fields
+        /// and in the given BLOB (byte array) of timeseries values.
+        /// </summary>
+        /// <param name="blobData">the BLOB (byte array) of timeseries values</param>
+        /// <returns>the checksum</returns>
+        public static byte[] ComputeChecksum(
+                    TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
+                    int timeStepCount, DateTime blobStartDate, DateTime blobEndDate,
+                    byte[] blobData)
+        {
+            // The MD5 checksum will be computed from two byte arrays.  The first byte array contains
+            // a series of meta parameters that TimeSeriesLibrary that are inherently linked with the
+            // time series array.  The second byte array is the time series array itself.
+
+
+            // This constant expresses the length of the byte array of meta parameters.  The
+            // calculation of the constant must be in accord with the parameters that are 
+            // actually assigned into the byte array below.
+            const int LengthOfParamInputForChecksum =
+                sizeof(TSDateCalculator.TimeStepUnitCode) +  // TimeStepUnit
+                sizeof(short) +              // TimeStepQuantity
+                sizeof(int) +                // TimeStepCount
+                8 + 8;                       // StartDate and EndDate
+
+
+            // Byte array for the series of meta parameters that are fed into the MD5 algorithm first.
+            byte[] binArray = new byte[LengthOfParamInputForChecksum];
+            // MemoryStream and BinaryWriter objects allow us to write data into the byte array
+            MemoryStream binStream = new MemoryStream();
+            BinaryWriter binWriter = new BinaryWriter(binStream);
+
+            // Write relevant meta-parameters (not including the BLOB itself) into a short byte array
+
+            // TimeStepUnit
+            binWriter.Write((short)timeStepUnit);
+            // TimeStepQuantity
+            binWriter.Write(timeStepQuantity);
+            // TimeStepCount
+            binWriter.Write(timeStepCount);
+            // StartDate and EndDate
+            binWriter.Write(blobStartDate.ToBinary());
+            binWriter.Write(blobEndDate.ToBinary());
+
+            // MD5CryptoServiceProvider object has methods to compute the checksum
+            MD5CryptoServiceProvider md5Hasher = new MD5CryptoServiceProvider();
+            // feed the short byte array of meta-parameters into the MD5 hash computer
+            md5Hasher.TransformBlock(binArray, 0, LengthOfParamInputForChecksum, binArray, 0);
+            // feed the BLOB of timeseries values into the MD5 hash computer
+            md5Hasher.TransformFinalBlock(blobData, 0, blobData.Length);
+            // return the hash (checksum) value
+            return md5Hasher.Hash;
         }
+        #endregion
 
     }
 }
