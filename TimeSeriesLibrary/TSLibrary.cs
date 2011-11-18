@@ -86,7 +86,6 @@ namespace TimeSeriesLibrary
         /// <param name="valueList">The List that the method will fill</param>
         /// <param name="reqStartDate">The earliest date that the method will enter into the list</param>
         /// <returns>The number of values that the method added to the list</returns>
-        // usage: perhaps none?
         public int ReadValuesRegular(
                 int connectionNumber, String tableName, Guid id,
                 int nReqValues, ref List<double> valueList, DateTime reqStartDate, DateTime reqEndDate)

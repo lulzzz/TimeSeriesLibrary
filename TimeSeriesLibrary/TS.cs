@@ -29,8 +29,6 @@ namespace TimeSeriesLibrary
         public Boolean IsInitialized;
 
 
-
-
         #region Static Constructor
         /// <summary>
         /// Static constructor is called before the first instance of the class is initialized--not when an
@@ -62,7 +60,7 @@ namespace TimeSeriesLibrary
         #endregion
 
 
-        #region Method for Initializing time series meta parameters (before reading or writing data values)
+        #region Initialize() Method
         /// <summary>
         /// Method reads the database record to get the definition of the time series.
         /// It does not read the time series data values themselves.  Therefore, this
@@ -111,7 +109,7 @@ namespace TimeSeriesLibrary
         #endregion
 
 
-        #region Method builds string for returning empty DataTable
+        #region BuildStringForEmptyDataTable()
         /// <summary>
         /// Method returns a string for querying the database table and returning an empty result set.
         /// The subsequent query can be used to create an empty DataTable object, with the necessary
@@ -144,7 +142,6 @@ namespace TimeSeriesLibrary
         public unsafe int ReadValuesRegular(Guid id,
             int nReqValues, double[] valueArray, DateTime reqStartDate, DateTime reqEndDate)
         {
-            int numReadValues = 0;
             // Initialize class fields other than the BLOB of data values
             if (!IsInitialized) Initialize(id);
 
@@ -155,44 +152,19 @@ namespace TimeSeriesLibrary
                                 String.Format("The method can only process regular time series, but" +
                                 "the record with Guid {0} is irregular.", id));
             }
+            // If the start or end date requested by the caller are such that the stored time series
+            // does not overlap, then we don't need to go any further.
+            if (reqStartDate > BlobEndDate || reqEndDate < BlobStartDate)
+                return 0;
 
-            //
-            // Start the DataTable
-
-            // SQL statement that will only give us the BLOB of data values
-            String comm = String.Format("select ValueBlob from {0} where Guid='{1}' ",
-                                    TableName, Id);
-            // SqlDataAdapter object will use the query to fill the DataTable
-            using (SqlDataAdapter adp = new SqlDataAdapter(comm, Connx))
-            {
-                DataTable dTable = new DataTable();
-                // Execute the query to fill the DataTable object
-                try
-                {
-                    adp.Fill(dTable);
-                }
-                catch
-                {   // The query failed
-                    throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
-                                    "Table '" + TableName + "' could not be opened using query:\n\n." + comm);
-                }
-                // There should be at least 1 row in the table
-                if (dTable.Rows.Count < 1)
-                {
-                    throw new TSLibraryException(ErrCode.Enum.Record_Not_Found_Table,
-                                    "Found zero records using query:\n\n." + comm);
-                }
-
-                // DataRow object represents the current row of the DataTable object, which in turn is our result set
-                DataRow currentRow = dTable.Rows[0];
-                // Cast the BLOB as an array of bytes
-                Byte[] blobData = (Byte[])currentRow["ValueBlob"];
-                // Convert the BLOB into an array of double values (valueArray)
-                numReadValues = TSBlobCoder.ConvertBlobToArrayRegular(TimeStepUnit, TimeStepQuantity,
-                                    BlobStartDate, BlobEndDate,
-                                    nReqValues, reqStartDate, reqEndDate, blobData, valueArray);
-            }
-            return numReadValues;
+            // byte array (the BLOB) that will be read from the database.
+            Byte[] blobData = null;
+            // method ReadValues reads data from the database into the byte array
+            ReadValues(id, ref blobData);
+            // Convert the BLOB into an array of double values (valueArray)
+            return TSBlobCoder.ConvertBlobToArrayRegular(TimeStepUnit, TimeStepQuantity,
+                                BlobStartDate, BlobEndDate,
+                                nReqValues, reqStartDate, reqEndDate, blobData, valueArray);
         }
         #endregion
 
@@ -213,7 +185,6 @@ namespace TimeSeriesLibrary
         public unsafe int ReadValuesIrregular(Guid id,
             int nReqValues, TimeSeriesValue[] dateValueArray, DateTime reqStartDate, DateTime reqEndDate)
         {
-            int numReadValues = 0;
             // Initialize class fields other than the BLOB of data values
             if (!IsInitialized) Initialize(id);
 
@@ -224,12 +195,26 @@ namespace TimeSeriesLibrary
                                 String.Format("The method can only process irregular time series, but" +
                                 "the record with Guid {0} is regular.", id));
             }
-
             // If the start or end date requested by the caller are such that the stored time series
             // does not overlap, then we don't need to go any further.
             if (reqStartDate > BlobEndDate || reqEndDate < BlobStartDate)
                 return 0;
 
+            // byte array (the BLOB) that will be read from the database.
+            Byte[] blobData = null;
+            // method ReadValues reads data from the database into the byte array
+            ReadValues(id, ref blobData);
+            // convert the byte array into date/value pairs
+            return TSBlobCoder.ConvertBlobToArrayIrregular(nReqValues, reqStartDate, reqEndDate,
+                            blobData, dateValueArray);
+
+        }
+        #endregion
+
+
+        #region ReadValues() Method
+        public unsafe void ReadValues(Guid id, ref byte[] blobData)
+        {
             // SQL statement that will only give us the BLOB of data values
             String comm = String.Format("select ValueBlob from {0} where Guid='{1}' ",
                                     TableName, Id);
@@ -257,12 +242,9 @@ namespace TimeSeriesLibrary
                 // DataRow object represents the current row of the DataTable object, which in turn is our result set
                 DataRow currentRow = dTable.Rows[0];
                 // Cast the BLOB as an array of bytes
-                Byte[] blobData = (Byte[])currentRow["ValueBlob"];
-
-                numReadValues = TSBlobCoder.ConvertBlobToArrayIrregular(nReqValues, reqStartDate, reqEndDate,
-                                blobData, dateValueArray);
+                blobData = (Byte[])currentRow["ValueBlob"];
             }
-            return numReadValues;
+
         }
         #endregion
 

@@ -45,7 +45,7 @@ namespace Sandbox
                 "Data Source=.; Database=OasisOutput; Trusted_Connection=yes;");
 
             //HashTest();
-            //WriteOneSeriesIrreg();
+            WriteOneSeriesIrreg();
             //WriteOneSeriesArray();
             //ReadOneSeriesModel();
             WriteOneSeriesList();
