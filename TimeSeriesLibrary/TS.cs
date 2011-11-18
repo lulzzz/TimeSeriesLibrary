@@ -172,7 +172,7 @@ namespace TimeSeriesLibrary
         #region ReadValuesIrregular() Method
         /// <summary>
         /// Method reads the irregular time series matching the given GUID, storing the dates and
-        /// values into the given array of TimeSeriesValue (a struct containing the date/value pair).
+        /// values into the given array of TSDateValueStruct (a struct containing the date/value pair).
         /// The method starts populating the array at the given start date, filling in no more than
         /// the number of values, that are requested, and not reading past the given end date
         /// </summary>
@@ -183,7 +183,7 @@ namespace TimeSeriesLibrary
         /// <param name="reqEndDate">end date requested</param>
         /// <returns>The number of values actually filled into the array</returns>
         public unsafe int ReadValuesIrregular(Guid id,
-            int nReqValues, TimeSeriesValue[] dateValueArray, DateTime reqStartDate, DateTime reqEndDate)
+            int nReqValues, TSDateValueStruct[] dateValueArray, DateTime reqStartDate, DateTime reqEndDate)
         {
             // Initialize class fields other than the BLOB of data values
             if (!IsInitialized) Initialize(id);
@@ -292,7 +292,7 @@ namespace TimeSeriesLibrary
         /// <param name="dateValueArray">The array of values to be written to the database</param>
         /// <returns>GUID value identifying the database record that was created</returns>
         public unsafe Guid WriteValuesIrregular(
-                    int nOutValues, TimeSeriesValue[] dateValueArray)
+                    int nOutValues, TSDateValueStruct[] dateValueArray)
         {
             // Fill in the class-level fields
             TimeStepUnit = TSDateCalculator.TimeStepUnitCode.Irregular;

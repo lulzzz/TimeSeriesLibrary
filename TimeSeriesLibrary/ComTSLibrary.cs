@@ -27,12 +27,12 @@ namespace TimeSeriesLibrary
         System.Data.SqlClient.SqlConnection GetConnectionFromId(int connectionNumber);
 
         [ComVisible(true)]
-        int ReadDatesValuesUnsafe(int connectionNumber, string tableName, Guid id, int nReqValues, TimeSeriesValue[] dateValueArray, DateTime reqStartDate, DateTime reqEndDate);
+        int ReadDatesValuesUnsafe(int connectionNumber, string tableName, Guid id, int nReqValues, TSDateValueStruct[] dateValueArray, DateTime reqStartDate, DateTime reqEndDate);
         [ComVisible(true)]
         int ReadValuesRegularUnsafe(int connectionNumber, string tableName, Guid id, int nReqValues, double[] valueArray, DateTime reqStartDate, DateTime reqEndDate);
 
         [ComVisible(true)]
-        Guid WriteValuesIrregularUnsafe(int connectionNumber, string tableName, int nOutValues, TimeSeriesValue[] dateValueArray);
+        Guid WriteValuesIrregularUnsafe(int connectionNumber, string tableName, int nOutValues, TSDateValueStruct[] dateValueArray);
         [ComVisible(true)]
         Guid WriteValuesRegularUnsafe(int connectionNumber, string tableName, short timeStepUnit, short timeStepQuantity, int nOutValues, double[] valueArray, DateTime outStartDate);
 
@@ -168,7 +168,7 @@ namespace TimeSeriesLibrary
         /// <summary>
         /// This method reads the time series matching the given GUID, using the given
         /// database connection number and database table name, and stores the values into
-        /// the given array of TimeSeriesValue structs (date/value pairs).  The method starts populating the
+        /// the given array of TSDateValueStruct structs (date/value pairs).  The method starts populating the
         /// array at the given start date, filling in no more than the number of values
         /// that are requested.  The method will read regular or irregular time series.
         /// 
@@ -185,7 +185,7 @@ namespace TimeSeriesLibrary
         [ComVisible(true)]
         public unsafe int ReadDatesValuesUnsafe(
                 int connectionNumber, String tableName, Guid id,
-                int nReqValues, TimeSeriesValue[] dateValueArray, DateTime reqStartDate, DateTime reqEndDate)
+                int nReqValues, TSDateValueStruct[] dateValueArray, DateTime reqStartDate, DateTime reqEndDate)
         {
             // Get the connection that we'll pass along.
             SqlConnection connx = GetConnectionFromId(connectionNumber);
@@ -295,7 +295,7 @@ namespace TimeSeriesLibrary
         [ComVisible(true)]
         public unsafe Guid WriteValuesIrregularUnsafe(
                     int connectionNumber, String tableName,
-                    int nOutValues, TimeSeriesValue[] dateValueArray)
+                    int nOutValues, TSDateValueStruct[] dateValueArray)
         {
             // Get the connection that we'll pass along.
             SqlConnection connx = GetConnectionFromId(connectionNumber);

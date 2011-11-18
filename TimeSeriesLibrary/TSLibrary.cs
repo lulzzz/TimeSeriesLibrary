@@ -104,7 +104,7 @@ namespace TimeSeriesLibrary
         /// <summary>
         /// This method reads the time series matching the given GUID, using the given
         /// database connection number and database table name, and stores the values into
-        /// the given list of TimeSeriesValue structs (date/value pairs).  The method will 
+        /// the given list of TSDateValueStruct structs (date/value pairs).  The method will 
         /// read regular or irregular time series.
         /// 
         /// This method is designed to be used from managed code such as C#.  This
@@ -137,8 +137,8 @@ namespace TimeSeriesLibrary
         /// <summary>
         /// This method reads the time series matching the given GUID, using the given
         /// database connection number and database table name, and stores the values into
-        /// the given list of TimeSeriesValue structs (date/value pairs).  The method starts populating the
-        /// array at the given start date, filling in no more than the number of values
+        /// the given List of TimeSeriesValue objects (date/value pairs).  The method starts populating
+        /// the array at the given start date, filling in no more than the number of values
         /// that are requested, and will not add any values that come after the given end date.
         /// The method will read regular or irregular time series.
         /// 
@@ -156,7 +156,6 @@ namespace TimeSeriesLibrary
         /// <param name="reqStartDate">The earliest date that the method will enter into the array</param>
         /// <param name="reqEndDate">The latest date that the method will enter into the array</param>
         /// <returns>The number of values that the method added to the list</returns>
-        // usage: for GUI to retrieve a time series, with date and list-length limits.
         public int ReadLimitedDatesValues(
                 int connectionNumber, String tableName, Guid id,
                 int nReqValues, ref List<TimeSeriesValue> dateValueList, DateTime reqStartDate, DateTime reqEndDate)
@@ -180,14 +179,15 @@ namespace TimeSeriesLibrary
                 // IRREGULAR TIME SERIES
 
                 // Allocate an array of date/value pairs that will be used by the caller
-                TimeSeriesValue[] dateValueArray = new TimeSeriesValue[nReqValues];
+                TSDateValueStruct[] dateValueArray = new TSDateValueStruct[nReqValues];
                 // Read the date/value list from the database
                 nValuesRead = ts.ReadValuesIrregular(id, nReqValues, dateValueArray, reqStartDate, reqEndDate);
                 // resize the array so that the list that we make from it will have exactly the right size
                 if(nValuesRead!=nReqValues)
-                    Array.Resize<TimeSeriesValue>(ref dateValueArray, nValuesRead);
+                    Array.Resize<TSDateValueStruct>(ref dateValueArray, nValuesRead);
                 // Convert the array of date/value pairs into the list that will be used by the caller
-                dateValueList = dateValueArray.ToList<TimeSeriesValue>();
+                dateValueList = dateValueArray
+                        .Select(tsv => (TimeSeriesValue)tsv).ToList<TimeSeriesValue>();
             }
             else
             {
@@ -206,19 +206,11 @@ namespace TimeSeriesLibrary
                 dateValueList = new List<TimeSeriesValue>(nValuesRead);
                 // Loop through all values, building the list of date/value pairs out of the
                 // primitive array of dates and primitive array of values.
-                TimeSeriesValue tsv = new TimeSeriesValue();
                 int i;
                 for (i = 0; i < nValuesRead; i++)
                 {
-                    tsv.Date = dateArray[i];
-                    tsv.Value = valueArray[i];
-                    dateValueList.Add(tsv);
-                }
-                // If the number of requested values is much smaller than the capacity of the list,
-                // then we'll reallocate the list so as not to waste memory.
-                if (i < nValuesRead * 0.4)
-                {
-                    dateValueList.TrimExcess();
+                    dateValueList.Add(new TimeSeriesValue
+                                { Date = dateArray[i], Value = valueArray[i] });
                 }
                 nValuesRead = i;
             }
@@ -288,7 +280,7 @@ namespace TimeSeriesLibrary
         public Guid WriteValues(
                     int connectionNumber, String tableName,
                     short timeStepUnit, short timeStepQuantity,
-                    List<TimeSeriesValue> dateValueList)
+                    List<TSDateValueStruct> dateValueList)
         {
             // Get the connection that we'll pass along.
             SqlConnection connx = GetConnectionFromId(connectionNumber);

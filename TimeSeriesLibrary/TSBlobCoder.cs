@@ -57,16 +57,16 @@ namespace TimeSeriesLibrary
         #region Method ConvertBlobToArrayIrregular
         public static unsafe int ConvertBlobToArrayIrregular(
             int nReqValues, DateTime reqStartDate, DateTime reqEndDate,
-            Byte[] blobData, TimeSeriesValue[] dateValueArray)
+            Byte[] blobData, TSDateValueStruct[] dateValueArray)
         {
             int numReadValues = 0;
 
             // MemoryStream and BinaryReader objects enable bulk copying of data from the BLOB
             MemoryStream blobStream = new MemoryStream(blobData);
             BinaryReader blobReader = new BinaryReader(blobStream);
-            // How many elements of 'TimeSeriesValue' are in the BLOB?
+            // How many elements of 'TSDateValueStruct' are in the BLOB?
             int numBlobBin = (int)blobStream.Length;
-            int numBlobValues = numBlobBin / sizeof(TimeSeriesValue);
+            int numBlobValues = numBlobBin / sizeof(TSDateValueStruct);
             DateTime currDate;
             int j = 0;
             // Loop through all time steps in the BLOB
@@ -113,10 +113,10 @@ namespace TimeSeriesLibrary
 
         #region Method ConvertArrayToBlobIrregular
         public static unsafe byte[] ConvertArrayToBlobIrregular(
-            int TimeStepCount, TimeSeriesValue[] dateValueArray)
+            int TimeStepCount, TSDateValueStruct[] dateValueArray)
         {
             // The number of bytes required for the BLOB
-            int nBin = TimeStepCount * sizeof(TimeSeriesValue);
+            int nBin = TimeStepCount * sizeof(TSDateValueStruct);
             // Allocate an array for the BLOB
             Byte[] blobData = new Byte[nBin];
 

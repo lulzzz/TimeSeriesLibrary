@@ -177,9 +177,9 @@ namespace TimeSeriesLibrary
                         // all collated together.
                         String[] stringArray = DataString.Split(new char[] { }, StringSplitOptions.RemoveEmptyEntries);
                         // We'll use this date/value structure to build each item of the date/value array
-                        TimeSeriesValue tsv = new TimeSeriesValue();
+                        TSDateValueStruct tsv = new TSDateValueStruct();
                         // allocate the array of date/value pairs
-                        TimeSeriesValue[] dateValueArray = new TimeSeriesValue[stringArray.Length/3];
+                        TSDateValueStruct[] dateValueArray = new TSDateValueStruct[stringArray.Length/3];
                         // Loop through the array of strings, 3 elements at a time
                         for (int i = 2; i < stringArray.Length; i += 3)
                         {

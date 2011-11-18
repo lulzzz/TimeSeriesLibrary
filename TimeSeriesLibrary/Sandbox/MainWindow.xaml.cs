@@ -123,7 +123,7 @@ namespace Sandbox
         //{
         //    int ret;
 
-        //    TimeSeriesValue[] dateValueArray = new TimeSeriesValue[nVals];
+        //    TSDateValueStruct[] dateValueArray = new TSDateValueStruct[nVals];
 
         //    ret = tsLib.ReadDatesValuesUnsafe(connNumber, "FileStrm2",
         //                    testId1, nVals, dateValueArray, StartDate, StartDate.AddDays(5));
@@ -137,7 +137,7 @@ namespace Sandbox
         {
             int ret;
 
-            List<TimeSeriesValue> dateValueList = new List<TimeSeriesValue>();
+            List<TSDateValueStruct> dateValueList = new List<TSDateValueStruct>();
 
             ret = tsLib.ReadAllDatesValues(connNumber, "FileStrm2",
                             testId1, ref dateValueList);
@@ -183,7 +183,7 @@ namespace Sandbox
             int i;
             DateTime date = StartDate;
 
-            TimeSeriesValue[] dateValArray = new TimeSeriesValue[nVals];
+            TSDateValueStruct[] dateValArray = new TSDateValueStruct[nVals];
             TS ts = new TS(tsLib.ConnxObject.TSConnectionsCollection[connNumber], "FileStrm2");
 
             for (i = 0; i < nVals; i++)
@@ -195,7 +195,7 @@ namespace Sandbox
             }
             testId1 = ts.WriteValuesIrregular(nVals, dateValArray);
             
-            TimeSeriesValue[] outArray = new TimeSeriesValue[nVals];
+            TSDateValueStruct[] outArray = new TSDateValueStruct[nVals];
             i = ts.ReadValuesIrregular(testId1, nVals, outArray, StartDate, dateValArray[nVals-1].Date);
             date = StartDate;
         }
@@ -210,7 +210,7 @@ namespace Sandbox
         //    testId2 = tsLib.WriteValuesRegularUnsafe(connNumber, "FileStrm2",
         //               3, 1, nVals, valArray, StartDate);
 
-        //    //List<TimeSeriesValue> tsvList = new List<TimeSeriesValue>();
+        //    //List<TSDateValueStruct> tsvList = new List<TSDateValueStruct>();
         //    //tsLib.ReadDatesValues(connNumber, "FileStrm2", testId1,
         //    //            nVals, ref tsvList, StartDate);
 
@@ -222,10 +222,10 @@ namespace Sandbox
             int i;
 
             List<double> valList = new List<double>();
-            List<TimeSeriesValue> dateValList = new List<TimeSeriesValue>();
+            List<TSDateValueStruct> dateValList = new List<TSDateValueStruct>();
             DateTime date = StartDate;
 
-            TimeSeriesValue tsv;
+            TSDateValueStruct tsv;
             for (i = 0; i < nVals; i++)
             {
                 valList.Add(i * 10);
@@ -245,7 +245,7 @@ namespace Sandbox
                             (short)TSDateCalculator.TimeStepUnitCode.Day, 3, dateValList);
 
             
-            List<TimeSeriesValue> dv = new List<TimeSeriesValue>();
+            List<TSDateValueStruct> dv = new List<TSDateValueStruct>();
             i = tsLib.ReadAllDatesValues(connNumber, "FileStrm2", testId2, ref dv);
             i = 3;
         }
