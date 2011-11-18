@@ -29,7 +29,7 @@ namespace TimeSeriesLibrary
         [ComVisible(true)]
         int ReadDatesValuesUnsafe(int connectionNumber, string tableName, Guid id, int nReqValues, TimeSeriesValue[] dateValueArray, DateTime reqStartDate, DateTime reqEndDate);
         [ComVisible(true)]
-        int ReadValuesRegularUnsafe(int connectionNumber, string tableName, Guid id, int nReqValues, double[] valueArray, DateTime reqStartDate);
+        int ReadValuesRegularUnsafe(int connectionNumber, string tableName, Guid id, int nReqValues, double[] valueArray, DateTime reqStartDate, DateTime reqEndDate);
 
         [ComVisible(true)]
         Guid WriteValuesIrregularUnsafe(int connectionNumber, string tableName, int nOutValues, TimeSeriesValue[] dateValueArray);
@@ -155,14 +155,14 @@ namespace TimeSeriesLibrary
         [ComVisible(true)]
         public unsafe int ReadValuesRegularUnsafe(
                 int connectionNumber, String tableName, Guid id,
-                int nReqValues, double[] valueArray, DateTime reqStartDate)
+                int nReqValues, double[] valueArray, DateTime reqStartDate, DateTime reqEndDate)
         {
             // Get the connection that we'll pass along.
             SqlConnection connx = GetConnectionFromId(connectionNumber);
             // Construct new TS object with SqlConnection object and table name
             TS ts = new TS(connx, tableName);
 
-            return ts.ReadValuesRegular(id, nReqValues, valueArray, reqStartDate);
+            return ts.ReadValuesRegular(id, nReqValues, valueArray, reqStartDate, reqEndDate);
         }
 
         /// <summary>
@@ -211,7 +211,7 @@ namespace TimeSeriesLibrary
                 // Allocate an array to hold the time series' data values
                 double[] valueArray = new double[nReqValues];
                 // Read the data values from the database
-                nValuesRead = ts.ReadValuesRegular(id, nReqValues, valueArray, reqStartDate);
+                nValuesRead = ts.ReadValuesRegular(id, nReqValues, valueArray, reqStartDate, reqEndDate);
                 // Allocate an array to hold the time series' date values
                 DateTime[] dateArray = new DateTime[nValuesRead];
                 // Fill the array with the date values corresponding to the time steps defined

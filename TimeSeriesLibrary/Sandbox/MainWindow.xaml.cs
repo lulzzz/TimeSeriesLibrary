@@ -48,7 +48,7 @@ namespace Sandbox
             //WriteOneSeriesIrreg();
             //WriteOneSeriesArray();
             //ReadOneSeriesModel();
-            //WriteOneSeriesList();
+            WriteOneSeriesList();
             //ReadOneSeriesArray();
         }
         private void MainWindowClosed(object sender, EventArgs e)
@@ -59,7 +59,7 @@ namespace Sandbox
 
         private void GoButtonClick(object sender, RoutedEventArgs e)
         {
-            ImportTest();
+            //ImportTest();
             //ReadArrayTest();
             //ReadListTest();
             //WriteArrayTest();
@@ -119,20 +119,20 @@ namespace Sandbox
         }
 
 
-        void ReadOneSeriesModel()
-        {
-            int ret;
+        //void ReadOneSeriesModel()
+        //{
+        //    int ret;
 
-            TimeSeriesValue[] dateValueArray = new TimeSeriesValue[nVals];
+        //    TimeSeriesValue[] dateValueArray = new TimeSeriesValue[nVals];
 
-            ret = tsLib.ReadDatesValuesUnsafe(connNumber, "FileStrm2",
-                            testId1, nVals, dateValueArray, StartDate, StartDate.AddDays(5));
+        //    ret = tsLib.ReadDatesValuesUnsafe(connNumber, "FileStrm2",
+        //                    testId1, nVals, dateValueArray, StartDate, StartDate.AddDays(5));
 
-            ret = tsLib.ReadDatesValuesUnsafe(connNumber, "FileStrm2",
-                            testId2, nVals, dateValueArray, StartDate, StartDate.AddDays(3));
+        //    ret = tsLib.ReadDatesValuesUnsafe(connNumber, "FileStrm2",
+        //                    testId2, nVals, dateValueArray, StartDate, StartDate.AddDays(3));
 
-            ret = 3;
-        }
+        //    ret = 3;
+        //}
         void ReadOneSeriesGUI()
         {
             int ret;
@@ -195,28 +195,28 @@ namespace Sandbox
             }
             testId1 = ts.WriteValuesIrregular(nVals, dateValArray);
             
-            //TimeSeriesValue[] outArray = new TimeSeriesValue[nVals];
-            //i = ts.ReadValuesIrregular(testId1, nVals, outArray, StartDate, StartDate.AddDays(5));
-            //date = StartDate;
+            TimeSeriesValue[] outArray = new TimeSeriesValue[nVals];
+            i = ts.ReadValuesIrregular(testId1, nVals, outArray, StartDate, dateValArray[nVals-1].Date);
+            date = StartDate;
         }
-        void WriteOneSeriesArray()
-        {
-            int i;
+        //void WriteOneSeriesArray()
+        //{
+        //    int i;
 
-            double[] valArray = new double[nVals];
+        //    double[] valArray = new double[nVals];
 
-            for (i = 0; i < nVals; i++)
-                valArray[i] = i * 3;
-            testId2 = tsLib.WriteValuesRegularUnsafe(connNumber, "FileStrm2",
-                       3, 1, nVals, valArray, StartDate);
+        //    for (i = 0; i < nVals; i++)
+        //        valArray[i] = i * 3;
+        //    testId2 = tsLib.WriteValuesRegularUnsafe(connNumber, "FileStrm2",
+        //               3, 1, nVals, valArray, StartDate);
 
-            //List<TimeSeriesValue> tsvList = new List<TimeSeriesValue>();
-            //tsLib.ReadDatesValues(connNumber, "FileStrm2", testId1,
-            //            nVals, ref tsvList, StartDate);
+        //    //List<TimeSeriesValue> tsvList = new List<TimeSeriesValue>();
+        //    //tsLib.ReadDatesValues(connNumber, "FileStrm2", testId1,
+        //    //            nVals, ref tsvList, StartDate);
 
-            DateTime date = StartDate;
+        //    DateTime date = StartDate;
 
-        }
+        //}
         void WriteOneSeriesList()
         {
             int i;
@@ -249,77 +249,77 @@ namespace Sandbox
             i = tsLib.ReadAllDatesValues(connNumber, "FileStrm2", testId2, ref dv);
             i = 3;
         }
-        void ReadOneSeriesArray()
-        {
-            int ret;
+        //void ReadOneSeriesArray()
+        //{
+        //    int ret;
 
-            double[] valArray = new double[nVals];
+        //    double[] valArray = new double[nVals];
 
-            ret = tsLib.ReadValuesRegularUnsafe(connNumber, "FileStrm2",
-                            testId1, nVals, valArray, StartDate);
+        //    ret = tsLib.ReadValuesRegularUnsafe(connNumber, "FileStrm2",
+        //                    testId1, nVals, valArray, StartDate);
 
-            ret = tsLib.ReadValuesRegularUnsafe(connNumber, "FileStrm2",
-                            testId2, nVals, valArray, StartDate);
+        //    ret = tsLib.ReadValuesRegularUnsafe(connNumber, "FileStrm2",
+        //                    testId2, nVals, valArray, StartDate);
 
-            ret = 3;
-        }
+        //    ret = 3;
+        //}
 
-        void ReadArrayTest()
-        {
-            int ret, i;
+        //void ReadArrayTest()
+        //{
+        //    int ret, i;
 
-            double[] valArray = new double[nVals];
+        //    double[] valArray = new double[nVals];
 
-            DateTime timerStart = DateTime.Now;
-            for (i = 0; i < nIter; i++)
-            {
-                TimeLabelBlob.Content = String.Format("Iteration {0}", i);
-                ret = tsLib.ReadValuesRegularUnsafe(connNumber, "FileStrm2",
-                                testId1, nVals, valArray, StartDate);
-            }
-            DateTime timerEnd = DateTime.Now;
-            TimeSpan timerDiff = timerEnd - timerStart;
-            TimeLabelBlob.Content = String.Format("BLOBBED --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
-        }
-        void ReadListTest()
-        {
-            int ret, i;
+        //    DateTime timerStart = DateTime.Now;
+        //    for (i = 0; i < nIter; i++)
+        //    {
+        //        TimeLabelBlob.Content = String.Format("Iteration {0}", i);
+        //        ret = tsLib.ReadValuesRegularUnsafe(connNumber, "FileStrm2",
+        //                        testId1, nVals, valArray, StartDate);
+        //    }
+        //    DateTime timerEnd = DateTime.Now;
+        //    TimeSpan timerDiff = timerEnd - timerStart;
+        //    TimeLabelBlob.Content = String.Format("BLOBBED --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
+        //}
+        //void ReadListTest()
+        //{
+        //    int ret, i;
 
-            List<double> valList = new List<double>();
+        //    List<double> valList = new List<double>();
 
-            DateTime timerStart = DateTime.Now;
-            for (i = 0; i < nIter; i++)
-            {
-                TimeLabelBlob.Content = String.Format("Iteration {0}", i);
-                ret = tsLib.ReadValuesRegular(connNumber, "FileStrm2",
-                                testId1, nVals, ref valList, StartDate);
-            }
-            DateTime timerEnd = DateTime.Now;
-            TimeSpan timerDiff = timerEnd - timerStart;
-            TimeLabelBlob.Content = String.Format("BLOBBED --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
-        }
+        //    DateTime timerStart = DateTime.Now;
+        //    for (i = 0; i < nIter; i++)
+        //    {
+        //        TimeLabelBlob.Content = String.Format("Iteration {0}", i);
+        //        ret = tsLib.ReadValuesRegular(connNumber, "FileStrm2",
+        //                        testId1, nVals, ref valList, StartDate);
+        //    }
+        //    DateTime timerEnd = DateTime.Now;
+        //    TimeSpan timerDiff = timerEnd - timerStart;
+        //    TimeLabelBlob.Content = String.Format("BLOBBED --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
+        //}
 
 
-        void WriteArrayTest()
-        {
-            int i;
+        //void WriteArrayTest()
+        //{
+        //    int i;
 
-            double[] valArray = new double[nVals];
+        //    double[] valArray = new double[nVals];
 
-            for (i = 0; i < nVals; i++)
-                valArray[i] = i * 3;
+        //    for (i = 0; i < nVals; i++)
+        //        valArray[i] = i * 3;
 
-            DateTime timerStart = DateTime.Now;
-            for (i = 0; i < nIter; i++)
-            {
-                TimeLabelBlob.Content = String.Format("Iteration {0}", i);
-                tsLib.WriteValuesRegularUnsafe(connNumber, "FileStrm2",
-                           3, 1, nVals, valArray, StartDate);
-            }
-            DateTime timerEnd = DateTime.Now;
-            TimeSpan timerDiff = timerEnd - timerStart;
-            TimeLabelBlob.Content = String.Format("BLOBWRI --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
-        }
+        //    DateTime timerStart = DateTime.Now;
+        //    for (i = 0; i < nIter; i++)
+        //    {
+        //        TimeLabelBlob.Content = String.Format("Iteration {0}", i);
+        //        tsLib.WriteValuesRegularUnsafe(connNumber, "FileStrm2",
+        //                   3, 1, nVals, valArray, StartDate);
+        //    }
+        //    DateTime timerEnd = DateTime.Now;
+        //    TimeSpan timerDiff = timerEnd - timerStart;
+        //    TimeLabelBlob.Content = String.Format("BLOBWRI --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
+        //}
         void WriteListTest()
         {
             int i;

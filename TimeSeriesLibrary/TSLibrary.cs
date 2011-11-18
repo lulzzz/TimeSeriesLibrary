@@ -89,7 +89,7 @@ namespace TimeSeriesLibrary
         // usage: perhaps none?
         public int ReadValuesRegular(
                 int connectionNumber, String tableName, Guid id,
-                int nReqValues, ref List<double> valueList, DateTime reqStartDate)
+                int nReqValues, ref List<double> valueList, DateTime reqStartDate, DateTime reqEndDate)
         {
             // Get the connection that we'll pass along.
             SqlConnection connx = GetConnectionFromId(connectionNumber);
@@ -97,7 +97,7 @@ namespace TimeSeriesLibrary
             TS ts = new TS(connx, tableName);
 
             double[] valueArray = new double[nReqValues];
-            int ret = ts.ReadValuesRegular(id, nReqValues, valueArray, reqStartDate);
+            int ret = ts.ReadValuesRegular(id, nReqValues, valueArray, reqStartDate, reqEndDate);
             valueList = valueArray.ToList<double>();
             return ret;
         }
@@ -197,7 +197,7 @@ namespace TimeSeriesLibrary
                 // Allocate an array to hold the time series' data values
                 double[] valueArray = new double[nReqValues];
                 // Read the data values from the database
-                nValuesRead = ts.ReadValuesRegular(id, nReqValues, valueArray, reqStartDate);
+                nValuesRead = ts.ReadValuesRegular(id, nReqValues, valueArray, reqStartDate, reqEndDate);
                 // Allocate an array to hold the time series' date values
                 DateTime[] dateArray = new DateTime[nValuesRead];
                 // Fill the array with the date values corresponding to the time steps defined
@@ -214,13 +214,6 @@ namespace TimeSeriesLibrary
                     tsv.Date = dateArray[i];
                     tsv.Value = valueArray[i];
                     dateValueList.Add(tsv);
-                    // So far we have ignored the requested end date.  However, at this
-                    // stage we won't make the list any longer than was requested by the caller.
-                    if (tsv.Date >= reqEndDate)
-                    {
-                        i++;
-                        break;
-                    }
                 }
                 // If the number of requested values is much smaller than the capacity of the list,
                 // then we'll reallocate the list so as not to waste memory.

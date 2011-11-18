@@ -197,7 +197,7 @@ namespace TimeSeriesLibrary
         /// <param name="reqStartDate">start date requested</param>
         /// <returns>The number of values actually filled into the array</returns>
         public unsafe int ReadValuesRegular(Guid id,
-            int nReqValues, double[] valueArray, DateTime reqStartDate)
+            int nReqValues, double[] valueArray, DateTime reqStartDate, DateTime reqEndDate)
         {
             int numReadValues = 0;
             // Initialize class fields other than the BLOB of data values
@@ -242,24 +242,10 @@ namespace TimeSeriesLibrary
                 DataRow currentRow = dTable.Rows[0];
                 // Cast the BLOB as an array of bytes
                 Byte[] blobData = (Byte[])currentRow["ValueBlob"];
-                // MemoryStream and BinaryReader objects enable bulk copying of data from the BLOB
-                MemoryStream blobStream = new MemoryStream(blobData);
-                BinaryReader blobReader = new BinaryReader(blobStream);
-                // How many elements of size 'double' are in the BLOB?
-                int numBlobBin = (int)blobStream.Length;
-                int numBlobValues = numBlobBin / sizeof(double);
-                // Do we skip any values at the front of the BLOB in order to fullfil the requested start date?
-                int numSkipValues = 0;
-                if (reqStartDate > BlobStartDate)
-                    numSkipValues = TSDateCalculator.CountSteps(BlobStartDate, reqStartDate, TimeStepUnit, TimeStepQuantity);
-                // convert the number of skipped values from number of doubles to number of bytes
-                int numSkipBin = numSkipValues * sizeof(double);
-                // the number of values that can actually be read from the BLOB
-                numReadValues = Math.Min(numBlobValues - numSkipValues, nReqValues);
-                int numReadBin = numReadValues * sizeof(double);
-
-                // Transfer the entire array of data as a block
-                Buffer.BlockCopy(blobReader.ReadBytes(numBlobBin), numSkipBin, valueArray, 0, numReadBin);
+                // Convert the BLOB into an array of double values (valueArray)
+                numReadValues = TSBlobCoder.ConvertBlobToArrayRegular(TimeStepUnit, TimeStepQuantity,
+                                    BlobStartDate, BlobEndDate,
+                                    nReqValues, reqStartDate, reqEndDate, blobData, valueArray);
             }
             return numReadValues;
         }
@@ -327,32 +313,9 @@ namespace TimeSeriesLibrary
                 DataRow currentRow = dTable.Rows[0];
                 // Cast the BLOB as an array of bytes
                 Byte[] blobData = (Byte[])currentRow["ValueBlob"];
-                // MemoryStream and BinaryReader objects enable bulk copying of data from the BLOB
-                MemoryStream blobStream = new MemoryStream(blobData);
-                BinaryReader blobReader = new BinaryReader(blobStream);
-                // How many elements of 'TimeSeriesValue' are in the BLOB?
-                int numBlobBin = (int)blobStream.Length;
-                int numBlobValues = numBlobBin / sizeof(TimeSeriesValue);
-                DateTime currDate;
-                int j = 0;
-                // Loop through all time steps in the BLOB
-                for (int i = 0; i < numBlobValues; i++)
-                {
-                    // First check the date of this time step
-                    currDate = DateTime.FromBinary(blobReader.ReadInt64());
-                    // If date is before or after the dates requested by the caller, then
-                    // we won't record the date/value info to the output array.
-                    if (currDate < reqStartDate) continue;
-                    if (currDate > reqEndDate) break;
-                    // Record the date and value to the output array.
-                    dateValueArray[j].Date = currDate;
-                    dateValueArray[j].Value = blobReader.ReadDouble();
-                    j++;
-                    // Don't overrun the array length specified by the caller
-                    if (j >= nReqValues) break;
-                }
-                
-                numReadValues = j;
+
+                numReadValues = TSBlobCoder.ConvertBlobToArrayIrregular(nReqValues, reqStartDate, reqEndDate,
+                                blobData, dateValueArray);
             }
             return numReadValues;
         }
@@ -411,14 +374,8 @@ namespace TimeSeriesLibrary
                     // represents a record that we will add to the database table.
                     DataRow currentRow = dTable.NewRow();
 
-                    // The number of bytes required for the BLOB
-                    int nBin = TimeStepCount * sizeof(double);
-                    // Allocate an array for the BLOB--plus a bit of padding that is used to compute the checksum
-                    Byte[] blobData = new Byte[nBin];
-                    // Copy the array of doubles that was passed to the method into the byte array.  We skip
-                    // a bit of padding at the beginning that is used to compute the checksum.  Thus, the
-                    // byte array (without the padding for checksum) becomes the BLOB.
-                    Buffer.BlockCopy(valueArray, 0, blobData, 0, nBin);
+                    // Convert the array of double values into a byte array...a BLOB
+                    byte[] blobData = TSBlobCoder.ConvertArrayToBlobRegular(TimeStepCount, valueArray);
                     // compute the checksum
                     Byte[] checksum = ComputeChecksum(blobData);
 
@@ -495,20 +452,8 @@ namespace TimeSeriesLibrary
                     // represents a record that we will add to the database table.
                     DataRow currentRow = dTable.NewRow();
 
-                    //
-                    // Fill the values into the DataTable's records
-
-                    // start at first record
-                    int nBin = TimeStepCount * sizeof(TimeSeriesValue);
-                    Byte[] blobData = new Byte[nBin];
-
-                    MemoryStream blobStream = new MemoryStream(blobData);
-                    BinaryWriter blobWriter = new BinaryWriter(blobStream);
-                    for (int i = 0; i < TimeStepCount; i++)
-                    {
-                        blobWriter.Write(dateValueArray[i].Date.ToBinary());
-                        blobWriter.Write(dateValueArray[i].Value);
-                    }
+                    // Convert the array of double values into a byte array...a BLOB
+                    Byte[] blobData = TSBlobCoder.ConvertArrayToBlobIrregular(TimeStepCount, dateValueArray);
                     // compute the checksum
                     Byte[] checksum = ComputeChecksum(blobData);
 

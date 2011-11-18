@@ -46,6 +46,7 @@
   <ItemGroup>
     <Compile Include="ComTSLibrary.cs" />
     <Compile Include="TimeSeriesValue.cs" />
+    <Compile Include="TSBlobCoder.cs" />
     <Compile Include="TSLibraryException.cs" />
     <Compile Include="TS.cs">
       <SubType>Code</SubType>
