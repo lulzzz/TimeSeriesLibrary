@@ -17,11 +17,10 @@ namespace TimeSeriesLibrary
         #region Method ConvertBlobToArrayRegular
         public static unsafe int ConvertBlobToArrayRegular(
             TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
-            DateTime blobStartDate, DateTime blobEndDate,
+            DateTime blobStartDate, bool applyLimits,
             int nReqValues, DateTime reqStartDate, DateTime reqEndDate,
             Byte[] blobData, double[] valueArray)
         {
-            int numReadValues = 0;
 
             // MemoryStream and BinaryReader objects enable bulk copying of data from the BLOB
             MemoryStream blobStream = new MemoryStream(blobData);
@@ -29,19 +28,33 @@ namespace TimeSeriesLibrary
             // How many elements of size 'double' are in the BLOB?
             int numBlobBin = (int)blobStream.Length;
             int numBlobValues = numBlobBin / sizeof(double);
-            // Do we skip any values at the front of the BLOB in order to fullfil the requested start date?
+
+            int numReadValues = numBlobValues;
             int numSkipValues = 0;
-            if (reqStartDate > blobStartDate)
-                numSkipValues = TSDateCalculator.CountSteps(blobStartDate, reqStartDate, timeStepUnit, timeStepQuantity);
-            // convert the number of skipped values from number of doubles to number of bytes
-            int numSkipBin = numSkipValues * sizeof(double);
-            // Do we truncate any values at the end of the BLOB in order to fulfill the requested end date?
             int numTruncValues = 0;
-            if (reqEndDate < blobEndDate)
-                numTruncValues = TSDateCalculator.CountSteps(reqEndDate, blobEndDate, timeStepUnit, timeStepQuantity);
-            // the number of values that can actually be read from the BLOB
-            numReadValues = Math.Min(numBlobValues - numSkipValues - numTruncValues, nReqValues);
+
+            // Values might be skipped from the front or truncated from the end of the array,
+            // but only if this flag is 'true'.
+            if (applyLimits)
+            {
+                // Do we skip any values at the front of the BLOB in order to fullfil the requested start date?
+                if (reqStartDate > blobStartDate)
+                    numSkipValues = TSDateCalculator.CountSteps(blobStartDate, reqStartDate, timeStepUnit, timeStepQuantity);
+                // compute the last date in the BLOB
+                DateTime blobEndDate = TSDateCalculator.IncrementDate
+                                (blobStartDate, timeStepUnit, timeStepQuantity, numBlobValues);
+                // Do we truncate any values at the end of the BLOB in order to fulfill the requested end date?
+                if (reqEndDate < blobEndDate)
+                    numTruncValues = TSDateCalculator.CountSteps(reqEndDate, blobEndDate, timeStepUnit, timeStepQuantity);
+                // the number of values that can actually be read from the BLOB
+                numReadValues = Math.Min(numBlobValues - numSkipValues - numTruncValues, nReqValues);
+            }
+
+            // the number of bytes that will actually be read
             int numReadBin = numReadValues * sizeof(double);
+            // the number of bytes that will be skipped
+            int numSkipBin = numSkipValues * sizeof(double);
+
             // If we've got zero values to read, then we're done early!
             if (numReadValues <= 0)
                 return 0;
@@ -55,7 +68,7 @@ namespace TimeSeriesLibrary
 
 
         #region Method ConvertBlobToArrayIrregular
-        public static unsafe int ConvertBlobToArrayIrregular(
+        public static unsafe int ConvertBlobToArrayIrregular(bool applyLimits,
             int nReqValues, DateTime reqStartDate, DateTime reqEndDate,
             Byte[] blobData, TSDateValueStruct[] dateValueArray)
         {
@@ -76,14 +89,17 @@ namespace TimeSeriesLibrary
                 currDate = DateTime.FromBinary(blobReader.ReadInt64());
                 // If date is before or after the dates requested by the caller, then
                 // we won't record the date/value info to the output array.
-                if (currDate < reqStartDate) continue;
-                if (currDate > reqEndDate) break;
+                if (applyLimits)
+                {
+                    if (currDate < reqStartDate) continue;
+                    if (currDate > reqEndDate) break;
+                }
                 // Record the date and value to the output array.
                 dateValueArray[j].Date = currDate;
                 dateValueArray[j].Value = blobReader.ReadDouble();
                 j++;
                 // Don't overrun the array length specified by the caller
-                if (j >= nReqValues) break;
+                if(applyLimits) if (j >= nReqValues) break;
             }
 
             numReadValues = j;
@@ -120,10 +136,13 @@ namespace TimeSeriesLibrary
             // Allocate an array for the BLOB
             Byte[] blobData = new Byte[nBin];
 
+            // MemoryStream and BinaryWriter objects enable copying of data to the BLOB
             MemoryStream blobStream = new MemoryStream(blobData);
             BinaryWriter blobWriter = new BinaryWriter(blobStream);
+            // Loop through the entire array
             for (int i = 0; i < TimeStepCount; i++)
             {
+                // write the value to the BLOB as DATE followed by VALUE
                 blobWriter.Write(dateValueArray[i].Date.ToBinary());
                 blobWriter.Write(dateValueArray[i].Value);
             }

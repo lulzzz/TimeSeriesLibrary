@@ -163,8 +163,9 @@ namespace TimeSeriesLibrary
             ReadValues(id, ref blobData);
             // Convert the BLOB into an array of double values (valueArray)
             return TSBlobCoder.ConvertBlobToArrayRegular(TimeStepUnit, TimeStepQuantity,
-                                BlobStartDate, BlobEndDate,
-                                nReqValues, reqStartDate, reqEndDate, blobData, valueArray);
+                                BlobStartDate, true,
+                                nReqValues, reqStartDate, reqEndDate, 
+                                blobData, valueArray);
         }
         #endregion
 
@@ -205,7 +206,7 @@ namespace TimeSeriesLibrary
             // method ReadValues reads data from the database into the byte array
             ReadValues(id, ref blobData);
             // convert the byte array into date/value pairs
-            return TSBlobCoder.ConvertBlobToArrayIrregular(nReqValues, reqStartDate, reqEndDate,
+            return TSBlobCoder.ConvertBlobToArrayIrregular(true, nReqValues, reqStartDate, reqEndDate,
                             blobData, dateValueArray);
 
         }

@@ -18,7 +18,139 @@ namespace TimeSeriesLibrary
         /// </summary>
         public TSConnection ConnxObject = new TSConnection();
 
-        #region Public Methods for Connection
+
+        #region Public methods for converting List<TimeSeriesValue> to BLOB and vice-versa
+
+        public int ConvertBlobToListAll(
+            TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
+            DateTime blobStartDate,
+            Byte[] blobData, ref List<TimeSeriesValue> dateValueList)
+        {
+            // The private method ConvertBlobToList() will do all the real work here.
+            // This private method takes parameters for limiting a portion of the List to be
+            // written to the BLOB.  The values below are dummies that will be passed to
+            // the private method, which it will ignore.
+            int nReqValues = 0;
+            DateTime reqStartDate = blobStartDate;
+            DateTime reqEndDate = blobStartDate;
+
+            // Let the private core method do all the real work.
+            // We pass it the 'applyLimits' value of false, to tell it to ignore the 'req' limit values.
+            return ConvertBlobToList(timeStepUnit, timeStepQuantity,
+                        blobStartDate, false,
+                        nReqValues, reqStartDate, reqEndDate,
+                        blobData, ref dateValueList);
+        }
+
+
+        public int ConvertBlobToListLimited(
+            TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
+            DateTime blobStartDate,
+            int nReqValues, DateTime reqStartDate, DateTime reqEndDate,
+            Byte[] blobData, ref List<TimeSeriesValue> dateValueList)
+        {
+            // Let the private core method do all the real work.
+            // We pass it the 'applyLimits' value of true.
+            return ConvertBlobToList(timeStepUnit, timeStepQuantity,
+                        blobStartDate, true, 
+                        nReqValues, reqStartDate, reqEndDate,
+                        blobData, ref dateValueList);
+        }
+
+
+        private unsafe int ConvertBlobToList(
+            TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
+            DateTime blobStartDate, Boolean applyLimits,
+            int nReqValues, DateTime reqStartDate, DateTime reqEndDate,
+            Byte[] blobData, ref List<TimeSeriesValue> dateValueList)
+        {
+            int nValuesRead = 0;
+
+            if (timeStepUnit == TSDateCalculator.TimeStepUnitCode.Irregular)
+            {
+                // IRREGULAR TIME SERIES
+
+                // If we're not limiting the output list (i.e., we're returning every time step from
+                // the BLOB), then set the size of the intermediate array to match the size of the BLOB.
+                if (applyLimits == false)
+                    nReqValues = blobData.Length / sizeof(TSDateValueStruct);
+                // Allocate an array of date/value pairs that TSBlobCoder method will fill
+                TSDateValueStruct[] dateValueArray = new TSDateValueStruct[nReqValues];
+                // Method in the TSBlobCoder class does the real work
+                nValuesRead = TSBlobCoder.ConvertBlobToArrayIrregular(applyLimits, 
+                                    nReqValues, reqStartDate, reqEndDate,
+                                    blobData, dateValueArray);
+                // resize the array so that the List that we make from it will have exactly the right size
+                if(nValuesRead!=nReqValues)
+                    Array.Resize<TSDateValueStruct>(ref dateValueArray, nValuesRead);
+                // Convert the array of date/value pairs into the List that will be used by the caller
+                dateValueList = dateValueArray
+                        .Select(tsv => (TimeSeriesValue)tsv).ToList<TimeSeriesValue>();
+            }
+            else
+            {
+                // REGULAR TIME SERIES
+
+                // If we're not limiting the output list (i.e., we're returning every time step from
+                // the BLOB), then set the size of the intermediate array to match the size of the BLOB.
+                if (applyLimits == false)
+                    nReqValues = blobData.Length / sizeof(double);
+                // Allocate an array of values that TSBlobCoder method will fill
+                double[] valueArray = new double[nReqValues];
+                // Method in the TSBlobCoder class does the real work
+                nValuesRead = TSBlobCoder.ConvertBlobToArrayRegular(timeStepUnit, timeStepQuantity,
+                                    blobStartDate, applyLimits,
+                                    nReqValues, reqStartDate, reqEndDate,
+                                    blobData, valueArray);
+                // Allocate an array to hold the time series' date values
+                DateTime[] dateArray = new DateTime[nValuesRead];
+                // Fill the array with the date values corresponding to the time steps defined
+                // for this time series in the database.
+                TSDateCalculator.FillDateArray(timeStepUnit, timeStepQuantity, nValuesRead, dateArray, reqStartDate);
+                // Allocate a List of date/value pairs that will be used by the caller
+                dateValueList = new List<TimeSeriesValue>(nValuesRead);
+                // Loop through all values, building the List of date/value pairs out of the
+                // primitive array of dates and primitive array of values.
+                int i;
+                for (i = 0; i < nValuesRead; i++)
+                {
+                    dateValueList.Add(new TimeSeriesValue { Date = dateArray[i], Value = valueArray[i] });
+                }
+                nValuesRead = i;
+            }
+            return nValuesRead;
+        }
+
+        public byte[] ConvertListToBlob(TSDateCalculator.TimeStepUnitCode timeStepUnit, 
+                            List<TimeSeriesValue> dateValueList)
+        {
+            int timeStepCount = dateValueList.Count;
+
+            if (timeStepUnit == TSDateCalculator.TimeStepUnitCode.Irregular)
+            {
+                // IRREGULAR TIME SERIES
+
+                // The method in TSBlobCoder can only process an array of TSDateValueStruct.  Therefore
+                // we convert the List of objects to an Array of struct instances.
+                TSDateValueStruct[] dateValueArray = dateValueList.Select(tsv => (TSDateValueStruct)tsv).ToArray();
+                // Let the method in TSBlobCoder class do all the work
+                return TSBlobCoder.ConvertArrayToBlobIrregular(timeStepCount, dateValueArray);
+            }
+            else
+            {
+                // REGULAR TIME SERIES
+
+                // The method in TSBlobCoder can only process an array of double values.  Therefore
+                // we convert the List of date/value objects to an Array values.
+                double[] valueArray = dateValueList.Select(dv => dv.Value).ToArray();
+                // Let the method in TSBlobCoder class do all the work
+                return TSBlobCoder.ConvertArrayToBlobRegular(timeStepCount, valueArray);
+            }
+        }
+        #endregion
+
+
+        #region Public Methods for Database Connection
         /// <summary>
         /// Opens a new connection for the time series library to use.  The new connection 
         /// is added to a list and assigned a serial number within the list.  The method returns
@@ -66,7 +198,7 @@ namespace TimeSeriesLibrary
         #endregion
 
 
-        #region Public methods for READING time series
+        #region Public methods for READING time series from database
 
         /// <summary>
         /// This method reads the time series matching the given GUID, using the given
@@ -85,6 +217,7 @@ namespace TimeSeriesLibrary
         /// <param name="nReqValues">The maximum number of values that the method will fill into the list</param>
         /// <param name="valueList">The List that the method will fill</param>
         /// <param name="reqStartDate">The earliest date that the method will enter into the list</param>
+        /// <param name="reqEndDate">The latest date that the method will enter into the list</param>
         /// <returns>The number of values that the method added to the list</returns>
         public int ReadValuesRegular(
                 int connectionNumber, String tableName, Guid id,
@@ -95,8 +228,11 @@ namespace TimeSeriesLibrary
             // Construct new TS object with SqlConnection object and table name
             TS ts = new TS(connx, tableName);
 
+            // allocate an array of doubles, since the ReadValuesRegular method works from arrays (not Lists)
             double[] valueArray = new double[nReqValues];
+            // The real work gets done in ReadValuesRegular method of the TS object
             int ret = ts.ReadValuesRegular(id, nReqValues, valueArray, reqStartDate, reqEndDate);
+            // convert the array that ReadValuesRegular filled into a List
             valueList = valueArray.ToList<double>();
             return ret;
         }
@@ -104,7 +240,7 @@ namespace TimeSeriesLibrary
         /// <summary>
         /// This method reads the time series matching the given GUID, using the given
         /// database connection number and database table name, and stores the values into
-        /// the given list of TSDateValueStruct structs (date/value pairs).  The method will 
+        /// the given list of TimeSeriesValue objects (date/value pairs).  The method will 
         /// read regular or irregular time series.
         /// 
         /// This method is designed to be used from managed code such as C#.  This
@@ -129,7 +265,10 @@ namespace TimeSeriesLibrary
             // Read the meta-parameters of the time series so that we'll know its date and list-length limits
             if (!ts.IsInitialized) ts.Initialize(id);
 
-            // let the sister function do the rest of the work
+            // Let the sister function do the rest of the work.  This function will limit the length
+            // of the TimeSeriesValue List that it returns, but we tell it that the limits are the
+            // beginning, end, and length of the timeseries as stored in the database.  Therefore, 
+            // it will return the entire time series as found in the database.
             return ReadLimitedDatesValues(connectionNumber, tableName, id,
                         ts.TimeStepCount, ref dateValueList, ts.BlobStartDate, ts.BlobEndDate);
         }
@@ -151,7 +290,7 @@ namespace TimeSeriesLibrary
         /// <param name="tableName">The name of the database table that contains the time series</param>
         /// <param name="id">GUID value identifying the time series to read</param>
         /// <param name="nReqValues">The maximum number of values that the method will fill into the array.
-        /// If zero is given, then no maximum number of values is applied.</param>
+        /// If 0 is given, then no maximum number of values is applied.</param>
         /// <param name="dateValueList">The list that the method will fill</param>
         /// <param name="reqStartDate">The earliest date that the method will enter into the array</param>
         /// <param name="reqEndDate">The latest date that the method will enter into the array</param>
@@ -178,14 +317,14 @@ namespace TimeSeriesLibrary
             {
                 // IRREGULAR TIME SERIES
 
-                // Allocate an array of date/value pairs that will be used by the caller
+                // Allocate an array of date/value pairs for ReadValuesIrregular to fill
                 TSDateValueStruct[] dateValueArray = new TSDateValueStruct[nReqValues];
-                // Read the date/value list from the database
+                // Read the date/value array from the database
                 nValuesRead = ts.ReadValuesIrregular(id, nReqValues, dateValueArray, reqStartDate, reqEndDate);
-                // resize the array so that the list that we make from it will have exactly the right size
+                // resize the array so that the List that we make from it will have exactly the right size
                 if(nValuesRead!=nReqValues)
                     Array.Resize<TSDateValueStruct>(ref dateValueArray, nValuesRead);
-                // Convert the array of date/value pairs into the list that will be used by the caller
+                // Convert the array of date/value pairs into the List that will be used by the caller
                 dateValueList = dateValueArray
                         .Select(tsv => (TimeSeriesValue)tsv).ToList<TimeSeriesValue>();
             }
@@ -202,9 +341,9 @@ namespace TimeSeriesLibrary
                 // Fill the array with the date values corresponding to the time steps defined
                 // for this time series in the database.
                 ts.FillDateArray(id, nValuesRead, dateArray, reqStartDate);
-                // Allocate a list of date/value pairs that will be used by the caller
+                // Allocate a List of date/value pairs that will be used by the caller
                 dateValueList = new List<TimeSeriesValue>(nValuesRead);
-                // Loop through all values, building the list of date/value pairs out of the
+                // Loop through all values, building the List of date/value pairs out of the
                 // primitive array of dates and primitive array of values.
                 int i;
                 for (i = 0; i < nValuesRead; i++)
@@ -220,7 +359,7 @@ namespace TimeSeriesLibrary
         #endregion
 
 
-        #region Public methods for WRITING time series
+        #region Public methods for WRITING time series to database
 
         /// <summary>
         /// This method saves the given time series list as a new database record, using the given
@@ -250,7 +389,7 @@ namespace TimeSeriesLibrary
             SqlConnection connx = GetConnectionFromId(connectionNumber);
             // Construct new TS object with SqlConnection object and table name
             TS ts = new TS(connx, tableName);
-
+            // Call the method in the TS object that does all the work.
             return ts.WriteValuesRegular(timeStepUnit, timeStepQuantity, nOutValues, valueList.ToArray<double>(), outStartDate);
         }
         
@@ -291,12 +430,22 @@ namespace TimeSeriesLibrary
 
             if ((TSDateCalculator.TimeStepUnitCode)timeStepUnit == TSDateCalculator.TimeStepUnitCode.Irregular)
             {
+                // IRREGULAR TIME SERIES
+
+                // A method in the TS object does all the work.  We pass it an array of date/value pairs
+                // that is equivalent to the List that we received from the caller.
                 return ts.WriteValuesIrregular(nOutValues, 
                             dateValueList.Select(tsv => (TSDateValueStruct)tsv).ToArray());
             }
             else
             {
+                // REGULAR TIME SERIES
+
+                // Create an array of values that is extracted from the List of date/value pairs
+                // that we received from the caller.  This is all that the method for storing
+                // regular time series will need to (and be able to) process.
                 double[] valueArray = dateValueList.Select(dv => dv.Value).ToArray();
+                // A method in the TS object does all the work.
                 return ts.WriteValuesRegular(timeStepUnit, timeStepQuantity, nOutValues, valueArray, outStartDate);
             }
         }
@@ -304,7 +453,7 @@ namespace TimeSeriesLibrary
         #endregion
 
 
-        #region Public methods for DELETING time series
+        #region Public methods for DELETING time series from database
 
         /// <summary>
         /// This method deletes a record for a single time series from the database, using the

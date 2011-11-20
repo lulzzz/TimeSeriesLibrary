@@ -22,3 +22,5 @@ TimeSeriesLibrary.suo
 *.tlog
 *.sdf
 *.opensdf
+*.trx
+TimeSeriesLibrary/TestResults

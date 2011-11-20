@@ -1,6 +1,8 @@
 ﻿using TimeSeriesLibrary;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Linq;
+using System.Collections.Generic;
 
 namespace TimeSeriesLibrary_Test
 {
@@ -70,6 +72,33 @@ namespace TimeSeriesLibrary_Test
 
 
         /// <summary>
+        /// test for ValueEquals method
+        ///</summary>
+        [TestMethod()]
+        public void ValueEqualsTrueTest()
+        {
+            TimeSeriesValue tsv1 = new TimeSeriesValue { Date = date1, Value = val1 };
+            TimeSeriesValue tsv2 = new TimeSeriesValue { Date = date1, Value = val1 };
+
+            Assert.IsTrue(tsv1.ValueEquals(tsv2));
+        }
+        [TestMethod()]
+        public void ValueEqualsFalseValTest()
+        {
+            TimeSeriesValue tsv1 = new TimeSeriesValue { Date = date1, Value = val1 };
+            TimeSeriesValue tsv2 = new TimeSeriesValue { Date = date1, Value = val2 };
+
+            Assert.IsFalse(tsv1.ValueEquals(tsv2));
+        }
+        [TestMethod()]
+        public void ValueEqualsFalseDateTest()
+        {
+            TimeSeriesValue tsv1 = new TimeSeriesValue { Date = date1, Value = val1 };
+            TimeSeriesValue tsv2 = new TimeSeriesValue { Date = date2, Value = val1 };
+
+            Assert.IsFalse(tsv1.ValueEquals(tsv2));
+        }
+        /// <summary>
         /// tests for explicit conversion operators
         ///</summary>
         [TestMethod()]
@@ -79,8 +108,7 @@ namespace TimeSeriesLibrary_Test
             TimeSeriesValue tsv = new TimeSeriesValue{ Date = date1, Value = val1 };
             
             TimeSeriesValue actual = ((TimeSeriesValue)(tsdvs));
-            Assert.AreEqual(tsv.Date, actual.Date);
-            Assert.AreEqual(tsv.Value, actual.Value);
+            Assert.IsTrue(tsv.ValueEquals(actual));
         }
         [TestMethod()]
         public void ConvertFromStruct2()
@@ -89,8 +117,7 @@ namespace TimeSeriesLibrary_Test
             TimeSeriesValue tsv = new TimeSeriesValue { Date = date2, Value = val2 };
 
             TimeSeriesValue actual = ((TimeSeriesValue)(tsdvs));
-            Assert.AreEqual(tsv.Date, actual.Date);
-            Assert.AreEqual(tsv.Value, actual.Value);
+            Assert.IsTrue(tsv.ValueEquals(actual));
         }
         [TestMethod()]
         public void ConvertToStruct1()
