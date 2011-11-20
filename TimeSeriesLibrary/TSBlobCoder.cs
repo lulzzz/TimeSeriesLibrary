@@ -42,7 +42,7 @@ namespace TimeSeriesLibrary
                     numSkipValues = TSDateCalculator.CountSteps(blobStartDate, reqStartDate, timeStepUnit, timeStepQuantity);
                 // compute the last date in the BLOB
                 DateTime blobEndDate = TSDateCalculator.IncrementDate
-                                (blobStartDate, timeStepUnit, timeStepQuantity, numBlobValues);
+                                (blobStartDate, timeStepUnit, timeStepQuantity, numBlobValues-1);
                 // Do we truncate any values at the end of the BLOB in order to fulfill the requested end date?
                 if (reqEndDate < blobEndDate)
                     numTruncValues = TSDateCalculator.CountSteps(reqEndDate, blobEndDate, timeStepUnit, timeStepQuantity);
@@ -91,7 +91,11 @@ namespace TimeSeriesLibrary
                 // we won't record the date/value info to the output array.
                 if (applyLimits)
                 {
-                    if (currDate < reqStartDate) continue;
+                    if (currDate < reqStartDate)
+                    {
+                        blobReader.ReadDouble();
+                        continue;
+                    }
                     if (currDate > reqEndDate) break;
                 }
                 // Record the date and value to the output array.

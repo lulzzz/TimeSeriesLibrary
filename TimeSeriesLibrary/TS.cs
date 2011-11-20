@@ -272,7 +272,7 @@ namespace TimeSeriesLibrary
             TimeStepCount = nOutValues;
             BlobStartDate = outStartDate;
             // Determine the date of the last time step
-            BlobEndDate = TSDateCalculator.IncrementDate(outStartDate, TimeStepUnit, TimeStepQuantity, TimeStepCount);
+            BlobEndDate = TSDateCalculator.IncrementDate(outStartDate, TimeStepUnit, TimeStepQuantity, TimeStepCount-1);
 
             // Convert the array of double values into a byte array...a BLOB
             byte[] blobData = TSBlobCoder.ConvertArrayToBlobRegular(TimeStepCount, valueArray);

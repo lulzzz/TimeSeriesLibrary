@@ -87,9 +87,11 @@ namespace TimeSeriesLibrary_Test
         #endregion
 
 
-        /// <summary>
-        ///A test for ConvertBlobToListAll
-        ///</summary>
+        // The series of tests below is for ConvertBlobToListAll and ConvertListToBlob.
+        // The tests take advantage of the fact that the methods are designed so that
+        // the series that is put into the BLOB must be identical to the series that
+        // comes out of the BLOB.
+
         // This method is re-used by the actual test methods that follow.
         public void ConvertBlobAll(List<TimeSeriesValue> inList,
                 TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity, 
@@ -138,6 +140,86 @@ namespace TimeSeriesLibrary_Test
         {
             ConvertBlobAll(RegList2, TimeStepUnit2, TimeStepQuantity2, BlobStartDate2);
         }
+
+
+        // The series of tests below is for ConvertBlobToListLimited and ConvertListToBlob.
+        // The tests take advantage of the fact that the methods are designed so that
+        // the series that is put into the BLOB must be identical to the series that
+        // comes out of the BLOB.
+
+        // This method is re-used by the actual test methods that follow.
+        public void ConvertBlobLimited(List<TimeSeriesValue> inList,
+                TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
+                DateTime blobStartDate,
+                int nCutStart,          // the number of time steps that the test will truncate from the start of the series
+                int nCutEnd)            // the number of time steps that the test will truncate from the end of the series
+        {
+            TSLibrary tsLib = new TSLibrary();
+            List<TimeSeriesValue> outList = new List<TimeSeriesValue>();
+
+            byte[] blobData = tsLib.ConvertListToBlob(timeStepUnit, inList);
+
+            int ret = tsLib.ConvertBlobToListLimited(timeStepUnit, timeStepQuantity,
+                            blobStartDate, 
+                            inList.Count, inList[nCutStart].Date, inList[inList.Count-nCutEnd-1].Date,
+                            blobData, ref outList);
+
+            // The return value of the function must match the number of items in the original list
+            Assert.AreEqual(ret, inList.Count - nCutStart - nCutEnd);
+            // the count in both lists must match
+            Assert.AreEqual(outList.Count, inList.Count - nCutStart - nCutEnd);
+
+            // now check each item in the two lists
+            Boolean AreEqual = true;
+            for (int i = 0; i < ret; i++)
+            {
+                if (outList[i].ValueEquals(inList[i+nCutStart]) == false)
+                    AreEqual = false;
+            }
+
+            Assert.IsTrue(AreEqual);
+        }
+        [TestMethod()]
+        public void ConvertBlobToListLimitedIrregTest1()
+        {
+            ConvertBlobLimited(IrregList1, TSDateCalculator.TimeStepUnitCode.Irregular, 0, BlobStartDate1, 3, 5);
+        }
+        [TestMethod()]
+        public void ConvertBlobToListLimitedIrregTest2()
+        {
+            ConvertBlobLimited(IrregList2, TSDateCalculator.TimeStepUnitCode.Irregular, 0, BlobStartDate2, 5, 13);
+        }
+        [TestMethod()]
+        public void ConvertBlobToListLimitedIrregTest3()
+        {
+            ConvertBlobLimited(IrregList2, TSDateCalculator.TimeStepUnitCode.Irregular, 0, BlobStartDate2, 0, 100);
+        }
+        [TestMethod()]
+        public void ConvertBlobToListLimitedIrregTest4()
+        {
+            ConvertBlobLimited(IrregList2, TSDateCalculator.TimeStepUnitCode.Irregular, 0, BlobStartDate2, 100, 0);
+        }
+        [TestMethod()]
+        public void ConvertBlobToListLimitedRegTest1()
+        {
+            ConvertBlobLimited(RegList1, TimeStepUnit1, TimeStepQuantity1, BlobStartDate1, 4, 7);
+        }
+        [TestMethod()]
+        public void ConvertBlobToListLimitedRegTest2()
+        {
+            ConvertBlobLimited(RegList2, TimeStepUnit2, TimeStepQuantity2, BlobStartDate2, 7, 4);
+        }
+        [TestMethod()]
+        public void ConvertBlobToListLimitedRegTest3()
+        {
+            ConvertBlobLimited(RegList2, TimeStepUnit2, TimeStepQuantity2, BlobStartDate2, 0, 180);
+        }
+        [TestMethod()]
+        public void ConvertBlobToListLimitedRegTest4()
+        {
+            ConvertBlobLimited(RegList2, TimeStepUnit2, TimeStepQuantity2, BlobStartDate2, 180, 0);
+        }
+
 
     }
 }
