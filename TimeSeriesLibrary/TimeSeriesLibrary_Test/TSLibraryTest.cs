@@ -20,10 +20,12 @@ namespace TimeSeriesLibrary_Test
             static TSDateCalculator.TimeStepUnitCode TimeStepUnit1 = TSDateCalculator.TimeStepUnitCode.Hour;
             static short TimeStepQuantity1 = 3;
             static DateTime BlobStartDate1 = DateTime.Parse("1/1/1920 12:00 PM");
+            static int TimeStepCount1 =500;
         static List<TimeSeriesValue> RegList2 = new List<TimeSeriesValue>();
             static TSDateCalculator.TimeStepUnitCode TimeStepUnit2 = TSDateCalculator.TimeStepUnitCode.Month;
             static short TimeStepQuantity2 = 1;
             static DateTime BlobStartDate2 = DateTime.Parse("3/3/1933 12:11 PM");
+            static int TimeStepCount2 = 1144;
 
         private TestContext testContextInstance;
 
@@ -56,7 +58,7 @@ namespace TimeSeriesLibrary_Test
             IrregList1.Add(new TimeSeriesValue { Date = BlobStartDate1, Value = 1.1 });
             RegList1.Add(new TimeSeriesValue{ Date=BlobStartDate1, Value=-500.0 });
 
-            for(i=1; i<500; i++)
+            for(i=1; i<TimeStepCount1; i++)
             {
                 IrregList1.Add(new TimeSeriesValue{ 
                         Date=IrregList1[i-1].Date.AddHours(Math.Sqrt(i)),
@@ -69,7 +71,7 @@ namespace TimeSeriesLibrary_Test
             IrregList2.Add(new TimeSeriesValue { Date = BlobStartDate2, Value = 3.5 });
             RegList2.Add(new TimeSeriesValue { Date = BlobStartDate2, Value = -20.0 });
 
-            for (i = 1; i < 1144; i++)
+            for (i = 1; i < TimeStepCount2; i++)
             {
                 IrregList2.Add(new TimeSeriesValue
                 {
@@ -152,7 +154,8 @@ namespace TimeSeriesLibrary_Test
                 TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
                 DateTime blobStartDate,
                 int nCutStart,          // the number of time steps that the test will truncate from the start of the series
-                int nCutEnd)            // the number of time steps that the test will truncate from the end of the series
+                int nCutEnd,            // the number of time steps that the test will truncate from the end of the series
+                int nMax)               // the maximum number of time steps to put into the series
         {
             TSLibrary tsLib = new TSLibrary();
             List<TimeSeriesValue> outList = new List<TimeSeriesValue>();
@@ -161,13 +164,13 @@ namespace TimeSeriesLibrary_Test
 
             int ret = tsLib.ConvertBlobToListLimited(timeStepUnit, timeStepQuantity,
                             blobStartDate, 
-                            inList.Count, inList[nCutStart].Date, inList[inList.Count-nCutEnd-1].Date,
+                            nMax, inList[nCutStart].Date, inList[inList.Count-nCutEnd-1].Date,
                             blobData, ref outList);
 
             // The return value of the function must match the number of items in the original list
-            Assert.AreEqual(ret, inList.Count - nCutStart - nCutEnd);
+            Assert.AreEqual(ret, Math.Min(nMax, inList.Count - nCutStart - nCutEnd));
             // the count in both lists must match
-            Assert.AreEqual(outList.Count, inList.Count - nCutStart - nCutEnd);
+            Assert.AreEqual(outList.Count, Math.Min(nMax, inList.Count - nCutStart - nCutEnd));
 
             // now check each item in the two lists
             Boolean AreEqual = true;
@@ -182,44 +185,269 @@ namespace TimeSeriesLibrary_Test
         [TestMethod()]
         public void ConvertBlobToListLimitedIrregTest1()
         {
-            ConvertBlobLimited(IrregList1, TSDateCalculator.TimeStepUnitCode.Irregular, 0, BlobStartDate1, 3, 5);
+            ConvertBlobLimited(IrregList1, TSDateCalculator.TimeStepUnitCode.Irregular, 0, BlobStartDate1, 3, 5, TimeStepCount1);
         }
         [TestMethod()]
         public void ConvertBlobToListLimitedIrregTest2()
         {
-            ConvertBlobLimited(IrregList2, TSDateCalculator.TimeStepUnitCode.Irregular, 0, BlobStartDate2, 5, 13);
+            ConvertBlobLimited(IrregList2, TSDateCalculator.TimeStepUnitCode.Irregular, 0, BlobStartDate2, 5, 13, TimeStepCount2);
         }
         [TestMethod()]
         public void ConvertBlobToListLimitedIrregTest3()
         {
-            ConvertBlobLimited(IrregList2, TSDateCalculator.TimeStepUnitCode.Irregular, 0, BlobStartDate2, 0, 100);
+            ConvertBlobLimited(IrregList2, TSDateCalculator.TimeStepUnitCode.Irregular, 0, BlobStartDate2, 0, 100, TimeStepCount2);
         }
         [TestMethod()]
         public void ConvertBlobToListLimitedIrregTest4()
         {
-            ConvertBlobLimited(IrregList2, TSDateCalculator.TimeStepUnitCode.Irregular, 0, BlobStartDate2, 100, 0);
+            ConvertBlobLimited(IrregList2, TSDateCalculator.TimeStepUnitCode.Irregular, 0, BlobStartDate2, 100, 0, TimeStepCount2);
         }
         [TestMethod()]
         public void ConvertBlobToListLimitedRegTest1()
         {
-            ConvertBlobLimited(RegList1, TimeStepUnit1, TimeStepQuantity1, BlobStartDate1, 4, 7);
+            ConvertBlobLimited(RegList1, TimeStepUnit1, TimeStepQuantity1, BlobStartDate1, 4, 7, TimeStepCount1);
         }
         [TestMethod()]
         public void ConvertBlobToListLimitedRegTest2()
         {
-            ConvertBlobLimited(RegList2, TimeStepUnit2, TimeStepQuantity2, BlobStartDate2, 7, 4);
+            ConvertBlobLimited(RegList2, TimeStepUnit2, TimeStepQuantity2, BlobStartDate2, 7, 4, TimeStepCount2);
         }
         [TestMethod()]
         public void ConvertBlobToListLimitedRegTest3()
         {
-            ConvertBlobLimited(RegList2, TimeStepUnit2, TimeStepQuantity2, BlobStartDate2, 0, 180);
+            ConvertBlobLimited(RegList2, TimeStepUnit2, TimeStepQuantity2, BlobStartDate2, 0, 180, TimeStepCount2);
         }
         [TestMethod()]
         public void ConvertBlobToListLimitedRegTest4()
         {
-            ConvertBlobLimited(RegList2, TimeStepUnit2, TimeStepQuantity2, BlobStartDate2, 180, 0);
+            ConvertBlobLimited(RegList2, TimeStepUnit2, TimeStepQuantity2, BlobStartDate2, 180, 0, TimeStepCount2);
+        }
+        [TestMethod()]
+        public void ConvertBlobToListLimitedRegTest5()
+        {
+            ConvertBlobLimited(RegList1, TimeStepUnit1, TimeStepQuantity1, BlobStartDate1, 0, 180, 72);
+        }
+        [TestMethod()]
+        public void ConvertBlobToListLimitedRegTest6()
+        {
+            ConvertBlobLimited(RegList2, TimeStepUnit2, TimeStepQuantity2, BlobStartDate2, 180, 0, 231);
         }
 
+
+        // The series of tests below is for ComputeChecksum()
+        //
+
+        // This method is reused by the actual test methods that follow
+        public Boolean ComputeTestChecksums(
+                TSDateCalculator.TimeStepUnitCode u1, short q1, List<TimeSeriesValue> list1, ref byte[] chk1,
+                TSDateCalculator.TimeStepUnitCode u2, short q2, List<TimeSeriesValue> list2, ref byte[] chk2)
+        {
+            TSLibrary tsLib = new TSLibrary();
+
+            byte[] blob1 = tsLib.ConvertListToBlob(u1, list1);
+
+            chk1 = tsLib.ComputeChecksum(
+                u1, q1, list1.Count,
+                list1[0].Date, list1[list1.Count - 1].Date, blob1);
+
+            byte[] blob2 = tsLib.ConvertListToBlob(u2, list2);
+
+            chk2 = tsLib.ComputeChecksum(
+                u2, q2, list2.Count,
+                list2[0].Date, list2[list2.Count - 1].Date, blob2);
+
+            Assert.IsTrue(chk1.Length == 16);
+            Assert.IsTrue(chk2.Length == 16);
+
+            for (int i = 0; i < chk1.Length; i++)
+                if(chk1[i] != chk2[i])
+                    return false;
+
+            return true;
+
+        }
+        // Test whether identical checksums are returned from identical timeseries.
+        // Note that this test seems trivial -- equal inputs have to result in equal outputs.
+        // However, it seemed important to test this behavior and I couldn't think of how else to do it.
+        [TestMethod()]
+        public void ChecksumIdenticalTest()
+        {
+            List<TimeSeriesValue> duplicateList = new List<TimeSeriesValue>();
+            
+            // Create an identical array by deep copy
+            foreach(TimeSeriesValue tsv in IrregList1)
+            {
+                duplicateList.Add(new TimeSeriesValue { Date = tsv.Date, Value = tsv.Value });
+            }
+            byte[] chk1=null, chk2=null;
+
+            Boolean ret = ComputeTestChecksums(
+                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, IrregList1, ref chk1,
+                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, duplicateList, ref chk2);
+
+            Assert.IsTrue(ret);
+        }
+        [TestMethod()]
+        public void ChecksumDiffTest1()
+        {
+            List<TimeSeriesValue> duplicateList = new List<TimeSeriesValue>();
+
+            // Create an identical array by deep copy
+            foreach (TimeSeriesValue tsv in IrregList1)
+            {
+                duplicateList.Add(new TimeSeriesValue { Date = tsv.Date, Value = tsv.Value });
+            }
+            // Slightly alter one date in the list
+            duplicateList[5].Date = duplicateList[5].Date.AddMinutes(12);
+            
+            byte[] chk1 = null, chk2 = null;
+
+            Boolean ret = ComputeTestChecksums(
+                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, IrregList1, ref chk1,
+                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, duplicateList, ref chk2);
+
+            Assert.IsFalse(ret);
+        }
+        [TestMethod()]
+        public void ChecksumDiffTest2()
+        {
+            List<TimeSeriesValue> duplicateList = new List<TimeSeriesValue>();
+
+            // Create an identical array by deep copy
+            foreach (TimeSeriesValue tsv in IrregList1)
+            {
+                duplicateList.Add(new TimeSeriesValue { Date = tsv.Date, Value = tsv.Value });
+            }
+            // Slightly alter one value in the list
+            duplicateList[17].Value *= 1.02;
+
+            byte[] chk1 = null, chk2 = null;
+
+            Boolean ret = ComputeTestChecksums(
+                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, IrregList1, ref chk1,
+                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, duplicateList, ref chk2);
+
+            Assert.IsFalse(ret);
+        }
+        [TestMethod()]
+        public void ChecksumDiffTest2B()
+        {
+            List<TimeSeriesValue> duplicateList = new List<TimeSeriesValue>();
+
+            // Create an identical array by deep copy
+            foreach (TimeSeriesValue tsv in IrregList1)
+            {
+                duplicateList.Add(new TimeSeriesValue { Date = tsv.Date, Value = tsv.Value });
+            }
+            // Slightly alter one value in the list
+            duplicateList[177].Value *= 1.2;
+
+            byte[] chk1 = null, chk2 = null;
+
+            Boolean ret = ComputeTestChecksums(
+                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, IrregList1, ref chk1,
+                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, duplicateList, ref chk2);
+
+            Assert.IsFalse(ret);
+        }
+        [TestMethod()]
+        public void ChecksumDiffTest3()
+        {
+            List<TimeSeriesValue> duplicateList = new List<TimeSeriesValue>();
+
+            // Create an identical array by deep copy
+            foreach (TimeSeriesValue tsv in IrregList1)
+            {
+                duplicateList.Add(new TimeSeriesValue { Date = tsv.Date, Value = tsv.Value });
+            }
+            // remove the last time step in the list
+            duplicateList.RemoveAt(duplicateList.Count - 1);
+
+            byte[] chk1 = null, chk2 = null;
+
+            Boolean ret = ComputeTestChecksums(
+                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, IrregList1, ref chk1,
+                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, duplicateList, ref chk2);
+
+            Assert.IsFalse(ret);
+        }
+        [TestMethod()]
+        public void ChecksumDiffTest4()
+        {
+            List<TimeSeriesValue> duplicateList = new List<TimeSeriesValue>();
+
+            // Create an identical array by deep copy
+            foreach (TimeSeriesValue tsv in IrregList1)
+            {
+                duplicateList.Add(new TimeSeriesValue { Date = tsv.Date, Value = tsv.Value });
+            }
+            // remove a value from the middle of the list
+            duplicateList.RemoveAt(150);
+
+            byte[] chk1 = null, chk2 = null;
+
+            Boolean ret = ComputeTestChecksums(
+                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, IrregList1, ref chk1,
+                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, duplicateList, ref chk2);
+
+            Assert.IsFalse(ret);
+        }
+        // This compound test method checks that the meta parameters are properly included in the
+        // checksum.  In the tests, the BLOB should be identical, but the meta parameters are different.
+        [TestMethod()]
+        public void ChecksumDiffParamTest()
+        {
+            List<TimeSeriesValue> duplicateList = new List<TimeSeriesValue>();
+
+            // Create an identical array by deep copy
+            foreach (TimeSeriesValue tsv in RegList1)
+            {
+                duplicateList.Add(new TimeSeriesValue { Date = tsv.Date, Value = tsv.Value });
+            }
+            byte[] chk1 = null, chk2 = null;
+
+            Boolean ret;
+            // The only difference should be the "TimeStepQuantity" parameter
+            ret = ComputeTestChecksums(
+                    TimeStepUnit1, TimeStepQuantity1, RegList1, ref chk1,
+                    TimeStepUnit1, (short)(TimeStepQuantity1+1), duplicateList, ref chk2);
+
+            Assert.IsFalse(ret);
+
+            // The only difference should be the "TimeStepUnit" parameter
+            ret = ComputeTestChecksums(
+                    TimeStepUnit1, TimeStepQuantity1, RegList1, ref chk1,
+                    TSDateCalculator.TimeStepUnitCode.Day, TimeStepQuantity1, duplicateList, ref chk2);
+
+            Assert.IsFalse(ret);
+
+            // The only difference should be the "BlobStartDate" parameter
+            duplicateList[0].Date = duplicateList[0].Date.AddMinutes(12);
+            ret = ComputeTestChecksums(
+                    TimeStepUnit1, TimeStepQuantity1, RegList1, ref chk1,
+                    TimeStepUnit1, TimeStepQuantity1, duplicateList, ref chk2);
+
+            Assert.IsFalse(ret);
+
+            // undo the change from above
+            duplicateList[0].Date = RegList1[0].Date;
+            // The only difference should be the "BlobEndDate" parameter
+            duplicateList[duplicateList.Count - 1].Date = duplicateList[duplicateList.Count - 1].Date.AddMinutes(-24);
+            ret = ComputeTestChecksums(
+                    TimeStepUnit1, TimeStepQuantity1, RegList1, ref chk1,
+                    TimeStepUnit1, TimeStepQuantity1, duplicateList, ref chk2);
+
+            Assert.IsFalse(ret);
+
+            // undo the change from above
+            duplicateList[duplicateList.Count - 1].Date = RegList1[duplicateList.Count - 1].Date;
+            // Should be identical, to ensure that the above tests were what they were supposed to be
+            ret = ComputeTestChecksums(
+                    TimeStepUnit1, TimeStepQuantity1, RegList1, ref chk1,
+                    TimeStepUnit1, TimeStepQuantity1, duplicateList, ref chk2);
+
+            Assert.IsTrue(ret);
+        }
 
     }
 }

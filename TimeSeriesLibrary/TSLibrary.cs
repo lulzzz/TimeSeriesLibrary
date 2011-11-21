@@ -150,6 +150,22 @@ namespace TimeSeriesLibrary
         #endregion
 
 
+        #region Public Methods for Computing Checksum
+        
+        public byte[] ComputeChecksum(
+                    TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
+                    int timeStepCount, DateTime blobStartDate, DateTime blobEndDate,
+                    byte[] blobData)
+        {
+            // Let the method in TSBlobCoder class do all the work
+            return TSBlobCoder.ComputeChecksum(timeStepUnit, timeStepQuantity,
+                        timeStepCount, blobStartDate, blobEndDate, 
+                        blobData);
+        }
+
+        #endregion
+
+
         #region Public Methods for Database Connection
         /// <summary>
         /// Opens a new connection for the time series library to use.  The new connection 

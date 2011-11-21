@@ -15,13 +15,38 @@ namespace TimeSeriesLibrary
     class TSBlobCoder
     {
         #region Method ConvertBlobToArrayRegular
+        /// <summary>
+        /// This method converts a BLOB (byte array) to an array of regular time step timeseries 
+        /// values (double precision floats).  The caller must give meta parameters of the
+        /// time series, such as time step size and start date.  The method will convert
+        /// only a portion of the BLOB if the applyLimits parameter is true, according to
+        /// the parameter values nReqValues, reqStartDate, and reqEndDate.  If the 
+        /// applyLimits parameter is false, then the method converts the entire BLOB into
+        /// the given array of values.  The array of values must have been allocated 
+        /// large enough prior to calling this method.
+        /// </summary>
+        /// <param name="timeStepUnit">TSDateCalculator.TimeStepUnitCode value for Minute,Hour,Day,Week,Month, Year, or Irregular</param>
+        /// <param name="timeStepQuantity">The number of the given unit that defines the time step.
+        /// For instance, if the time step is 6 hours long, then this value is 6.</param>
+        /// <param name="blobStartDate">Date of the first time step in the BLOB</param>
+        /// <param name="applyLimits">If true, then the method will convert only a portion of the BLOB,
+        /// according to the parameter values nReqValues, reqStartDate, and reqEndDate.  If false, the method
+        /// converts the entire BLOB into a value array.</param>
+        /// <param name="nReqValues">The maximum number of elements that will be converted into the array of values.
+        /// If applyLimits==false, then this value is ignored.</param>
+        /// <param name="reqStartDate">The earliest date in the time series that will be written to the array of values.
+        /// If applyLimits==false, then this value is ignored.</param>
+        /// <param name="reqEndDate">The latest date in the time series that will be written to the array of values.
+        /// If applyLimits==false, then this value is ignored.</param>
+        /// <param name="blobData">the BLOB that will be converted</param>
+        /// <param name="valueArray">the array of time series values that is produced from the BLOB</param>
+        /// <returns>The number of time steps that were actually written to valueArray</returns>
         public static unsafe int ConvertBlobToArrayRegular(
             TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
             DateTime blobStartDate, bool applyLimits,
             int nReqValues, DateTime reqStartDate, DateTime reqEndDate,
             Byte[] blobData, double[] valueArray)
         {
-
             // MemoryStream and BinaryReader objects enable bulk copying of data from the BLOB
             MemoryStream blobStream = new MemoryStream(blobData);
             BinaryReader blobReader = new BinaryReader(blobStream);
@@ -68,6 +93,27 @@ namespace TimeSeriesLibrary
 
 
         #region Method ConvertBlobToArrayIrregular
+        /// <summary>
+        /// This method converts a BLOB (byte array) to an array of regular time step timeseries 
+        /// values (date/value pairs stored in TSDateValueStruct).  The method will convert
+        /// only a portion of the BLOB if the applyLimits parameter is true, according to
+        /// the parameter values nReqValues, reqStartDate, and reqEndDate.  If the 
+        /// applyLimits parameter is false, then the method converts the entire BLOB into
+        /// the given array of values.  The array of values must have been allocated 
+        /// large enough prior to calling this method.
+        /// </summary>
+        /// <param name="applyLimits">If true, then the method will convert only a portion of the BLOB,
+        /// according to the parameter values nReqValues, reqStartDate, and reqEndDate.  If false, the method
+        /// converts the entire BLOB into a value array.</param>
+        /// <param name="nReqValues">The maximum number of elements that will be converted into the array of values.
+        /// If applyLimits==false, then this value is ignored.</param>
+        /// <param name="reqStartDate">The earliest date in the time series that will be written to the array of values.
+        /// If applyLimits==false, then this value is ignored.</param>
+        /// <param name="reqEndDate">The latest date in the time series that will be written to the array of values.
+        /// If applyLimits==false, then this value is ignored.</param>
+        /// <param name="blobData">the BLOB that will be converted</param>
+        /// <param name="dateValueArray">the array of time series values that is produced from the BLOB</param>
+        /// <returns>The number of time steps that were actually written to dateValueArray</returns>
         public static unsafe int ConvertBlobToArrayIrregular(bool applyLimits,
             int nReqValues, DateTime reqStartDate, DateTime reqEndDate,
             Byte[] blobData, TSDateValueStruct[] dateValueArray)
@@ -114,6 +160,13 @@ namespace TimeSeriesLibrary
 
 
         #region Method ConvertArrayToBlobRegular
+        /// <summary>
+        /// This method converts the given array of time series values (array of double precision
+        /// floats) to a BLOB (byte array).
+        /// </summary>
+        /// <param name="TimeStepCount">The number of time steps in the given array of time series values</param>
+        /// <param name="valueArray">The array of time series values to convert into a BLOB</param>
+        /// <returns>The BLOB that is created from valueArray</returns>
         public static unsafe byte[] ConvertArrayToBlobRegular(
             int TimeStepCount, double[] valueArray)
         {
@@ -132,6 +185,13 @@ namespace TimeSeriesLibrary
 
 
         #region Method ConvertArrayToBlobIrregular
+        /// <summary>
+        /// This method converts the given array of time series values (date/value pairs stored in 
+        /// TSDateValueStruct) to a BLOB (byte array).
+        /// </summary>
+        /// <param name="TimeStepCount">The number of time steps in the given array of time series values</param>
+        /// <param name="dateValueArray">The array of time series values to convert into a BLOB</param>
+        /// <returns>The BLOB that is created from dateValueArray</returns>
         public static unsafe byte[] ConvertArrayToBlobIrregular(
             int TimeStepCount, TSDateValueStruct[] dateValueArray)
         {
@@ -157,11 +217,18 @@ namespace TimeSeriesLibrary
 
         #region ComputeChecksum() Method
         /// <summary>
-        /// Method computes the checksum for the timeseries, using the information in class-level fields
-        /// and in the given BLOB (byte array) of timeseries values.
+        /// Method computes an MD5 checksum for the timeseries.  The input to the MD5 hash includes the 
+        /// timeseries' BLOB of values, plus a short string of numbers that are TimeSeriesLibrary
+        /// is responsible for keeping in accord with the BLOB.
         /// </summary>
+        /// <param name="timeStepUnit">TSDateCalculator.TimeStepUnitCode value for Minute,Hour,Day,Week,Month, Year, or Irregular</param>
+        /// <param name="timeStepQuantity">The number of the given unit that defines the time step.
+        /// For instance, if the time step is 6 hours long, then this value is 6.</param>
+        /// <param name="timeStepCount">The number of time steps stored in the BLOB</param>
+        /// <param name="blobStartDate">Date of the first time step in the BLOB</param>
+        /// <param name="blobEndDate">Date of the last time step in the BLOB</param>
         /// <param name="blobData">the BLOB (byte array) of timeseries values</param>
-        /// <returns>the checksum</returns>
+        /// <returns>the checksum as a byte[16] array</returns>
         public static byte[] ComputeChecksum(
                     TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
                     int timeStepCount, DateTime blobStartDate, DateTime blobEndDate,
@@ -185,7 +252,7 @@ namespace TimeSeriesLibrary
             // Byte array for the series of meta parameters that are fed into the MD5 algorithm first.
             byte[] binArray = new byte[LengthOfParamInputForChecksum];
             // MemoryStream and BinaryWriter objects allow us to write data into the byte array
-            MemoryStream binStream = new MemoryStream();
+            MemoryStream binStream = new MemoryStream(binArray);
             BinaryWriter binWriter = new BinaryWriter(binStream);
 
             // Write relevant meta-parameters (not including the BLOB itself) into a short byte array
