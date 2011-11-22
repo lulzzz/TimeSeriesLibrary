@@ -21,7 +21,7 @@ namespace TimeSeriesLibrary
 
         #region Class Constructor
         /// <summary>
-        /// Class constructor
+        /// Class constructor that should be invoked if the XML object will save to the database
         /// </summary>
         /// <param name="connx">SqlConnection object that this object will use</param>
         /// <param name="tableName">Name of the table in the database that stores this object's records</param>
@@ -29,6 +29,14 @@ namespace TimeSeriesLibrary
         {
             Connx = connx;
             TableName = tableName;
+        }
+        /// <summary>
+        /// Class constructor that should be invoked if the XML object will NOT save to the database
+        /// </summary>
+        public TSXml()
+        {
+            Connx = null;
+            TableName = null;
         }
         #endregion
 
@@ -44,7 +52,10 @@ namespace TimeSeriesLibrary
         /// <param name="tsImportList">List of TSImport objects that this function records for each series that is imported.
         /// This function appends the list.</param>
         /// <returns>The number of time series records that were successfully stored</returns>
-        public int ReadAndStore(String xmlFileName, List<TSImport> tsImportList)
+        public int ReadAndStore(
+                        String xmlFileName, String xmlText,
+                        List<TSImport> tsImportList,
+                        Boolean storeToDatabase, Boolean recordDetails)
         {
             String s;       // ephemeral String object
             String DataString="";  // String that holds the unparsed DataSeries
@@ -58,9 +69,23 @@ namespace TimeSeriesLibrary
             // Flags will indicate if the XML is missing any data
             Boolean foundTimeStepUnit, foundTimeStepQuantity, foundStartDate, foundValueArray;
 
+
+            // TODO: Check that between xmlFileName and xmlText, one and only one of them is non-null
+            // TODO: Check that when storeToDatabase is true, the proper constructor has been called.
+
+            // Initialize a Stream object for the XmlReader object to read from.  This method can
+            // be called with either the file name of an XML file, or with a string containing the
+            // complete text of the XML to be parsed.  The type of Stream object that we initialize
+            // depends on which parameter the method was called with.
+            Stream xmlStream;
+            if (xmlFileName == null)
+                xmlStream = new MemoryStream(Encoding.ASCII.GetBytes(xmlText));
+            else
+                xmlStream = new FileStream(xmlFileName, FileMode.Open);
+
             // This XmlReader object opens the XML file and parses it for us.  The 'using'
             // statement ensures that the XmlReader's resources are properly disposed.
-            using (XmlReader xmlReader = XmlReader.Create(xmlFileName))
+            using (XmlReader xmlReader = XmlReader.Create(xmlStream))
             {
                 // All of the data that we'll read is contained inside an element named 'Import'
                 if (!xmlReader.ReadToFollowing("Import"))
@@ -137,6 +162,64 @@ namespace TimeSeriesLibrary
                                     foundValueArray = true;
                                     break;
 
+                                case "Apart":
+                                    // <Apart> contains the A part of record name from a HECDSS file
+                                    // This element is only processed if recordDetails==true.
+                                    if (! recordDetails)
+                                        goto default;
+                                    tsImport.APart = oneSeriesXmlReader.ReadElementContentAsString();
+                                    break;
+
+                                case "Bpart":
+                                    // <Bpart> contains the B part of record name from a HECDSS file
+                                    // This element is only processed if recordDetails==true.
+                                    if (! recordDetails)
+                                        goto default;
+                                    tsImport.BPart = oneSeriesXmlReader.ReadElementContentAsString();
+                                    break;
+
+                                case "Cpart":
+                                    // <Cpart> contains the C part of record name from a HECDSS file
+                                    // This element is only processed if recordDetails==true.
+                                    if (! recordDetails)
+                                        goto default;
+                                    tsImport.CPart = oneSeriesXmlReader.ReadElementContentAsString();
+                                    break;
+
+                                case "Epart":
+                                    // <Epart> contains the E part of record name from a HECDSS file
+                                    // This element is only processed if recordDetails==true.
+                                    if (! recordDetails)
+                                        goto default;
+                                    tsImport.EPart = oneSeriesXmlReader.ReadElementContentAsString();
+                                    break;
+
+                                case "Units":
+                                    // <Units> contains the name of the units of measurement for the time series values
+                                    // This element is only processed if recordDetails==true.
+                                    if (! recordDetails)
+                                        goto default;
+                                    tsImport.Units = oneSeriesXmlReader.ReadElementContentAsString();
+                                    break;
+
+                                case "TimeSeriesType":
+                                    // <TimeSeriesType> contains the text name of the time series type,
+                                    // [PER-AVER | PER-CUM | INST-VAL | INST-CUM]
+                                    // This element is only processed if recordDetails==true.
+                                    if (! recordDetails)
+                                        goto default;
+                                    tsImport.TimeSeriesType = oneSeriesXmlReader.ReadElementContentAsString();
+                                    break;
+
+                                case "TraceNumber":
+                                    // <Apart> contains the A part of record name from a HECDSS file
+                                    // This element is only processed if recordDetails==true.
+                                    if (! recordDetails)
+                                        goto default;
+                                    s = oneSeriesXmlReader.ReadElementContentAsString();
+                                    tsImport.TraceNumber = int.Parse(s);
+                                    break;
+
                                 default:
                                     // Any other tags are simply copied to the String object 'UnprocessedElements'.
                                     // Here they are stored with the enclosing tags (e.g. "<Units>CFS</Units>").
@@ -188,25 +271,37 @@ namespace TimeSeriesLibrary
                             tsv.Value = double.Parse(stringArray[i]);
                             dateValueArray[i/3] = tsv;
                         }
-                        // The TS object is used to save one record to the database table
-                        TS ts = new TS(Connx, TableName);
-                        // save the record
-                        tsImport.Id = ts.WriteValuesIrregular(dateValueArray.Length, dateValueArray);
-                        // Done with the TS object.
-                        ts = null;
+                        if (storeToDatabase)
+                        {
+                            // The TS object is used to save one record to the database table
+                            TS ts = new TS(Connx, TableName);
+                            // save the record
+                            tsImport.Id = ts.WriteValuesIrregular(dateValueArray.Length, dateValueArray);
+                            // Done with the TS object.
+                            ts = null;
+                        }
+                        else
+                            tsImport.BlobData = TSBlobCoder.ConvertArrayToBlobIrregular(
+                                    dateValueArray.Length, dateValueArray);
                     }
                     else
                     {
                         // Fancy LINQ statement turns the String object into an array of double[]
                         valueArray = DataString.Split(new char[] { }, StringSplitOptions.RemoveEmptyEntries)
                                         .Select(z => double.Parse(z)).ToArray();
-                        // The TS object is used to save one record to the database table
-                        TS ts = new TS(Connx, TableName);
-                        // save the record
-                        tsImport.Id = ts.WriteValuesRegular((short)TimeStepUnit, TimeStepQuantity,
-                                                valueArray.Length, valueArray, StartDate);
-                        // Done with the TS object.
-                        ts = null;
+                        if (storeToDatabase)
+                        {
+                            // The TS object is used to save one record to the database table
+                            TS ts = new TS(Connx, TableName);
+                            // save the record
+                            tsImport.Id = ts.WriteValuesRegular((short)TimeStepUnit, TimeStepQuantity,
+                                                    valueArray.Length, valueArray, StartDate);
+                            // Done with the TS object.
+                            ts = null;
+                        }
+                        else
+                            tsImport.BlobData = TSBlobCoder.ConvertArrayToBlobRegular(
+                                    valueArray.Length, valueArray);
                     }
                     
                     // the TSImport object contains data for this timeseries that TSLibrary does not process.
