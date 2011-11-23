@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Xml;
 
 namespace TimeSeriesLibrary
 {
@@ -14,9 +15,36 @@ namespace TimeSeriesLibrary
     /// </summary>
     public class TSImport
     {
+        /// <summary>
+        /// This value indicates whether the TSImport object records certain elements 
+        /// from an XML file to dedicated fields within the TSImport object, or to the 
+        /// UnprocessedElements string field of the TSImport object.  It also determines
+        /// whether the TSImport object records the BLOB of timeseries data.
+        /// 
+        /// If true, then XML elements such as "Apart" are recorded to their own fields,
+        /// and the BLOB is recorded in the BlobData field.
+        /// 
+        /// If false, then XML elements such as "Apart" are recorded to the 
+        /// UnprocessedElements field, and the BLOB is not recorded in this object.
+        /// </summary>
+        public Boolean IsDetailed;
+        
+
         // These fields are filled in by both the detailed and non-detailed XML methods
+        /// <summary>
+        /// Content of the Name tag in the XML file, presumably the name of a HECDSS record
+        /// </summary>
         public String Name;
+        /// <summary>
+        /// The GUID that identifies the record that was created for this timeseries in 
+        /// the the database.  If the database was not written to, then this field is meaningless.
+        /// </summary>
         public Guid Id;
+        /// <summary>
+        /// A string of XML elements, including the surrounding tags, that were not directly processed
+        /// by the TimeSeriesLibrary.  The design calls for the caller to process these elements
+        /// according to its own logic.
+        /// </summary>
         public String UnprocessedElements;
 
         // These fields are only filled by the detailed XML methods
@@ -28,15 +56,62 @@ namespace TimeSeriesLibrary
         public String TimeSeriesType;
         public int TraceNumber;
         
-        // These fields may be stored to the database by some XML methods,
-        // and they are only filled into this object by the detailed XML methods.
+        // These fields are meta-parameters of the BLOB that are written to the database (if
+        // database writing was invoked).  These are recorded by both detailed and non-detailed
+        // XML methods.
         public TSDateCalculator.TimeStepUnitCode TimeStepUnit;
         public short TimeStepQuantity;
         public int TimeStepCount;
         public DateTime BlobStartDate;
         public DateTime BlobEndDate;
         public byte[] Checksum;
-        public byte[] BlobData;
+        
+        /// <summary>
+        /// The BLOB (byte array) of time series values that was created by TimeSeriesLibrary.
+        /// </summary>
+        public byte[] BlobData;  // This is only recorded by non-detailed XML methods.
+
+
+        #region Class Constructor
+        public TSImport(Boolean isDetailed)
+        {
+            IsDetailed = isDetailed;
+        }
+        #endregion
+
+
+        #region Methods for recording details
+        // These methods are designed to make the TSXml class more readable, by hiding the logic
+        // involved in setting these fields into the TSImport class.
+        public void SetAPart(XmlReader xmlReader) { SetDetailFieldString(ref APart, xmlReader); }
+        public void SetBPart(XmlReader xmlReader) { SetDetailFieldString(ref BPart, xmlReader); }
+        public void SetCPart(XmlReader xmlReader) { SetDetailFieldString(ref CPart, xmlReader); }
+        public void SetEPart(XmlReader xmlReader) { SetDetailFieldString(ref EPart, xmlReader); }
+        public void SetUnits(XmlReader xmlReader) { SetDetailFieldString(ref Units, xmlReader); }
+        public void SetTimeSeriesType(XmlReader xmlReader) { SetDetailFieldString(ref TimeSeriesType, xmlReader); }
+        public void SetTraceNumber(XmlReader xmlReader) { SetDetailFieldInt(ref TraceNumber, xmlReader); }
+
+        // The field that is passed as a parameter will be assigned from the current XML 
+        // element if IsDetailed is true.  Otherwise, the XML element is recorded in the 
+        // UnprocessedElements field.
+        private void SetDetailFieldString(ref String s, XmlReader xmlReader)
+        {
+            if (IsDetailed)
+                s = xmlReader.ReadElementContentAsString();
+            else
+                UnprocessedElements += xmlReader.ReadOuterXml();
+        }
+        // The field that is passed as a parameter will be assigned from the current XML 
+        // element if IsDetailed is true.  Otherwise, the XML element is recorded in the 
+        // UnprocessedElements field.
+        private void SetDetailFieldInt(ref int i, XmlReader xmlReader)
+        {
+            if (IsDetailed)
+                i = int.Parse(xmlReader.ReadElementContentAsString());
+            else
+                UnprocessedElements += xmlReader.ReadOuterXml();
+        }
+        #endregion
 
 
         #region Method RecordFromTSParameters()
@@ -69,9 +144,10 @@ namespace TimeSeriesLibrary
         public void RecordFromTS(TS ts, byte[] blobData)
         {
             Id = ts.Id;
-            Checksum = ts.Checksum;
-            BlobData = blobData;
             RecordFromTSParameters(ts.tsParameters);
+            Checksum = ts.Checksum;
+            if(IsDetailed)
+                BlobData = blobData;
         }
         #endregion
 

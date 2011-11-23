@@ -532,30 +532,36 @@ namespace TimeSeriesLibrary
         /// that is saved to the database.  The List must already be instantiated before calling this method.
         /// The method does not change any items that are already in the List.</param>
         /// <returns>The number of time series records that were successfully stored</returns>
-        public int XmlImportWithList(int connectionNumber, String tableName, String xmlFileName,
-                        List<TSImport> tsImportList)
+        public int XmlImport(String xmlFileName, List<TSImport> tsImportList)
+        {
+            // Construct new TSXml object without SqlConnection object and table name
+            TSXml tsXml = new TSXml();
+            // Method in the TSXML object does all the work
+            return tsXml.ReadAndStore(xmlFileName, null, tsImportList, false, true);
+        }
+        /// <summary>
+        /// This method reads the given XML file and stores any time series that are defined in the
+        /// XML file to the database using the given database connection number and database table name.
+        /// For each time series that the method adds to the database, it adds a TSImport object to the
+        /// given List of TSImport objects.  Each TSImport object records fields that were read from the
+        /// XML file, but which TSLibrary does not process.
+        /// </summary>
+        /// <param name="connectionNumber">The serial number of the connection that is used to write to the database</param>
+        /// <param name="tableName">The name of the database table that time series will be written to</param>
+        /// <param name="xmlFileName">The file name (with path) of an XML file that defines one or more time series to import</param>
+        /// <param name="tsImportList">A List of TSImport objects that the method adds to--one item for each time series
+        /// that is saved to the database.  The List must already be instantiated before calling this method.
+        /// The method does not change any items that are already in the List.</param>
+        /// <returns>The number of time series records that were successfully stored</returns>
+        public int XmlImportAndSaveToDB(int connectionNumber, String tableName,
+                        String xmlFileName, List<TSImport> tsImportList)
         {
             // Get the connection that we'll pass along.
             SqlConnection connx = GetConnectionFromId(connectionNumber);
             // Construct new TSXml object with SqlConnection object and table name
             TSXml tsXml = new TSXml(connx, tableName);
-
-            return tsXml.ReadAndStore(xmlFileName, null, tsImportList, true, false);
-        }
-        /// <summary>
-        /// This method reads the given XML file and stores any time series that are defined in the
-        /// XML file to the database using the given database connection number and database table name.
-        /// The method does not process a List of TSImport objects.
-        /// </summary>
-        /// <param name="connectionNumber">The serial number of the connection that is used to write to the database</param>
-        /// <param name="tableName">The name of the database table that time series will be written to</param>
-        /// <param name="xmlFileName">The file name (with path) of an XML file that defines one or more time series to import</param>
-        /// <returns>The number of time series records that were successfully stored</returns>
-        public int XmlImport(int connectionNumber, String tableName, String xmlFileName)
-        {
-            // Simply let the sister method do all the processing,
-            // but pass it a local List<TSImport> instance that won't be saved.
-            return XmlImportWithList(connectionNumber, tableName, xmlFileName, new List<TSImport>());
+            // Method in the TSXML object does all the work
+            return tsXml.ReadAndStore(xmlFileName, null, tsImportList, true, true);
         }
         #endregion
 
