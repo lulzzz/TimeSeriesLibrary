@@ -20,13 +20,57 @@ namespace TimeSeriesLibrary
         private String TableName;       // name of the database table that stores this time series
 
         public Guid Id = new Guid();   // unique identifier for the database record
-        public TSDateCalculator.TimeStepUnitCode TimeStepUnit;  // code for the units that measure the regular time step (e.g. hour, day, month)
-        public short TimeStepQuantity;   // number of units per time step (e.g. Quantity=6 for 6-hour time steps)
-        public DateTime BlobStartDate;   // Date of the first time step stored in the database
-        public DateTime BlobEndDate;     // Date of the last time step stored in the database
-        public int TimeStepCount;        // The number of time steps stored in the database
-
+        public TSParameters tsParameters = new TSParameters();
         public Boolean IsInitialized;
+
+
+        #region Properties linked to tsParameters field
+        /// <summary>
+        /// code for the units that measure the regular time step (e.g. hour, day, month)
+        /// </summary>
+        // This property simply refers to a field of the TSParameters object
+        public TSDateCalculator.TimeStepUnitCode TimeStepUnit
+        {
+            get { return tsParameters.TimeStepUnit; }
+            set { tsParameters.TimeStepUnit = value; }
+        }
+        /// <summary>
+        /// number of units per time step (e.g. Quantity=6 for 6-hour time steps)
+        /// </summary>
+        // This property simply refers to a field of the TSParameters object
+        public short TimeStepQuantity
+        {
+            get { return tsParameters.TimeStepQuantity; }
+            set { tsParameters.TimeStepQuantity = value; }
+        }
+        /// <summary>
+        /// Date of the first time step stored in the databasepublic 
+        /// </summary>
+        // This property simply refers to a field of the TSParameters object
+        DateTime BlobStartDate
+        {
+            get { return tsParameters.BlobStartDate; }
+            set { tsParameters.BlobStartDate = value; }
+        }
+        /// <summary>
+        /// Date of the last time step stored in the database
+        /// </summary>
+        // This property simply refers to a field of the TSParameters object
+        public DateTime BlobEndDate
+        {
+            get { return tsParameters.BlobEndDate; }
+            set { tsParameters.BlobEndDate = value; }
+        }
+        /// <summary>
+        /// The number of time steps stored in the database
+        /// </summary>
+        // This property simply refers to a field of the TSParameters object
+        public int TimeStepCount
+        {
+            get { return tsParameters.TimeStepCount; }
+            set { tsParameters.TimeStepCount = value; }
+        }
+        #endregion
 
 
         #region Static Constructor
@@ -266,13 +310,8 @@ namespace TimeSeriesLibrary
                     short timeStepUnit, short timeStepQuantity,
                     int nOutValues, double[] valueArray, DateTime outStartDate)
         {
-            // Record values from function parameters
-            TimeStepUnit = (TSDateCalculator.TimeStepUnitCode)timeStepUnit;
-            TimeStepQuantity = timeStepQuantity;
-            TimeStepCount = nOutValues;
-            BlobStartDate = outStartDate;
-            // Determine the date of the last time step
-            BlobEndDate = TSDateCalculator.IncrementDate(outStartDate, TimeStepUnit, TimeStepQuantity, TimeStepCount-1);
+            // The method's parameters are used to compute the meta-parameters of this time series
+            tsParameters.SetParametersRegular(timeStepUnit, timeStepQuantity, nOutValues, outStartDate);
 
             // Convert the array of double values into a byte array...a BLOB
             byte[] blobData = TSBlobCoder.ConvertArrayToBlobRegular(TimeStepCount, valueArray);
@@ -295,13 +334,8 @@ namespace TimeSeriesLibrary
         public unsafe Guid WriteValuesIrregular(
                     int nOutValues, TSDateValueStruct[] dateValueArray)
         {
-            // Fill in the class-level fields
-            TimeStepUnit = TSDateCalculator.TimeStepUnitCode.Irregular;
-            TimeStepQuantity = 0;
-            TimeStepCount = nOutValues;
-            // Determine the date of the first and last time step from the input array
-            BlobStartDate = dateValueArray[0].Date;
-            BlobEndDate = dateValueArray[TimeStepCount-1].Date;
+            // The method's parameters are used to compute the meta-parameters of this time series
+            tsParameters.SetParametersIrregular(nOutValues, dateValueArray);
 
             // Convert the array of double values into a byte array...a BLOB
             Byte[] blobData = TSBlobCoder.ConvertArrayToBlobIrregular(TimeStepCount, dateValueArray);
