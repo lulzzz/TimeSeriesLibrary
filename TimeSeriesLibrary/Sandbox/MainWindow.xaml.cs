@@ -193,7 +193,7 @@ namespace Sandbox
                 
                 date = date.AddDays(1);
             }
-            testId1 = ts.WriteValuesIrregular(nVals, dateValArray);
+            testId1 = ts.WriteValuesIrregular(true, null, nVals, dateValArray);
             
             TSDateValueStruct[] outArray = new TSDateValueStruct[nVals];
             i = ts.ReadValuesIrregular(testId1, nVals, outArray, StartDate, dateValArray[nVals-1].Date);

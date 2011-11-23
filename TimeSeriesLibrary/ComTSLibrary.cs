@@ -277,7 +277,8 @@ namespace TimeSeriesLibrary
             // Construct new TS object with SqlConnection object and table name
             TS ts = new TS(connx, tableName);
 
-            return ts.WriteValuesRegular(timeStepUnit, timeStepQuantity, nOutValues, valueArray, outStartDate);
+            return ts.WriteValuesRegular(true, null, timeStepUnit, timeStepQuantity, 
+                            nOutValues, outStartDate, valueArray);
         }
 
         /// <summary>
@@ -302,7 +303,7 @@ namespace TimeSeriesLibrary
             // Construct new TS object with SqlConnection object and table name
             TS ts = new TS(connx, tableName);
 
-            return ts.WriteValuesIrregular(nOutValues, dateValueArray);
+            return ts.WriteValuesIrregular(true, null, nOutValues, dateValueArray);
         }
 
         #endregion

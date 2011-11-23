@@ -105,7 +105,7 @@ namespace TimeSeriesLibrary
 
         #region Class Constructor
         /// <summary>
-        /// Class constructor
+        /// Class constructor that should be used if the TS object will read or write to database
         /// </summary>
         /// <param name="connx">SqlConnection object that this object will use</param>
         /// <param name="tableName">Name of the table in the database that stores this object's record</param>
@@ -114,6 +114,20 @@ namespace TimeSeriesLibrary
             // Store the method parameters in class fields
             Connx = connx;
             TableName = tableName;
+            // Mark this time series as uninitialized
+            // (because the meta parameters have not yet been read from the database)
+            IsInitialized = false;
+        }
+        /// <summary>
+        /// Class constructor that should be used if the TS object will not read or write to database
+        /// </summary>
+        /// <param name="connx">SqlConnection object that this object will use</param>
+        /// <param name="tableName">Name of the table in the database that stores this object's record</param>
+        public TS()
+        {
+            // These field values reflect that the database is not accessed
+            Connx = null;
+            TableName = null;
             // Mark this time series as uninitialized
             // (because the meta parameters have not yet been read from the database)
             IsInitialized = false;
@@ -311,22 +325,32 @@ namespace TimeSeriesLibrary
         #endregion
 
 
+        private void ErrorCheckWriteValues(bool doWriteToDB, TSImport tsImport)
+        {
+            // TODO
+        }
+
         #region WriteValuesRegular() Method
         /// <summary>
         /// Method writes the given array of values as a timeseries to the database with the given
         /// start date and time step descriptors.
         /// </summary>
+        /// <param name="doWriteToDB">true if the method should actually save the timeseries to the database</param>
+        /// <param name="tsImport">TSImport object into which the method will record values that it has computed.
+        /// If this parameter is null, then the method will skip the recording of such paramters to an object.</param>
         /// <param name="timeStepUnit">TSDateCalculator.TimeStepUnitCode value for Minute,Hour,Day,Week,Month, or Year</param>
         /// <param name="timeStepQuantity">The number of the given unit that defines the time step.
         /// For instance, if the time step is 6 hours long, then this value is 6.</param>
         /// <param name="nOutValues">The number of values in the array to be written to the database</param>
-        /// <param name="valueArray">The array of values to be written to the database</param>
         /// <param name="outStartDate">The date of the first time step</param>
+        /// <param name="valueArray">The array of values to be written to the database</param>
         /// <returns>GUID value identifying the database record that was created</returns>
         public unsafe Guid WriteValuesRegular(
-                    short timeStepUnit, short timeStepQuantity,
-                    int nOutValues, double[] valueArray, DateTime outStartDate)
+                    bool doWriteToDB, TSImport tsImport,
+                    short timeStepUnit, short timeStepQuantity, 
+                    int nOutValues, DateTime outStartDate, double[] valueArray)
         {
+            ErrorCheckWriteValues(doWriteToDB, tsImport);
             // The method's parameters are used to compute the meta-parameters of this time series
             tsParameters.SetParametersRegular(
                     (TSDateCalculator.TimeStepUnitCode)timeStepUnit, timeStepQuantity, 
@@ -334,9 +358,17 @@ namespace TimeSeriesLibrary
 
             // Convert the array of double values into a byte array...a BLOB
             byte[] blobData = TSBlobCoder.ConvertArrayToBlobRegular(TimeStepCount, valueArray);
+            // compute the Checksum
+            Checksum = TSBlobCoder.ComputeChecksum(tsParameters, blobData);
 
             // WriteValues method will handle all of the database interaction
-            return WriteValues(blobData);
+            if (doWriteToDB)
+                WriteValues(blobData);
+            // Save the information that this method has computed into a TSImport object
+            if (tsImport != null)
+                tsImport.RecordFromTS(this, blobData);
+
+            return Id;
         } 
         #endregion
 
@@ -347,20 +379,32 @@ namespace TimeSeriesLibrary
         /// The method determines the start and end date of the timeseries using the given array of 
         /// date/value pairs.  
         /// </summary>
+        /// <param name="doWriteToDB">true if the method should actually save the timeseries to the database</param>
+        /// <param name="tsImport">TSImport object into which the method will record values that it has computed.
         /// <param name="nOutValues">The number of values in the array to be written to the database</param>
         /// <param name="dateValueArray">The array of values to be written to the database</param>
         /// <returns>GUID value identifying the database record that was created</returns>
         public unsafe Guid WriteValuesIrregular(
+                    bool doWriteToDB, TSImport tsImport,
                     int nOutValues, TSDateValueStruct[] dateValueArray)
         {
+            ErrorCheckWriteValues(doWriteToDB, tsImport);
             // The method's parameters are used to compute the meta-parameters of this time series
             tsParameters.SetParametersIrregular(nOutValues, dateValueArray);
 
             // Convert the array of double values into a byte array...a BLOB
             Byte[] blobData = TSBlobCoder.ConvertArrayToBlobIrregular(TimeStepCount, dateValueArray);
+            // compute the Checksum
+            Checksum = TSBlobCoder.ComputeChecksum(tsParameters, blobData);
 
             // WriteValues method will handle all of the database interaction
-            return WriteValues(blobData);
+            if (doWriteToDB)
+                return WriteValues(blobData);
+            // Save the information that this method has computed into a TSImport object
+            if (tsImport != null)
+                tsImport.RecordFromTS(this, blobData);
+
+            return Id;
         }
         #endregion
 
@@ -395,10 +439,6 @@ namespace TimeSeriesLibrary
                     // DataRow object represents the current row of the DataTable object, which in turn
                     // represents a record that we will add to the database table.
                     DataRow currentRow = dTable.NewRow();
-
-                    // compute the Checksum
-                    Checksum = TSBlobCoder.ComputeChecksum(TimeStepUnit, TimeStepQuantity,
-                                    TimeStepCount, BlobStartDate, BlobEndDate, blobData);
 
                     // NewGuid method generates a GUID value that is virtually guaranteed to be unique
                     Id = Guid.NewGuid();

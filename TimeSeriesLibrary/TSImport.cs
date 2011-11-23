@@ -39,14 +39,11 @@ namespace TimeSeriesLibrary
         public byte[] BlobData;
 
 
-        #region Method TransferParametersIntoImportRecord()
+        #region Method RecordFromTSParameters()
         /// <summary>
         /// This method copies the meta parameters of a BLOB from a TSParameters object
-        /// (which is designed to hold meta parameters) into a TSImport object (which
-        /// is designed to record the meta parameters of the BLOB and other descriptors
-        /// of the time series that were read from an XML file).
+        /// (which is designed to hold meta parameters) into this TSImport object.
         /// </summary>
-        /// <param name="tsi">The TSImport object that values will be copied into</param>
         /// <param name="tsp">The TSParameters object that values will be copied from</param>
         public void RecordFromTSParameters(TSParameters tsp)
         {
@@ -55,6 +52,26 @@ namespace TimeSeriesLibrary
             BlobStartDate = tsp.BlobStartDate;
             BlobEndDate = tsp.BlobEndDate;
             TimeStepCount = tsp.TimeStepCount;
+        }
+        #endregion
+
+
+        #region Method RecordFromTS()
+        /// <summary>
+        /// This method copies into this TSImport object:
+        /// a BLOB (byte array),
+        /// the meta parameters of the BLOB,
+        /// the MD5 checksum for the BLOB and its meta parameters,
+        /// the Id (GUID) of the database record for the time series.
+        /// </summary>
+        /// <param name="tsp">The TS object that values will be copied from</param>
+        /// <param name="blobData">the BLOB (byte array)</param>
+        public void RecordFromTS(TS ts, byte[] blobData)
+        {
+            Id = ts.Id;
+            Checksum = ts.Checksum;
+            BlobData = blobData;
+            RecordFromTSParameters(ts.tsParameters);
         }
         #endregion
 

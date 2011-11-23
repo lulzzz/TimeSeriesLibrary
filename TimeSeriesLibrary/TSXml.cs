@@ -282,66 +282,26 @@ namespace TimeSeriesLibrary
                             tsv.Value = double.Parse(stringArray[i]);
                             dateValueArray[i/3] = tsv;
                         }
-                        if (storeToDatabase)
-                        {
-                            // The TS object is used to save one record to the database table
-                            TS ts = new TS(Connx, TableName);
-                            // save the record
-                            tsImport.Id = ts.WriteValuesIrregular(dateValueArray.Length, dateValueArray);
-                            // record the Checksum value
-                            tsImport.Checksum = ts.Checksum;
-                            // save the meta-parameters of the BLOB in the TSImport object
-                            tsImport.RecordFromTSParameters(ts.tsParameters);
-                            // Done with the TS object.
-                            ts = null;
-                        }
-                        else
-                        {
-                            // Create the BLOB of date/value pairs
-                            tsImport.BlobData = TSBlobCoder.ConvertArrayToBlobIrregular(
-                                    dateValueArray.Length, dateValueArray);
-                            // Compute the meta parameters of the BLOB
-                            TSParameters tsp = new TSParameters();
-                            tsp.SetParametersIrregular(dateValueArray.Length, dateValueArray);
-                            // Compute the checksum using the BLOB and the meta parameters
-                            tsImport.Checksum = TSBlobCoder.ComputeChecksum(tsp, tsImport.BlobData);
-                            // save the meta-parameters of the BLOB in the TSImport object
-                            tsImport.RecordFromTSParameters(tsp);
-                        }
+                        // The TS object is used to save one record to the database table
+                        TS ts = new TS(Connx, TableName);
+                        // Write to the database and record values in the TSImport object
+                        ts.WriteValuesIrregular(storeToDatabase, tsImport, dateValueArray.Length, dateValueArray);
+                        // Done with the TS object.
+                        ts = null;
                     }
                     else
                     {
                         // Fancy LINQ statement turns the String object into an array of double[]
                         valueArray = DataString.Split(new char[] { }, StringSplitOptions.RemoveEmptyEntries)
                                         .Select(z => double.Parse(z)).ToArray();
-                        if (storeToDatabase)
-                        {
-                            // The TS object is used to save one record to the database table
-                            TS ts = new TS(Connx, TableName);
-                            // save the record
-                            tsImport.Id = ts.WriteValuesRegular((short)TimeStepUnit, TimeStepQuantity,
-                                                    valueArray.Length, valueArray, StartDate);
-                            // record the Checksum value
-                            tsImport.Checksum = ts.Checksum;
-                            // save the meta-parameters of the BLOB in the TSImport object
-                            tsImport.RecordFromTSParameters(ts.tsParameters);
-                            // Done with the TS object.
-                            ts = null;
-                        }
-                        else
-                        {
-                            // Create the BLOB of date/value pairs
-                            tsImport.BlobData = TSBlobCoder.ConvertArrayToBlobRegular(
-                                    valueArray.Length, valueArray);
-                            // Compute the meta parameters of the BLOB
-                            TSParameters tsp = new TSParameters();
-                            tsp.SetParametersRegular(TimeStepUnit, TimeStepQuantity, 
-                                            valueArray.Length, StartDate);
-                            // Compute the checksum using the BLOB and the meta parameters
-                            tsImport.Checksum = TSBlobCoder.ComputeChecksum(tsp, tsImport.BlobData);
-                            // save the meta-parameters of the BLOB in the TSImport object
-                            tsImport.RecordFromTSParameters(tsp);
-                        }
+                        // The TS object is used to save one record to the database table
+                        TS ts = new TS(Connx, TableName);
+                        // Write to the database and record values in the TSImport object
+                        ts.WriteValuesRegular(storeToDatabase, tsImport,
+                                            (short)TimeStepUnit, TimeStepQuantity,
+                                            valueArray.Length, StartDate, valueArray);
+                        // Done with the TS object.
+                        ts = null;
                     }
                     
                     // the TSImport object contains data for this timeseries that TSLibrary does not process.

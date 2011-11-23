@@ -406,7 +406,8 @@ namespace TimeSeriesLibrary
             // Construct new TS object with SqlConnection object and table name
             TS ts = new TS(connx, tableName);
             // Call the method in the TS object that does all the work.
-            return ts.WriteValuesRegular(timeStepUnit, timeStepQuantity, nOutValues, valueList.ToArray<double>(), outStartDate);
+            return ts.WriteValuesRegular(true, null, timeStepUnit, timeStepQuantity, nOutValues, 
+                            outStartDate, valueList.ToArray<double>());
         }
         
         /// <summary>
@@ -450,7 +451,7 @@ namespace TimeSeriesLibrary
 
                 // A method in the TS object does all the work.  We pass it an array of date/value pairs
                 // that is equivalent to the List that we received from the caller.
-                return ts.WriteValuesIrregular(nOutValues, 
+                return ts.WriteValuesIrregular(true, null, nOutValues, 
                             dateValueList.Select(tsv => (TSDateValueStruct)tsv).ToArray());
             }
             else
@@ -462,7 +463,8 @@ namespace TimeSeriesLibrary
                 // regular time series will need to (and be able to) process.
                 double[] valueArray = dateValueList.Select(dv => dv.Value).ToArray();
                 // A method in the TS object does all the work.
-                return ts.WriteValuesRegular(timeStepUnit, timeStepQuantity, nOutValues, valueArray, outStartDate);
+                return ts.WriteValuesRegular(true, null, 
+                                timeStepUnit, timeStepQuantity, nOutValues, outStartDate, valueArray);
             }
         }
 
