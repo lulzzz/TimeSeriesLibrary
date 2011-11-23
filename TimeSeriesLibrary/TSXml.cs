@@ -19,6 +19,7 @@ namespace TimeSeriesLibrary
         private String TableName;
         private SqlConnection Connx;
 
+
         #region Class Constructor
         /// <summary>
         /// Class constructor that should be invoked if the XML object will save to the database
@@ -40,7 +41,8 @@ namespace TimeSeriesLibrary
         }
         #endregion
 
-        #region Method ReadAndStore
+
+        #region Method ReadAndStore()
         /// <summary>
         /// This method reads the given XML file and stores each of the timeseries described
         /// therein to the database.  For each timeseries that it stores, it adds an item to
@@ -70,8 +72,17 @@ namespace TimeSeriesLibrary
             Boolean foundTimeStepUnit, foundTimeStepQuantity, foundStartDate, foundValueArray;
 
 
-            // TODO: Check that between xmlFileName and xmlText, one and only one of them is non-null
-            // TODO: Check that when storeToDatabase is true, the proper constructor has been called.
+            // Error checks
+            if (xmlFileName == null && xmlText == null)
+                throw new TSLibraryException(ErrCode.Enum.Xml_Memory_File_Exclusion,
+                            "The method's xmlFileName and xmlText parameters can not both be null.");
+            if (xmlFileName != null && xmlText != null)
+                throw new TSLibraryException(ErrCode.Enum.Xml_Memory_File_Exclusion,
+                            "The method's xmlFileName and xmlText parameters can not both be non-null.");
+            if(storeToDatabase && Connx==null)
+                throw new TSLibraryException(ErrCode.Enum.Xml_Connection_Not_Initialized,
+                            "The method is directed to store results to database, " +
+                            "but a database connection has not been assigned in the constructor.");
 
             // Initialize a Stream object for the XmlReader object to read from.  This method can
             // be called with either the file name of an XML file, or with a string containing the
@@ -280,7 +291,7 @@ namespace TimeSeriesLibrary
                             // record the Checksum value
                             tsImport.Checksum = ts.Checksum;
                             // save the meta-parameters of the BLOB in the TSImport object
-                            TransferParametersIntoImportRecord(tsImport, ts.tsParameters);
+                            tsImport.RecordFromTSParameters(ts.tsParameters);
                             // Done with the TS object.
                             ts = null;
                         }
@@ -295,7 +306,7 @@ namespace TimeSeriesLibrary
                             // Compute the checksum using the BLOB and the meta parameters
                             tsImport.Checksum = TSBlobCoder.ComputeChecksum(tsp, tsImport.BlobData);
                             // save the meta-parameters of the BLOB in the TSImport object
-                            TransferParametersIntoImportRecord(tsImport, tsp);
+                            tsImport.RecordFromTSParameters(tsp);
                         }
                     }
                     else
@@ -313,7 +324,7 @@ namespace TimeSeriesLibrary
                             // record the Checksum value
                             tsImport.Checksum = ts.Checksum;
                             // save the meta-parameters of the BLOB in the TSImport object
-                            TransferParametersIntoImportRecord(tsImport, ts.tsParameters);
+                            tsImport.RecordFromTSParameters(ts.tsParameters);
                             // Done with the TS object.
                             ts = null;
                         }
@@ -329,7 +340,7 @@ namespace TimeSeriesLibrary
                             // Compute the checksum using the BLOB and the meta parameters
                             tsImport.Checksum = TSBlobCoder.ComputeChecksum(tsp, tsImport.BlobData);
                             // save the meta-parameters of the BLOB in the TSImport object
-                            TransferParametersIntoImportRecord(tsImport, tsp);
+                            tsImport.RecordFromTSParameters(tsp);
                         }
                     }
                     
@@ -344,14 +355,6 @@ namespace TimeSeriesLibrary
         }
     	#endregion 
 
-
-        private void TransferParametersIntoImportRecord(TSImport tsi, TSParameters tsp)
-        {
-            tsi.TimeStepUnit = tsp.TimeStepUnit;
-            tsi.TimeStepQuantity = tsp.TimeStepQuantity;
-            tsi.BlobStartDate = tsp.BlobStartDate;
-            tsi.BlobEndDate = tsp.BlobEndDate;
-            tsi.TimeStepCount = tsp.TimeStepCount;
-        }
     }
+
 }

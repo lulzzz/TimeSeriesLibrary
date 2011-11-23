@@ -30,7 +30,9 @@ namespace TimeSeriesLibrary
             End_Date_Precedes_Start_Date = -301,
 
             Xml_File_Incomplete = -401,
-            Xml_File_Empty = -401
+            Xml_File_Empty = -401,
+            Xml_Memory_File_Exclusion = -402,
+            Xml_Connection_Not_Initialized = -403
         }
     }
 }
