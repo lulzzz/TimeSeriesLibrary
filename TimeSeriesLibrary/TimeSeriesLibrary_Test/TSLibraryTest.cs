@@ -393,7 +393,7 @@ namespace TimeSeriesLibrary_Test
             Assert.IsFalse(ret);
         }
         // This compound test method checks that the meta parameters are properly included in the
-        // checksum.  In the tests, the BLOB should be identical, but the meta parameters are different.
+        // Checksum.  In the tests, the BLOB should be identical, but the meta parameters are different.
         [TestMethod()]
         public void ChecksumDiffParamTest()
         {

@@ -175,8 +175,8 @@ namespace TimeSeriesLibrary
             // Allocate an array for the BLOB
             Byte[] blobData = new Byte[nBin];
             // Copy the array of doubles that was passed to the method into the byte array.  We skip
-            // a bit of padding at the beginning that is used to compute the checksum.  Thus, the
-            // byte array (without the padding for checksum) becomes the BLOB.
+            // a bit of padding at the beginning that is used to compute the Checksum.  Thus, the
+            // byte array (without the padding for Checksum) becomes the BLOB.
             Buffer.BlockCopy(valueArray, 0, blobData, 0, nBin);
 
             return blobData;
@@ -217,8 +217,24 @@ namespace TimeSeriesLibrary
 
         #region ComputeChecksum() Method
         /// <summary>
-        /// Method computes an MD5 checksum for the timeseries.  The input to the MD5 hash includes the 
-        /// timeseries' BLOB of values, plus a short string of numbers that are TimeSeriesLibrary
+        /// Method computes an MD5 Checksum for the timeseries.  The input to the MD5 hash includes the 
+        /// timeseries' BLOB of values, plus a TSParameters object that contains a short string of 
+        /// numbers that TimeSeriesLibrary is responsible for keeping in accord with the BLOB.
+        /// </summary>
+        /// <param name="tsp"></param>
+        /// <param name="blobData"></param>
+        /// <returns></returns>
+        public static byte[] ComputeChecksum(TSParameters tsp, byte[] blobData)
+        {
+            // simply unpack the TSParameters object and call the overload of this method
+            return ComputeChecksum(tsp.TimeStepUnit, tsp.TimeStepQuantity,
+                        tsp.TimeStepCount, tsp.BlobStartDate, tsp.BlobEndDate, 
+                        blobData);
+        }
+
+        /// <summary>
+        /// Method computes an MD5 Checksum for the timeseries.  The input to the MD5 hash includes the 
+        /// timeseries' BLOB of values, plus a short string of numbers that TimeSeriesLibrary
         /// is responsible for keeping in accord with the BLOB.
         /// </summary>
         /// <param name="timeStepUnit">TSDateCalculator.TimeStepUnitCode value for Minute,Hour,Day,Week,Month, Year, or Irregular</param>
@@ -228,13 +244,13 @@ namespace TimeSeriesLibrary
         /// <param name="blobStartDate">Date of the first time step in the BLOB</param>
         /// <param name="blobEndDate">Date of the last time step in the BLOB</param>
         /// <param name="blobData">the BLOB (byte array) of timeseries values</param>
-        /// <returns>the checksum as a byte[16] array</returns>
+        /// <returns>the Checksum as a byte[16] array</returns>
         public static byte[] ComputeChecksum(
                     TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
                     int timeStepCount, DateTime blobStartDate, DateTime blobEndDate,
                     byte[] blobData)
         {
-            // The MD5 checksum will be computed from two byte arrays.  The first byte array contains
+            // The MD5 Checksum will be computed from two byte arrays.  The first byte array contains
             // a series of meta parameters that TimeSeriesLibrary that are inherently linked with the
             // time series array.  The second byte array is the time series array itself.
 
@@ -267,13 +283,13 @@ namespace TimeSeriesLibrary
             binWriter.Write(blobStartDate.ToBinary());
             binWriter.Write(blobEndDate.ToBinary());
 
-            // MD5CryptoServiceProvider object has methods to compute the checksum
+            // MD5CryptoServiceProvider object has methods to compute the Checksum
             MD5CryptoServiceProvider md5Hasher = new MD5CryptoServiceProvider();
             // feed the short byte array of meta-parameters into the MD5 hash computer
             md5Hasher.TransformBlock(binArray, 0, LengthOfParamInputForChecksum, binArray, 0);
             // feed the BLOB of timeseries values into the MD5 hash computer
             md5Hasher.TransformFinalBlock(blobData, 0, blobData.Length);
-            // return the hash (checksum) value
+            // return the hash (Checksum) value
             return md5Hasher.Hash;
         }
         #endregion

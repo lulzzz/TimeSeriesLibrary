@@ -381,7 +381,7 @@ namespace TimeSeriesLibrary
             // Construct new TSXml object with SqlConnection object and table name
             TSXml tsXml = new TSXml(connx, tableName);
 
-            return tsXml.ReadAndStore(xmlFileName, tsImportList);
+            return tsXml.ReadAndStore(xmlFileName, null, tsImportList, true, false);
         }
         /// <summary>
         /// This method reads the given XML file and stores any time series that are defined in the

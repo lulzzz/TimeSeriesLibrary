@@ -31,11 +31,11 @@ namespace TimeSeriesLibrary
         /// object, using the input parameters given to the method.
         /// </summary>
         public void SetParametersRegular(
-                    short timeStepUnit, short timeStepQuantity,
+                    TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
                     int timeStepCount, DateTime blobStartDate)
         {
             // Most of the parameters are straightforward
-            TimeStepUnit = (TSDateCalculator.TimeStepUnitCode)timeStepUnit;
+            TimeStepUnit = timeStepUnit;
             TimeStepQuantity = timeStepQuantity;
             TimeStepCount = timeStepCount;
             BlobStartDate = blobStartDate;

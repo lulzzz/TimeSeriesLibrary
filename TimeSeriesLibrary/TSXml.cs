@@ -277,12 +277,26 @@ namespace TimeSeriesLibrary
                             TS ts = new TS(Connx, TableName);
                             // save the record
                             tsImport.Id = ts.WriteValuesIrregular(dateValueArray.Length, dateValueArray);
+                            // record the Checksum value
+                            tsImport.Checksum = ts.Checksum;
+                            // save the meta-parameters of the BLOB in the TSImport object
+                            TransferParametersIntoImportRecord(tsImport, ts.tsParameters);
                             // Done with the TS object.
                             ts = null;
                         }
                         else
+                        {
+                            // Create the BLOB of date/value pairs
                             tsImport.BlobData = TSBlobCoder.ConvertArrayToBlobIrregular(
                                     dateValueArray.Length, dateValueArray);
+                            // Compute the meta parameters of the BLOB
+                            TSParameters tsp = new TSParameters();
+                            tsp.SetParametersIrregular(dateValueArray.Length, dateValueArray);
+                            // Compute the checksum using the BLOB and the meta parameters
+                            tsImport.Checksum = TSBlobCoder.ComputeChecksum(tsp, tsImport.BlobData);
+                            // save the meta-parameters of the BLOB in the TSImport object
+                            TransferParametersIntoImportRecord(tsImport, tsp);
+                        }
                     }
                     else
                     {
@@ -296,12 +310,27 @@ namespace TimeSeriesLibrary
                             // save the record
                             tsImport.Id = ts.WriteValuesRegular((short)TimeStepUnit, TimeStepQuantity,
                                                     valueArray.Length, valueArray, StartDate);
+                            // record the Checksum value
+                            tsImport.Checksum = ts.Checksum;
+                            // save the meta-parameters of the BLOB in the TSImport object
+                            TransferParametersIntoImportRecord(tsImport, ts.tsParameters);
                             // Done with the TS object.
                             ts = null;
                         }
                         else
+                        {
+                            // Create the BLOB of date/value pairs
                             tsImport.BlobData = TSBlobCoder.ConvertArrayToBlobRegular(
                                     valueArray.Length, valueArray);
+                            // Compute the meta parameters of the BLOB
+                            TSParameters tsp = new TSParameters();
+                            tsp.SetParametersRegular(TimeStepUnit, TimeStepQuantity, 
+                                            valueArray.Length, StartDate);
+                            // Compute the checksum using the BLOB and the meta parameters
+                            tsImport.Checksum = TSBlobCoder.ComputeChecksum(tsp, tsImport.BlobData);
+                            // save the meta-parameters of the BLOB in the TSImport object
+                            TransferParametersIntoImportRecord(tsImport, tsp);
+                        }
                     }
                     
                     // the TSImport object contains data for this timeseries that TSLibrary does not process.
@@ -315,5 +344,14 @@ namespace TimeSeriesLibrary
         }
     	#endregion 
 
+
+        private void TransferParametersIntoImportRecord(TSImport tsi, TSParameters tsp)
+        {
+            tsi.TimeStepUnit = tsp.TimeStepUnit;
+            tsi.TimeStepQuantity = tsp.TimeStepQuantity;
+            tsi.BlobStartDate = tsp.BlobStartDate;
+            tsi.BlobEndDate = tsp.BlobEndDate;
+            tsi.TimeStepCount = tsp.TimeStepCount;
+        }
     }
 }

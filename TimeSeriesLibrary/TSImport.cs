@@ -35,7 +35,7 @@ namespace TimeSeriesLibrary
         public int TimeStepCount;
         public DateTime BlobStartDate;
         public DateTime BlobEndDate;
-        public byte[] checksum;
+        public byte[] Checksum;
         public byte[] BlobData;
     }
 }

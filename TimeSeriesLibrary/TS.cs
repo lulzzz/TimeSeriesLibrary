@@ -14,14 +14,31 @@ namespace TimeSeriesLibrary
     /// </summary>
     public class TS
     {
-        // Fields with class scope may be shared between method calls.
-
-        private SqlConnection Connx;     // Object handles the connection to the database
-        private String TableName;       // name of the database table that stores this time series
-
-        public Guid Id = new Guid();   // unique identifier for the database record
-        public TSParameters tsParameters = new TSParameters();
+        /// <summary>
+        /// Object handles the connection to the database
+        /// </summary>
+        private SqlConnection Connx;
+        /// <summary>
+        /// name of the database table that stores this time series
+        /// </summary>
+        private String TableName;
+        /// <summary>
+        /// This value is true if the meta parameters have been read from the database.
+        /// </summary>
         public Boolean IsInitialized;
+
+        /// <summary>
+        /// unique identifier for the database record
+        /// </summary>
+        public Guid Id = new Guid();
+        /// <summary>
+        /// object that contains the meta-parameter values that TimeSeriesLibrary must maintain alongside the BLOB
+        /// </summary>
+        public TSParameters tsParameters = new TSParameters();
+        /// <summary>
+        /// MD5 Checksum computed from the BLOB and meta-parameters when the timeseries is saved to database.
+        /// </summary>
+        public Byte[] Checksum;
 
 
         #region Properties linked to tsParameters field
@@ -47,7 +64,7 @@ namespace TimeSeriesLibrary
         /// Date of the first time step stored in the databasepublic 
         /// </summary>
         // This property simply refers to a field of the TSParameters object
-        DateTime BlobStartDate
+        public DateTime BlobStartDate
         {
             get { return tsParameters.BlobStartDate; }
             set { tsParameters.BlobStartDate = value; }
@@ -311,7 +328,9 @@ namespace TimeSeriesLibrary
                     int nOutValues, double[] valueArray, DateTime outStartDate)
         {
             // The method's parameters are used to compute the meta-parameters of this time series
-            tsParameters.SetParametersRegular(timeStepUnit, timeStepQuantity, nOutValues, outStartDate);
+            tsParameters.SetParametersRegular(
+                    (TSDateCalculator.TimeStepUnitCode)timeStepUnit, timeStepQuantity, 
+                    nOutValues, outStartDate);
 
             // Convert the array of double values into a byte array...a BLOB
             byte[] blobData = TSBlobCoder.ConvertArrayToBlobRegular(TimeStepCount, valueArray);
@@ -377,8 +396,8 @@ namespace TimeSeriesLibrary
                     // represents a record that we will add to the database table.
                     DataRow currentRow = dTable.NewRow();
 
-                    // compute the checksum
-                    Byte[] checksum = TSBlobCoder.ComputeChecksum(TimeStepUnit, TimeStepQuantity,
+                    // compute the Checksum
+                    Checksum = TSBlobCoder.ComputeChecksum(TimeStepUnit, TimeStepQuantity,
                                     TimeStepCount, BlobStartDate, BlobEndDate, blobData);
 
                     // NewGuid method generates a GUID value that is virtually guaranteed to be unique
@@ -390,7 +409,7 @@ namespace TimeSeriesLibrary
                     currentRow["TimeStepCount"] = TimeStepCount;
                     currentRow["StartDate"] = BlobStartDate;
                     currentRow["EndDate"] = BlobEndDate;
-                    currentRow["Checksum"] = checksum;
+                    currentRow["Checksum"] = Checksum;
                     currentRow["ValueBlob"] = blobData;
                     dTable.Rows.Add(currentRow);
                     // Save the DataRow object to the database
