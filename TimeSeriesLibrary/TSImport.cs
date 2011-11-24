@@ -7,7 +7,7 @@ using System.Xml;
 namespace TimeSeriesLibrary
 {
     /// <summary>
-    /// This class contains meta-data about one time series record that was imported.  This
+    /// This class data for one time series record that was imported.  This
     /// meta-data can be used by functions outside of TimeSeriesLibrary to finish processing
     /// the time series that were imported from an XML file by the TSXml class.  In this way,
     /// the outside functions can handle features of the time series that TimeSeriesLibrary
@@ -99,7 +99,7 @@ namespace TimeSeriesLibrary
             if (IsDetailed)
                 s = xmlReader.ReadElementContentAsString();
             else
-                UnprocessedElements += xmlReader.ReadOuterXml();
+                AddUnprocessedElement(xmlReader.ReadOuterXml());
         }
         // The field that is passed as a parameter will be assigned from the current XML 
         // element if IsDetailed is true.  Otherwise, the XML element is recorded in the 
@@ -109,7 +109,20 @@ namespace TimeSeriesLibrary
             if (IsDetailed)
                 i = int.Parse(xmlReader.ReadElementContentAsString());
             else
-                UnprocessedElements += xmlReader.ReadOuterXml();
+                AddUnprocessedElement(xmlReader.ReadOuterXml());
+        }
+        /// <summary>
+        /// This method adds a string to the UnprocessedElements string.  
+        /// The UnprocessedElements string stores XML elements that TimeSeriesLibrary
+        /// does not recognize, so that the calling process can parse and process
+        /// these elements.
+        /// </summary>
+        /// <param name="s">The string that is to be added to the UnprocessedElements string.
+        /// The given string should include the enclosing XML tags.</param>
+        public void AddUnprocessedElement(String s)
+        {
+            // A space is inserted between elements for better XML parsing
+            UnprocessedElements += " " + s;
         }
         #endregion
 

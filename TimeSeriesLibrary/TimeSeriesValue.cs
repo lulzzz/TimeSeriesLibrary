@@ -12,7 +12,13 @@ namespace TimeSeriesLibrary
     /// </summary>
     public class TimeSeriesValue
     {
+        /// <summary>
+        /// The date of the time step
+        /// </summary>
         public DateTime Date;
+        /// <summary>
+        /// The value of the time series on the time step
+        /// </summary>
         public double Value;
 
         /// <summary>

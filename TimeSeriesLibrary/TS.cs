@@ -212,7 +212,8 @@ namespace TimeSeriesLibrary
         /// <param name="id">GUID id of the time series</param>
         /// <param name="nReqValues">number of values requested to read</param>
         /// <param name="valueArray">array requested to fill with values</param>
-        /// <param name="reqStartDate">start date requested</param>
+        /// <param name="reqStartDate">The earliest date in the time series that will be written to the array of values</param>
+        /// <param name="reqEndDate">The latest date in the time series that will be written to the array of values</param>
         /// <returns>The number of values actually filled into the array</returns>
         public unsafe int ReadValuesRegular(Guid id,
             int nReqValues, double[] valueArray, DateTime reqStartDate, DateTime reqEndDate)
@@ -289,7 +290,12 @@ namespace TimeSeriesLibrary
 
 
         #region ReadValues() Method
-        public unsafe void ReadValues(Guid id, ref byte[] blobData)
+        /// <summary>
+        /// This method contains the operations to read the BLOB from the database table.
+        /// </summary>
+        /// <param name="id">GUID identifying the time series record to read</param>
+        /// <param name="blobData">the byte array that is populated from the database BLOB</param>
+        private unsafe void ReadValues(Guid id, ref byte[] blobData)
         {
             // SQL statement that will only give us the BLOB of data values
             String comm = String.Format("select ValueBlob from {0} where Guid='{1}' ",
@@ -325,9 +331,20 @@ namespace TimeSeriesLibrary
         #endregion
 
 
+        /// <summary>
+        /// This method contains error checks on the input parameters of this class's methods
+        /// WriteValuesRegular() and WriteValuesIrregular(), so both of those methods call
+        /// this private method before they undertake any other operations.
+        /// </summary>
+        /// <param name="doWriteToDB">true if the 'Write' method should actually save the timeseries to the database</param>
+        /// <param name="tsImport">TSImport object into which the method will record values that it has computed.
+        /// If this parameter is null, then the method will skip the recording of such paramters to an object.</param>
         private void ErrorCheckWriteValues(bool doWriteToDB, TSImport tsImport)
         {
-            // TODO
+            // TODO: create an error code and throw exception
+            if (doWriteToDB && (TableName == null || Connx == null))
+            {
+            }
         }
 
         #region WriteValuesRegular() Method
@@ -410,7 +427,12 @@ namespace TimeSeriesLibrary
 
 
         #region WriteValues() Method
-        public unsafe Guid WriteValues(byte[] blobData)
+        /// <summary>
+        /// This method contains the actual operations to write the BLOB and its meta-parameters to the database.
+        /// </summary>
+        /// <param name="blobData">the blob (byte array) of time series values to be written</param>
+        /// <returns>GUID value identifying the database record that was created</returns>
+        private unsafe Guid WriteValues(byte[] blobData)
         {
             // SQL statement that gives us a resultset for the DataTable object.  Note that
             // this query is rigged so that it will always return 0 records.  This is because

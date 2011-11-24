@@ -12,7 +12,7 @@ namespace TimeSeriesLibrary
     /// a BLOB (byte array) and visa-versa.  All of this class's methods
     /// are static, so the class does not need to be instantiated.
     /// </summary>
-    class TSBlobCoder
+    public class TSBlobCoder
     {
         #region Method ConvertBlobToArrayRegular
         /// <summary>

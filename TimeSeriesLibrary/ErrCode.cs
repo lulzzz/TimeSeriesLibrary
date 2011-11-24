@@ -32,7 +32,8 @@ namespace TimeSeriesLibrary
             Xml_File_Incomplete = -401,
             Xml_File_Empty = -401,
             Xml_Memory_File_Exclusion = -402,
-            Xml_Connection_Not_Initialized = -403
+            Xml_Connection_Not_Initialized = -403,
+            Xml_File_Malformed = -404
         }
     }
 }
