@@ -6,12 +6,15 @@ using System.Text;
 namespace TimeSeriesLibrary
 {
     /// <summary>
-    /// Class stores methods and enum for computations involving time step size
+    /// This class stores methods and enum for computations involving time step size.
+    /// All of this class's methods are static, so the class does not need to be instantiated.
     /// </summary>
     public class TSDateCalculator
     {
+
+        #region enum TimeStepUnitCode
         /// <summary>
-        /// enum expresses the possible values in the TimeStepUnit field of the database table
+        /// This enum expresses the possible values in the TimeStepUnit field of the database table
         /// </summary>
         public enum TimeStepUnitCode : short
         {
@@ -22,10 +25,13 @@ namespace TimeSeriesLibrary
             Week = 4,
             Month = 5,
             Year = 6
-        }
+        } 
+        #endregion
 
+
+        #region IncrementDate() method
         /// <summary>
-        /// Method computes the end date when given the start date, a regular time step size,
+        /// This method computes the end date when given the start date, a regular time step size,
         /// and the number of time steps that should be added to the start date.
         /// </summary>
         /// <param name="startDate">The start date for the calculation</param>
@@ -66,10 +72,13 @@ namespace TimeSeriesLibrary
                     break;
             }
             return calcDate;
-        }
+        } 
+        #endregion
 
+
+        #region CountSteps() method
         /// <summary>
-        /// Method determines how many regular time steps are contained between the given
+        /// This method determines how many regular time steps are contained between the given
         /// start date and end date, when given a regular time step size.
         /// The method does not care whether the input start date comes before the input end
         /// date.  It simply returns the absolute value of the number of steps between the given dates.
@@ -83,8 +92,8 @@ namespace TimeSeriesLibrary
             TimeStepUnitCode unit, short stepSize)
         {
             DateTime calcDate;  // Date value that will be iterated for the counting process
-            int i=0;            // Counter for how many time steps
-            
+            int i = 0;            // Counter for how many time steps
+
             // Method does not care whether the input start date comes before the input end
             // date.  It simply returns the absolute value of the number of steps between the given dates.
             if (endDate < startDate)
@@ -128,19 +137,37 @@ namespace TimeSeriesLibrary
                     break;
             }
             return i;
-        }
+        } 
+        #endregion
 
+
+        #region FillDateArray() method
+        /// <summary>
+        /// This method fills values into the given array of date values, according to the
+        /// regular time step size specified by the given time step unit and quantity.  The
+        /// array must have been allocated prior to calling this method, and the size of the
+        /// array must be at least the given number of time steps to fill.
+        /// </summary>
+        /// <param name="timeStepUnit">code value for Minute,Hour,Day,Week,Month, Year, or Irregular</param>
+        /// <param name="timeStepQuantity">The number of the given unit that defines the time step.
+        /// For instance, if the time step is 6 hours long, then this value is 6.</param>
+        /// <param name="nReqValues">the number of time steps requested to fill into the array</param>
+        /// <param name="dateArray">the array of DateTime values that the method will fill</param>
+        /// <param name="reqStartDate">the DateTime value of the first time step</param>
         public static void FillDateArray(
                     TimeStepUnitCode timeStepUnit, short timeStepQuantity,
                     int nReqValues, DateTime[] dateArray, DateTime reqStartDate)
         {
+            // Element zero of the array comes directly from the input parameter
             dateArray[0] = reqStartDate;
             // Loop through the length of the array and fill in the date values
             for (int i = 1; i < nReqValues; i++)
             {
+                // IncrementDate method determines the date value of the next time step
                 dateArray[i] = IncrementDate(dateArray[i - 1], timeStepUnit, timeStepQuantity, 1);
             }
-        }
+        } 
+        #endregion
 
     }
 }

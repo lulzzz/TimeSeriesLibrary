@@ -72,9 +72,7 @@ namespace TimeSeriesLibrary_Test
         #endregion
 
 
-        /// <summary>
-        ///A test for ReadAndStore
-        ///</summary>
+        #region Test Method for ReadAndStore() without errors
         [TestMethod()]
         public void ReadAndStoreTest()
         {
@@ -157,13 +155,13 @@ namespace TimeSeriesLibrary_Test
                         TsImportList[2].BlobStartDate, TsImportList[2].BlobData,
                         ref tsvList);
             Assert.AreEqual(tsvList.Count, 17);
-            Assert.AreEqual(tsvList[0].Value,  312.5);  Assert.AreEqual(tsvList[0].Date,  DateTime.Parse("01/01/1930 11:59:00"));
-            Assert.AreEqual(tsvList[5].Value,  360.8);  Assert.AreEqual(tsvList[5].Date,  DateTime.Parse("01/03/1930 23:59:00"));
-            Assert.AreEqual(tsvList[14].Value, 2312.2);  Assert.AreEqual(tsvList[14].Date,  DateTime.Parse("01/11/1930 23:59:00"));
-            Assert.AreEqual(tsvList[16].Value, 312.2);  Assert.AreEqual(tsvList[16].Date,  DateTime.Parse("01/15/1930 23:59:00"));
+            Assert.AreEqual(tsvList[0].Value, 312.5); Assert.AreEqual(tsvList[0].Date, DateTime.Parse("01/01/1930 11:59:00"));
+            Assert.AreEqual(tsvList[5].Value, 360.8); Assert.AreEqual(tsvList[5].Date, DateTime.Parse("01/03/1930 23:59:00"));
+            Assert.AreEqual(tsvList[14].Value, 2312.2); Assert.AreEqual(tsvList[14].Date, DateTime.Parse("01/11/1930 23:59:00"));
+            Assert.AreEqual(tsvList[16].Value, 312.2); Assert.AreEqual(tsvList[16].Date, DateTime.Parse("01/15/1930 23:59:00"));
 
-            
-            
+
+
             // Verify APart in import list
             Assert.AreEqual(TsImportList[0].APart, null);
             Assert.AreEqual(TsImportList[1].APart, "QQ");
@@ -192,8 +190,11 @@ namespace TimeSeriesLibrary_Test
             Assert.AreEqual(TsImportList[1].UnprocessedElements, null);
             Assert.AreEqual(TsImportList[2].UnprocessedElements, " <OldManTag></OldManTag> <Schlap>Spoing-oing-oing</Schlap>");
 
-        }
+        } 
+        #endregion
 
+
+        #region Test Methods for error-handling of ReadAndStore()
         // Method should throw exception b/c it cannot write to database w/o having called the
         // constructor that initializes database fields.
         [TestMethod()]
@@ -208,7 +209,7 @@ namespace TimeSeriesLibrary_Test
                 int ret = TsXml.ReadAndStore(null, xmlText, TsImportList, storeToDatabase, recordDetails);
                 Assert.Fail("Should have thrown exception");
             }
-            catch(TSLibraryException e)
+            catch (TSLibraryException e)
             {
                 Assert.AreEqual(ErrCode.Enum.Xml_Connection_Not_Initialized, e.ErrCode);
             }
@@ -276,7 +277,7 @@ namespace TimeSeriesLibrary_Test
         [TestMethod()]
         public void ReadAndStoreMissingTagError2()
         {
-            string xmlText = "<Import></Import>"; 
+            string xmlText = "<Import></Import>";
             bool storeToDatabase = false;
             bool recordDetails = true;
 
@@ -314,10 +315,10 @@ namespace TimeSeriesLibrary_Test
         [TestMethod()]
         public void ReadAndStoreMissingTagError4()
         {
-            string xmlText = 
+            string xmlText =
                 "<Import><TimeSeries>" +
-		        "<StartDate>10/01/1927 03:09:00</StartDate>" +
-		        "<TimeStepUnit>Hour</TimeStepUnit>" +
+                "<StartDate>10/01/1927 03:09:00</StartDate>" +
+                "<TimeStepUnit>Hour</TimeStepUnit>" +
                 "<TimeStepQuantity>1</TimeStepQuantity>" +
                 "</TimeSeries></Import>";
             bool storeToDatabase = false;
@@ -362,7 +363,8 @@ namespace TimeSeriesLibrary_Test
             Assert.AreEqual(TsImportList[0].TimeStepCount, 2);
             // Verify BlobStartDate in import list
             Assert.AreEqual(TsImportList[0].BlobStartDate, DateTime.Parse("2/28/1927 15:00:00"));
-        }
+        } 
+        #endregion
     
     }
 }

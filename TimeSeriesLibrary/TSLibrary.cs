@@ -19,8 +19,22 @@ namespace TimeSeriesLibrary
         public TSConnection ConnxObject = new TSConnection();
 
 
-        #region Public methods for converting List<TimeSeriesValue> to BLOB and vice-versa
+        #region ConvertBlobToList() methods
 
+        /// <summary>
+        /// This method creates a List of TimeSeriesValue objects from the given BLOB (byte array)
+        /// of time series values.  The method converts the entire BLOB into the list.  The sibling
+        /// method ConvertBlobToListLimited can convert a selected portion of the BLOB into the list.
+        /// </summary>
+        /// <param name="timeStepUnit">TSDateCalculator.TimeStepUnitCode value for Minute,Hour,Day,Week,Month, Year, or Irregular</param>
+        /// <param name="timeStepQuantity">The number of the given unit that defines the time step.
+        /// For instance, if the time step is 6 hours long, then this value is 6.  If timeStepUnit is 
+        /// Irregular, then this value is ignored.</param>
+        /// <param name="blobStartDate">The DateTime value of the first time step in the BLOB. If 
+        /// timeStepUnit is Irregular, then this value is ignored.</param>
+        /// <param name="blobData">The BLOB (byte array) that this method will convert</param>
+        /// <param name="dateValueList">The List of TimeSeriesValues that this method will create from the BLOB.</param>
+        /// <returns>The number of time steps added to dateValueList</returns>
         public int ConvertBlobToListAll(
             TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
             DateTime blobStartDate,
@@ -42,7 +56,25 @@ namespace TimeSeriesLibrary
                         blobData, ref dateValueList);
         }
 
-
+        /// <summary>
+        /// This method creates a List of TimeSeriesValue objects from the given BLOB (byte array)
+        /// of time series values.  The method takes parameters for a maximum number of values,
+        /// an earliest date, and a latest date, so that only a portion of the BLOB might be 
+        /// converted to the List.  The sibling method ConvertBlobToListAll can convert the entire
+        /// BLOB without any limits.
+        /// </summary>
+        /// <param name="timeStepUnit">TSDateCalculator.TimeStepUnitCode value for Minute,Hour,Day,Week,Month, Year, or Irregular</param>
+        /// <param name="timeStepQuantity">The number of the given unit that defines the time step.
+        /// For instance, if the time step is 6 hours long, then this value is 6.  If timeStepUnit is 
+        /// Irregular, then this value is ignored.</param>
+        /// <param name="blobStartDate">The DateTime value of the first time step in the BLOB. If 
+        /// timeStepUnit is Irregular, then this value is ignored.</param>
+        /// <param name="nReqValues">The maximum number of time steps that should be added to dateValueList</param>
+        /// <param name="reqStartDate">The earliest date that will be added to dateValueList</param>
+        /// <param name="reqEndDate">The latest date that will be added to dateValueList</param>
+        /// <param name="blobData">The BLOB (byte array) that this method will convert into a List</param>
+        /// <param name="dateValueList">The List of TimeSeriesValues that this method will create from the BLOB.</param>
+        /// <returns>The number of time steps added to dateValueList</returns>
         public int ConvertBlobToListLimited(
             TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
             DateTime blobStartDate,
@@ -58,6 +90,31 @@ namespace TimeSeriesLibrary
         }
 
 
+        /// <summary>
+        /// This private method creates a List of TimeSeriesValue objects from the given BLOB (byte array)
+        /// of time series values.  The method takes parameters for a maximum number of values,
+        /// an earliest date, and a latest date, so that only a portion of the BLOB might be 
+        /// converted to the List.  This method is designed to do the operations that are common between
+        /// the public methods ConvertBlobToListLimited() and ConvertBlobToListAll().
+        /// </summary>
+        /// <param name="timeStepUnit">TSDateCalculator.TimeStepUnitCode value for Minute,Hour,Day,Week,Month, Year, or Irregular</param>
+        /// <param name="timeStepQuantity">The number of the given unit that defines the time step.
+        /// For instance, if the time step is 6 hours long, then this value is 6.  If timeStepUnit is 
+        /// Irregular, then this value is ignored.</param>
+        /// <param name="blobStartDate">The DateTime value of the first time step in the BLOB. If 
+        /// timeStepUnit is Irregular, then this value is ignored.</param>
+        /// <param name="applyLimits">If value is true, then nReqValues, reqStartDate, and reqEndDate will be
+        /// used to limit the portion of the BLOB that is converted to dateValueList.  If the value is false, then
+        /// nReqValues, reqStartDate, and reqEndDate will be ignored.</param>
+        /// <param name="nReqValues">The maximum number of time steps that should be added to dateValueList.
+        /// If applyLimits==false, then this value is ignored.</param>
+        /// <param name="reqStartDate">The earliest date that will be added to dateValueList.
+        /// If applyLimits==false, then this value is ignored.</param>
+        /// <param name="reqEndDate">The latest date that will be added to dateValueList.
+        /// If applyLimits==false, then this value is ignored.</param>
+        /// <param name="blobData">The BLOB (byte array) that this method will convert into a List</param>
+        /// <param name="dateValueList">The List of TimeSeriesValues that this method will create from the BLOB.</param>
+        /// <returns>The number of time steps added to dateValueList</returns>
         private unsafe int ConvertBlobToList(
             TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
             DateTime blobStartDate, Boolean applyLimits,
@@ -120,8 +177,19 @@ namespace TimeSeriesLibrary
             }
             return nValuesRead;
         }
+        #endregion
 
-        public byte[] ConvertListToBlob(TSDateCalculator.TimeStepUnitCode timeStepUnit, 
+
+        #region ConvertListToBlob() methods
+        /// <summary>
+        /// This method converts a List of TimeSeriesValue objects into a BLOB (byte array) of
+        /// time series values.  The entire List is converted into the BLOB--i.e., the method
+        /// does not take any parameters for limiting the size of the List that is created.
+        /// </summary>
+        /// <param name="timeStepUnit">TSDateCalculator.TimeStepUnitCode value for Minute,Hour,Day,Week,Month, Year, or Irregular</param>
+        /// <param name="dateValueList">A List of TimeSeriesValue objects that will be converted to a BLOB</param>
+        /// <returns>The BLOB (byte array) of time series values that was created from dateValueList</returns>
+        public byte[] ConvertListToBlob(TSDateCalculator.TimeStepUnitCode timeStepUnit,
                             List<TimeSeriesValue> dateValueList)
         {
             int timeStepCount = dateValueList.Count;
@@ -147,22 +215,121 @@ namespace TimeSeriesLibrary
                 return TSBlobCoder.ConvertArrayToBlobRegular(timeStepCount, valueArray);
             }
         }
+        /// <summary>
+        /// This method converts a List of TimeSeriesValue objects into a BLOB (byte array) of
+        /// time series values and computes a checksum from the BLOB and its meta parameters.
+        /// The entire List is converted into the BLOB--i.e., the method does not take any 
+        /// parameters for limiting the size of the List that is created.  This method will
+        /// throw exceptions if the meta-parameters that are passed in are not consistent
+        /// with the List of TimeSeriesValue objects.
+        /// </summary>
+        /// <param name="timeStepUnit">TSDateCalculator.TimeStepUnitCode value for Minute,Hour,Day,Week,Month, Year, or Irregular</param>
+        /// <param name="timeStepQuantity">The number of the given unit that defines the time step.
+        /// For instance, if the time step is 6 hours long, then this value is 6.</param>
+        /// <param name="timeStepCount">The number of time steps stored in the BLOB</param>
+        /// <param name="blobStartDate">Date of the first time step in the BLOB</param>
+        /// <param name="blobEndDate">Date of the last time step in the BLOB</param>
+        /// <param name="dateValueList">A List of TimeSeriesValue objects that will be converted to a BLOB</param>
+        /// <param name="checksum">The checksum (a 16-byte array) that will be computed by the method</param>
+        /// <returns>The BLOB (byte array) of time series values that was created from dateValueList</returns>
+        public byte[] ConvertListToBlobWithChecksum(
+                    TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
+                    int timeStepCount, DateTime blobStartDate, DateTime blobEndDate,
+                    List<TimeSeriesValue> dateValueList,
+                    ref byte[] checksum)
+        {
+            // Error checks
+            if (dateValueList.Count != timeStepCount)
+                throw new TSLibraryException(ErrCode.Enum.Checksum_Improper_Count);
+            if (dateValueList[0].Date != blobStartDate)
+                throw new TSLibraryException(ErrCode.Enum.Checksum_Improper_StartDate);
+            if (dateValueList.Last().Date != blobEndDate)
+                throw new TSLibraryException(ErrCode.Enum.Checksum_Improper_EndDate);
+            
+            // Convert the List dateValueList into a BLOB.  The sibling method does all the work.
+            byte[] blobData = ConvertListToBlob(timeStepUnit, dateValueList);
+            // Method in TSBlobCoder class computes the checksum
+            checksum = TSBlobCoder.ComputeChecksum(timeStepUnit, timeStepQuantity,
+                        timeStepCount, blobStartDate, blobEndDate, blobData);
+            
+            return blobData;
+        }
         #endregion
 
 
-        #region Public Methods for Computing Checksum
-        
-        public byte[] ComputeChecksum(
-                    TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
-                    int timeStepCount, DateTime blobStartDate, DateTime blobEndDate,
-                    byte[] blobData)
-        {
-            // Let the method in TSBlobCoder class do all the work
-            return TSBlobCoder.ComputeChecksum(timeStepUnit, timeStepQuantity,
-                        timeStepCount, blobStartDate, blobEndDate, 
-                        blobData);
-        }
+        #region Public methods for XML import
 
+        /// <summary>
+        /// This method reads the given XML file and stores each time series that is defined in the
+        /// XML file to a new TSImport object that is added to the given List of TSImport objects.
+        /// </summary>
+        /// <param name="xmlFileName">The file name (with path) of an XML file that defines one or more time series to import</param>
+        /// <param name="tsImportList">A List of TSImport objects that the method adds to.  One item is added to the List 
+        /// for each time series that is processed in the XML file.  The List must already be instantiated before calling 
+        /// this method.  The method does not change any items that are already in the List.</param>
+        /// <returns>The number of time series records that were successfully read and added to tsImportList</returns>
+        public int XmlImport(String xmlFileName, List<TSImport> tsImportList)
+        {
+            // Construct new TSXml object without SqlConnection object and table name
+            TSXml tsXml = new TSXml();
+            // Method in the TSXML object does all the work
+            return tsXml.ReadAndStore(xmlFileName, null, tsImportList, false, true);
+        }
+        /// <summary>
+        /// This method reads the given XML file and stores any time series that are defined in the
+        /// XML file to the database using the given database connection number and database table name.
+        /// Each time series is also stored in a new TSImport object that is addded to the given List 
+        /// of TSImport objects.
+        /// </summary>
+        /// <param name="connectionNumber">The serial number of the connection that is used to write to the database</param>
+        /// <param name="tableName">The name of the database table that time series will be written to</param>
+        /// <param name="xmlFileName">The file name (with path) of an XML file that defines one or more time series to import</param>
+        /// <param name="tsImportList">A List of TSImport objects that the method adds to.  One item is added to the List 
+        /// for each time series that is processed in the XML file.  The List must already be instantiated before calling 
+        /// this method.  The method does not change any items that are already in the List.</param>
+        /// <returns>The number of time series records that were successfully stored</returns>
+        public int XmlImportAndSaveToDB(int connectionNumber, String tableName,
+                        String xmlFileName, List<TSImport> tsImportList)
+        {
+            // Get the connection that we'll pass along.
+            SqlConnection connx = GetConnectionFromId(connectionNumber);
+            // Construct new TSXml object with SqlConnection object and table name
+            TSXml tsXml = new TSXml(connx, tableName);
+            // Method in the TSXML object does all the work
+            return tsXml.ReadAndStore(xmlFileName, null, tsImportList, true, true);
+        }
+        #endregion
+
+
+        #region Public methods for computing date values
+        DateTime IncrementDate(DateTime startDate, TSDateCalculator.TimeStepUnitCode unit,
+                    short stepSize, int numSteps)
+        {
+            return TSDateCalculator.IncrementDate(startDate, unit, stepSize, numSteps);
+        }
+        public void FillDateArray(
+                    TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
+                    int nReqValues, DateTime[] dateArray, DateTime reqStartDate)
+        {
+            TSDateCalculator.FillDateArray(timeStepUnit, timeStepQuantity,
+                                nReqValues, dateArray, reqStartDate);
+        }
+        public void FillSeriesDateArray(
+                    int connectionNumber, String tableName, Guid id,
+                    int nReqValues, DateTime[] dateArray, DateTime reqStartDate)
+        {
+            // Get the connection that we'll pass along.
+            SqlConnection connx = GetConnectionFromId(connectionNumber);
+            // Construct new TS object with SqlConnection object and table name
+            TS ts = new TS(connx, tableName);
+
+            ts.FillDateArray(id, nReqValues, dateArray, reqStartDate);
+        }
+        public int CountTimeSteps(DateTime startDate, DateTime endDate,
+            short unit, short stepSize)
+        {
+            return TSDateCalculator.CountSteps(startDate, endDate, (TSDateCalculator.TimeStepUnitCode)unit, stepSize);
+        }
         #endregion
 
 
@@ -514,90 +681,6 @@ namespace TimeSeriesLibrary
         }
 
         #endregion
-
-
-        #region Public methods for XML import
-
-        /// <summary>
-        /// This method reads the given XML file and stores any time series that are defined in the
-        /// XML file to the database using the given database connection number and database table name.
-        /// For each time series that the method adds to the database, it adds a TSImport object to the
-        /// given List of TSImport objects.  Each TSImport object records fields that were read from the
-        /// XML file, but which TSLibrary does not process.
-        /// </summary>
-        /// <param name="connectionNumber">The serial number of the connection that is used to write to the database</param>
-        /// <param name="tableName">The name of the database table that time series will be written to</param>
-        /// <param name="xmlFileName">The file name (with path) of an XML file that defines one or more time series to import</param>
-        /// <param name="tsImportList">A List of TSImport objects that the method adds to--one item for each time series
-        /// that is saved to the database.  The List must already be instantiated before calling this method.
-        /// The method does not change any items that are already in the List.</param>
-        /// <returns>The number of time series records that were successfully stored</returns>
-        public int XmlImport(String xmlFileName, List<TSImport> tsImportList)
-        {
-            // Construct new TSXml object without SqlConnection object and table name
-            TSXml tsXml = new TSXml();
-            // Method in the TSXML object does all the work
-            return tsXml.ReadAndStore(xmlFileName, null, tsImportList, false, true);
-        }
-        /// <summary>
-        /// This method reads the given XML file and stores any time series that are defined in the
-        /// XML file to the database using the given database connection number and database table name.
-        /// For each time series that the method adds to the database, it adds a TSImport object to the
-        /// given List of TSImport objects.  Each TSImport object records fields that were read from the
-        /// XML file, but which TSLibrary does not process.
-        /// </summary>
-        /// <param name="connectionNumber">The serial number of the connection that is used to write to the database</param>
-        /// <param name="tableName">The name of the database table that time series will be written to</param>
-        /// <param name="xmlFileName">The file name (with path) of an XML file that defines one or more time series to import</param>
-        /// <param name="tsImportList">A List of TSImport objects that the method adds to--one item for each time series
-        /// that is saved to the database.  The List must already be instantiated before calling this method.
-        /// The method does not change any items that are already in the List.</param>
-        /// <returns>The number of time series records that were successfully stored</returns>
-        public int XmlImportAndSaveToDB(int connectionNumber, String tableName,
-                        String xmlFileName, List<TSImport> tsImportList)
-        {
-            // Get the connection that we'll pass along.
-            SqlConnection connx = GetConnectionFromId(connectionNumber);
-            // Construct new TSXml object with SqlConnection object and table name
-            TSXml tsXml = new TSXml(connx, tableName);
-            // Method in the TSXML object does all the work
-            return tsXml.ReadAndStore(xmlFileName, null, tsImportList, true, true);
-        }
-        #endregion
-
-
-        #region Public methods for computing date values
-        DateTime IncrementDate(DateTime startDate, TSDateCalculator.TimeStepUnitCode unit,
-                    short stepSize, int numSteps)
-        {
-            return TSDateCalculator.IncrementDate(startDate, unit, stepSize, numSteps);
-        }
-        public void FillDateArray(
-                    TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
-                    int nReqValues, DateTime[] dateArray, DateTime reqStartDate)
-        {
-            TSDateCalculator.FillDateArray(timeStepUnit, timeStepQuantity, 
-                                nReqValues, dateArray, reqStartDate);
-        }
-        public void FillSeriesDateArray(
-                    int connectionNumber, String tableName, Guid id,
-                    int nReqValues, DateTime[] dateArray, DateTime reqStartDate)
-        {
-            // Get the connection that we'll pass along.
-            SqlConnection connx = GetConnectionFromId(connectionNumber);
-            // Construct new TS object with SqlConnection object and table name
-            TS ts = new TS(connx, tableName);
-
-            ts.FillDateArray(id, nReqValues, dateArray, reqStartDate);
-        }
-        public int CountTimeSteps(DateTime startDate, DateTime endDate,
-            short unit, short stepSize)
-        {
-            return TSDateCalculator.CountSteps(startDate, endDate, (TSDateCalculator.TimeStepUnitCode)unit, stepSize);
-        }
-        #endregion
-
-
 
     }
 }

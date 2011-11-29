@@ -28,9 +28,9 @@ namespace TimeSeriesLibrary
         /// UnprocessedElements field, and the BLOB is not recorded in this object.
         /// </summary>
         public Boolean IsDetailed;
-        
 
-        // These fields are filled in by both the detailed and non-detailed XML methods
+
+        // These fields are recorded to the TSImport object regardless of the value of IsDetailed.
         /// <summary>
         /// Content of the Name tag in the XML file, presumably the name of a HECDSS record
         /// </summary>
@@ -47,7 +47,8 @@ namespace TimeSeriesLibrary
         /// </summary>
         public String UnprocessedElements;
 
-        // These fields are only filled by the detailed XML methods
+
+        // These fields are only recorded in the TSImport object when IsDetailed==true.
         public String APart;
         public String BPart;
         public String CPart;
@@ -55,10 +56,11 @@ namespace TimeSeriesLibrary
         public String Units;
         public String TimeSeriesType;
         public int TraceNumber;
+
         
-        // These fields are meta-parameters of the BLOB that are written to the database (if
-        // database writing was invoked).  These are recorded by both detailed and non-detailed
-        // XML methods.
+        // These fields are meta-parameters of the BLOB that must be recorded in a consistent
+        // manner with the BLOB itself.  The fields are recorded to the TSImport object
+        // regardless of the value of IsDetailed.
         public TSDateCalculator.TimeStepUnitCode TimeStepUnit;
         public short TimeStepQuantity;
         public int TimeStepCount;
@@ -73,6 +75,21 @@ namespace TimeSeriesLibrary
 
 
         #region Class Constructor
+        /// <summary>
+        /// Class constructor for TSImport class.
+        /// </summary>
+        /// <param name="isDetailed">
+        /// This value indicates whether the TSImport object records certain elements 
+        /// from an XML file to dedicated fields within the TSImport object, or to the 
+        /// UnprocessedElements string field of the TSImport object.  It also determines
+        /// whether the TSImport object records the BLOB of timeseries data.
+        /// 
+        /// If true, then XML elements such as "Apart" are recorded to their own fields,
+        /// and the BLOB is recorded in the BlobData field.
+        /// 
+        /// If false, then XML elements such as "Apart" are recorded to the 
+        /// UnprocessedElements field, and the BLOB is not recorded in this object.
+        /// </param>
         public TSImport(Boolean isDetailed)
         {
             IsDetailed = isDetailed;
@@ -153,7 +170,7 @@ namespace TimeSeriesLibrary
         /// the Id (GUID) of the database record for the time series.
         /// </summary>
         /// <param name="tsp">The TS object that values will be copied from</param>
-        /// <param name="blobData">the BLOB (byte array)</param>
+        /// <param name="blobData">the BLOB (byte array) of time series values</param>
         public void RecordFromTS(TS ts, byte[] blobData)
         {
             Id = ts.Id;

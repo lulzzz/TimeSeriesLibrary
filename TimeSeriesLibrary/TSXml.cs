@@ -305,7 +305,10 @@ namespace TimeSeriesLibrary
             }
             catch(XmlException e)
             {
-                // if no such element is found then there is nothing to process
+                // An XmlException was caught somewhere in the lifetime of the object xmlReader,
+                // so we can presumably say there was an error in how the XML file was formatted.
+                // The information from the XmlException object is included in the error message
+                // that we throw here, and the XmlException is included as an inner exception.
                 throw new TSLibraryException(ErrCode.Enum.Xml_File_Malformed,
                             reportedFileName + "is malformed.\n\n" + e.Message, e);
             }

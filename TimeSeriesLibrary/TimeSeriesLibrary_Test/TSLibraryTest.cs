@@ -1,6 +1,7 @@
 ﻿using TimeSeriesLibrary;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Linq;
 using System.Collections.Generic;
 
 namespace TimeSeriesLibrary_Test
@@ -29,6 +30,7 @@ namespace TimeSeriesLibrary_Test
 
         private TestContext testContextInstance;
 
+        #region TestContext
         /// <summary>
         ///Gets or sets the test context which provides
         ///information about and functionality for the current test run.
@@ -43,7 +45,9 @@ namespace TimeSeriesLibrary_Test
             {
                 testContextInstance = value;
             }
-        }
+        } 
+        #endregion
+
 
         #region Additional test attributes
         // 
@@ -89,6 +93,7 @@ namespace TimeSeriesLibrary_Test
         #endregion
 
 
+        #region Test Methods for ConvertBlobToListAll() and ConvertListToBlob()
         // The series of tests below is for ConvertBlobToListAll and ConvertListToBlob.
         // The tests take advantage of the fact that the methods are designed so that
         // the series that is put into the BLOB must be identical to the series that
@@ -96,7 +101,7 @@ namespace TimeSeriesLibrary_Test
 
         // This method is re-used by the actual test methods that follow.
         public void ConvertBlobAll(List<TimeSeriesValue> inList,
-                TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity, 
+                TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
                 DateTime blobStartDate)
         {
             TSLibrary tsLib = new TSLibrary();
@@ -111,12 +116,12 @@ namespace TimeSeriesLibrary_Test
             Assert.AreEqual(ret, inList.Count);
             // the count in both lists must match
             Assert.AreEqual(outList.Count, inList.Count);
-            
+
             // now check each item in the two lists
             Boolean AreEqual = true;
-            for(int i=0; i<ret; i++)
+            for (int i = 0; i < ret; i++)
             {
-                if( outList[i].ValueEquals(inList[i])==false )
+                if (outList[i].ValueEquals(inList[i]) == false)
                     AreEqual = false;
             }
 
@@ -141,9 +146,11 @@ namespace TimeSeriesLibrary_Test
         public void ConvertBlobToListAllRegTest2()
         {
             ConvertBlobAll(RegList2, TimeStepUnit2, TimeStepQuantity2, BlobStartDate2);
-        }
+        } 
+        #endregion
 
 
+        #region Test Methods for ConvertBlobToListLimited() and ConvertListToBlob()
         // The series of tests below is for ConvertBlobToListLimited and ConvertListToBlob.
         // The tests take advantage of the fact that the methods are designed so that
         // the series that is put into the BLOB must be identical to the series that
@@ -163,8 +170,8 @@ namespace TimeSeriesLibrary_Test
             byte[] blobData = tsLib.ConvertListToBlob(timeStepUnit, inList);
 
             int ret = tsLib.ConvertBlobToListLimited(timeStepUnit, timeStepQuantity,
-                            blobStartDate, 
-                            nMax, inList[nCutStart].Date, inList[inList.Count-nCutEnd-1].Date,
+                            blobStartDate,
+                            nMax, inList[nCutStart].Date, inList[inList.Count - nCutEnd - 1].Date,
                             blobData, ref outList);
 
             // The return value of the function must match the number of items in the original list
@@ -176,7 +183,7 @@ namespace TimeSeriesLibrary_Test
             Boolean AreEqual = true;
             for (int i = 0; i < ret; i++)
             {
-                if (outList[i].ValueEquals(inList[i+nCutStart]) == false)
+                if (outList[i].ValueEquals(inList[i + nCutStart]) == false)
                     AreEqual = false;
             }
 
@@ -231,10 +238,12 @@ namespace TimeSeriesLibrary_Test
         public void ConvertBlobToListLimitedRegTest6()
         {
             ConvertBlobLimited(RegList2, TimeStepUnit2, TimeStepQuantity2, BlobStartDate2, 180, 0, 231);
-        }
+        } 
+        #endregion
 
 
-        // The series of tests below is for ComputeChecksum()
+        #region Test Methods for ConvertListToBlobWithChecksum() without errors
+        // The series of tests below is for ConvertListToBlobWithChecksum()
         //
 
         // This method is reused by the actual test methods that follow
@@ -244,23 +253,19 @@ namespace TimeSeriesLibrary_Test
         {
             TSLibrary tsLib = new TSLibrary();
 
-            byte[] blob1 = tsLib.ConvertListToBlob(u1, list1);
-
-            chk1 = tsLib.ComputeChecksum(
+            tsLib.ConvertListToBlobWithChecksum(
                 u1, q1, list1.Count,
-                list1[0].Date, list1[list1.Count - 1].Date, blob1);
+                list1[0].Date, list1[list1.Count - 1].Date, list1, ref chk1);
 
-            byte[] blob2 = tsLib.ConvertListToBlob(u2, list2);
-
-            chk2 = tsLib.ComputeChecksum(
+            tsLib.ConvertListToBlobWithChecksum(
                 u2, q2, list2.Count,
-                list2[0].Date, list2[list2.Count - 1].Date, blob2);
+                list2[0].Date, list2[list2.Count - 1].Date, list2, ref chk2);
 
             Assert.IsTrue(chk1.Length == 16);
             Assert.IsTrue(chk2.Length == 16);
 
             for (int i = 0; i < chk1.Length; i++)
-                if(chk1[i] != chk2[i])
+                if (chk1[i] != chk2[i])
                     return false;
 
             return true;
@@ -273,13 +278,13 @@ namespace TimeSeriesLibrary_Test
         public void ChecksumIdenticalTest()
         {
             List<TimeSeriesValue> duplicateList = new List<TimeSeriesValue>();
-            
+
             // Create an identical array by deep copy
-            foreach(TimeSeriesValue tsv in IrregList1)
+            foreach (TimeSeriesValue tsv in IrregList1)
             {
                 duplicateList.Add(new TimeSeriesValue { Date = tsv.Date, Value = tsv.Value });
             }
-            byte[] chk1=null, chk2=null;
+            byte[] chk1 = null, chk2 = null;
 
             Boolean ret = ComputeTestChecksums(
                     TSDateCalculator.TimeStepUnitCode.Irregular, 0, IrregList1, ref chk1,
@@ -299,7 +304,7 @@ namespace TimeSeriesLibrary_Test
             }
             // Slightly alter one date in the list
             duplicateList[5].Date = duplicateList[5].Date.AddMinutes(12);
-            
+
             byte[] chk1 = null, chk2 = null;
 
             Boolean ret = ComputeTestChecksums(
@@ -410,7 +415,7 @@ namespace TimeSeriesLibrary_Test
             // The only difference should be the "TimeStepQuantity" parameter
             ret = ComputeTestChecksums(
                     TimeStepUnit1, TimeStepQuantity1, RegList1, ref chk1,
-                    TimeStepUnit1, (short)(TimeStepQuantity1+1), duplicateList, ref chk2);
+                    TimeStepUnit1, (short)(TimeStepQuantity1 + 1), duplicateList, ref chk2);
 
             Assert.IsFalse(ret);
 
@@ -447,7 +452,115 @@ namespace TimeSeriesLibrary_Test
                     TimeStepUnit1, TimeStepQuantity1, duplicateList, ref chk2);
 
             Assert.IsTrue(ret);
+        } 
+        #endregion
+
+
+        #region Test Methods for error handling of ConvertListToBlobWithChecksum()
+
+        // Method should not throw any exceptions.
+        [TestMethod()]
+        public void ConvertListToBlobWithChecksum_Err0()
+        {
+            TSLibrary tsLib = new TSLibrary();
+            byte[] checksum = null;
+
+            try
+            {
+                byte[] blobData = tsLib.ConvertListToBlobWithChecksum(
+                        TSDateCalculator.TimeStepUnitCode.Irregular, 0,
+                        IrregList1.Count, IrregList1.First().Date, IrregList1.Last().Date,
+                        IrregList1, ref checksum);
+                Assert.IsTrue(true);
+            }
+            catch (TSLibraryException e)
+            {
+                Assert.Fail("Should not throw any exceptions");
+            }
         }
+        // Method should throw an exception b/c the TimeStepQuantity must
+        // be zero when the TimeStepUnit==Irregular.
+        [TestMethod()]
+        public void ConvertListToBlobWithChecksum_Err1()
+        {
+            TSLibrary tsLib = new TSLibrary();
+            byte[] checksum = null;
+
+            try
+            {
+                byte[] blobData = tsLib.ConvertListToBlobWithChecksum(
+                        TSDateCalculator.TimeStepUnitCode.Irregular, 3,
+                        IrregList1.Count, IrregList1.First().Date, IrregList1.Last().Date,
+                        IrregList1, ref checksum);
+                Assert.Fail("Should have thrown exception");
+            }
+            catch (TSLibraryException e)
+            {
+                Assert.AreEqual(ErrCode.Enum.Checksum_Quantity_Nonzero, e.ErrCode);
+            }
+        }
+        // Method should throw an exception b/c the TimeStepCount is wrong
+        [TestMethod()]
+        public void ConvertListToBlobWithChecksum_Err2()
+        {
+            TSLibrary tsLib = new TSLibrary();
+            byte[] checksum = null;
+
+            try
+            {
+                byte[] blobData = tsLib.ConvertListToBlobWithChecksum(
+                        TSDateCalculator.TimeStepUnitCode.Irregular, 0,
+                        IrregList1.Count+3, IrregList1.First().Date, IrregList1.Last().Date,
+                        IrregList1, ref checksum);
+                Assert.Fail("Should have thrown exception");
+            }
+            catch (TSLibraryException e)
+            {
+                Assert.AreEqual(ErrCode.Enum.Checksum_Improper_Count, e.ErrCode);
+            }
+        }
+        // Method should throw an exception b/c the StartDate is wrong
+        [TestMethod()]
+        public void ConvertListToBlobWithChecksum_Err3()
+        {
+            TSLibrary tsLib = new TSLibrary();
+            byte[] checksum = null;
+
+            try
+            {
+                byte[] blobData = tsLib.ConvertListToBlobWithChecksum(
+                        TSDateCalculator.TimeStepUnitCode.Irregular, 0,
+                        IrregList1.Count, IrregList1.First().Date.AddDays(2), IrregList1.Last().Date,
+                        IrregList1, ref checksum);
+                Assert.Fail("Should have thrown exception");
+            }
+            catch (TSLibraryException e)
+            {
+                Assert.AreEqual(ErrCode.Enum.Checksum_Improper_StartDate, e.ErrCode);
+            }
+        }
+        // Method should throw an exception b/c the end date is wrong
+        [TestMethod()]
+        public void ConvertListToBlobWithChecksum_Err4()
+        {
+            TSLibrary tsLib = new TSLibrary();
+            byte[] checksum = null;
+
+            try
+            {
+                byte[] blobData = tsLib.ConvertListToBlobWithChecksum(
+                        TSDateCalculator.TimeStepUnitCode.Irregular, 0,
+                        IrregList1.Count, IrregList1.First().Date, IrregList1.Last().Date.AddDays(2),
+                        IrregList1, ref checksum);
+                Assert.Fail("Should have thrown exception");
+            }
+            catch (TSLibraryException e)
+            {
+                Assert.AreEqual(ErrCode.Enum.Checksum_Improper_EndDate, e.ErrCode);
+            }
+        }
+
+        #endregion
 
     }
 }

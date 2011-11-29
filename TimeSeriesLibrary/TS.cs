@@ -160,10 +160,10 @@ namespace TimeSeriesLibrary
                 {
                     adp.Fill(dTable);
                 }
-                catch
+                catch(Exception e)
                 {   // The query failed.
                     throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
-                                    "Table '" + TableName + "' could not be opened using query:\n\n." + comm);
+                                    "Table '" + TableName + "' could not be opened using query:\n\n." + comm, e);
                 }
                 // There should be at least 1 row in the DataTable object
                 if (dTable.Rows.Count < 1)
@@ -309,10 +309,10 @@ namespace TimeSeriesLibrary
                 {
                     adp.Fill(dTable);
                 }
-                catch
+                catch(Exception e)
                 {   // The query failed
                     throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
-                                    "Table '" + TableName + "' could not be opened using query:\n\n." + comm);
+                                    "Table '" + TableName + "' could not be opened using query:\n\n." + comm, e);
                 }
                 // There should be at least 1 row in the table
                 if (dTable.Rows.Count < 1)
@@ -452,10 +452,10 @@ namespace TimeSeriesLibrary
                     {
                         adp.Fill(dTable);
                     }
-                    catch
+                    catch(Exception e)
                     {   // The query failed
                         throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
-                                        "Table '" + TableName + "' could not be opened using query:\n\n." + comm);
+                                        "Table '" + TableName + "' could not be opened using query:\n\n." + comm, e);
                     }
 
                     // DataRow object represents the current row of the DataTable object, which in turn
@@ -530,10 +530,10 @@ namespace TimeSeriesLibrary
             {   // This method executes the SQL command and returns the number of rows that were affected
                 numRowsAffected = sqlCommand.ExecuteNonQuery();
             }
-            catch (SqlException)
+            catch (SqlException e)
             {   // execution of the SQL command failed because it is invalid
                 throw new TSLibraryException(ErrCode.Enum.Sql_Syntax_Error,
-                                "SQL Command\n\n\"" + comm + "\"\n\n contains a syntax error.");
+                                "SQL Command\n\n\"" + comm + "\"\n\n contains a syntax error.", e);
             }
 
             // Return value reflects whether anything was actually deleted

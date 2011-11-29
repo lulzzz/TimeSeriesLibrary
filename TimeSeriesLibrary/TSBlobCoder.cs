@@ -264,6 +264,14 @@ namespace TimeSeriesLibrary
                 sizeof(int) +                // TimeStepCount
                 8 + 8;                       // StartDate and EndDate
 
+            // Error check
+            if (timeStepUnit == TSDateCalculator.TimeStepUnitCode.Irregular
+                        && timeStepQuantity != 0)
+            {
+                throw new TSLibraryException(ErrCode.Enum.Checksum_Quantity_Nonzero,
+                                "When the time step is irregular, the TimeStepQuantity must equal " +
+                                "zero in order to ensure consistency in the checksum." );
+            }
 
             // Byte array for the series of meta parameters that are fed into the MD5 algorithm first.
             byte[] binArray = new byte[LengthOfParamInputForChecksum];
