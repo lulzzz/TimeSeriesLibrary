@@ -118,7 +118,17 @@ namespace TimeSeriesLibrary
             /// read from the XML file.  Most likely this indicates there was an error in how the XML file
             /// is formed.  The XmlException is included as an inner exception to the TSLibraryException.
             /// </summary>
-            Xml_File_Malformed = -404
+            Xml_File_Malformed = -404,
+            /// <summary>
+            /// This error indicates that the TimeSeriesLibrary method does not recognize the value of
+            /// a TimeStepUnit field from an XML file.
+            /// </summary>
+            Xml_Unit_Name_Unrecognized = -405,
+            /// <summary>
+            /// This error indicates that the TimeSeriesLibrary method does not recognize the value of
+            /// a TimeStepQuantity field from an XML file.
+            /// </summary>
+            Xml_Quantity_Unrecognized = -406
         }
     }
 }

@@ -473,7 +473,7 @@ namespace TimeSeriesLibrary_Test
                         IrregList1, ref checksum);
                 Assert.IsTrue(true);
             }
-            catch (TSLibraryException e)
+            catch (TSLibraryException)
             {
                 Assert.Fail("Should not throw any exceptions");
             }

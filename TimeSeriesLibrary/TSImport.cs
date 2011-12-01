@@ -106,7 +106,7 @@ namespace TimeSeriesLibrary
         public void SetEPart(XmlReader xmlReader) { SetDetailFieldString(ref EPart, xmlReader); }
         public void SetUnits(XmlReader xmlReader) { SetDetailFieldString(ref Units, xmlReader); }
         public void SetTimeSeriesType(XmlReader xmlReader) { SetDetailFieldString(ref TimeSeriesType, xmlReader); }
-        public void SetTraceNumber(XmlReader xmlReader) { SetDetailFieldInt(ref TraceNumber, xmlReader); }
+        public void SetTraceNumber(XmlReader xmlReader) { SetDetailFieldInt(ref TraceNumber, xmlReader, 1); }
 
         // The field that is passed as a parameter will be assigned from the current XML 
         // element if IsDetailed is true.  Otherwise, the XML element is recorded in the 
@@ -121,10 +121,18 @@ namespace TimeSeriesLibrary
         // The field that is passed as a parameter will be assigned from the current XML 
         // element if IsDetailed is true.  Otherwise, the XML element is recorded in the 
         // UnprocessedElements field.
-        private void SetDetailFieldInt(ref int i, XmlReader xmlReader)
+        private void SetDetailFieldInt(ref int i, XmlReader xmlReader, int defaultVal)
         {
+            String tagName = xmlReader.Name;
+            String s = xmlReader.ReadElementContentAsString();
+
             if (IsDetailed)
-                i = int.Parse(xmlReader.ReadElementContentAsString());
+            {
+                if (s == String.Empty)
+                    i = (int)defaultVal;
+                else
+                    i = int.Parse(s);
+            }
             else
                 AddUnprocessedElement(xmlReader.ReadOuterXml());
         }

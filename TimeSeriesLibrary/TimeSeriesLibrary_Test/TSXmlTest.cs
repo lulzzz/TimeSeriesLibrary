@@ -365,6 +365,195 @@ namespace TimeSeriesLibrary_Test
             Assert.AreEqual(TsImportList[0].BlobStartDate, DateTime.Parse("2/28/1927 15:00:00"));
         } 
         #endregion
+
+
+
+        #region Test Methods for ParseTimeStepUnit()
+        // The method should successfully parse strings that match the names of the enum
+        [TestMethod()]
+        public void ParseTimeStepUnit_EnumNames()
+        {
+            TSDateCalculator.TimeStepUnitCode timeStepUnit;
+
+            timeStepUnit = TsXml.ParseTimeStepUnit("Minute");
+            Assert.AreEqual(timeStepUnit, TSDateCalculator.TimeStepUnitCode.Minute);
+
+            timeStepUnit = TsXml.ParseTimeStepUnit("Hour");
+            Assert.AreEqual(timeStepUnit, TSDateCalculator.TimeStepUnitCode.Hour);
+
+            timeStepUnit = TsXml.ParseTimeStepUnit("Day");
+            Assert.AreEqual(timeStepUnit, TSDateCalculator.TimeStepUnitCode.Day);
+
+            timeStepUnit = TsXml.ParseTimeStepUnit("Week");
+            Assert.AreEqual(timeStepUnit, TSDateCalculator.TimeStepUnitCode.Week);
+
+            timeStepUnit = TsXml.ParseTimeStepUnit("Month");
+            Assert.AreEqual(timeStepUnit, TSDateCalculator.TimeStepUnitCode.Month);
+
+            timeStepUnit = TsXml.ParseTimeStepUnit("Year");
+            Assert.AreEqual(timeStepUnit, TSDateCalculator.TimeStepUnitCode.Year);
+        }
+        // The method should successfully parse strings that match the patterns
+        // used by HECDSS record name E parts, including the abbreviations for
+        // Month and Minute.
+        [TestMethod()]
+        public void ParseTimeStepUnit_DssStyle()
+        {
+            TSDateCalculator.TimeStepUnitCode timeStepUnit;
+
+            timeStepUnit = TsXml.ParseTimeStepUnit("Min");
+            Assert.AreEqual(timeStepUnit, TSDateCalculator.TimeStepUnitCode.Minute);
+
+            timeStepUnit = TsXml.ParseTimeStepUnit("2Min");
+            Assert.AreEqual(timeStepUnit, TSDateCalculator.TimeStepUnitCode.Minute);
+
+            timeStepUnit = TsXml.ParseTimeStepUnit("720Min");
+            Assert.AreEqual(timeStepUnit, TSDateCalculator.TimeStepUnitCode.Minute);
+
+            timeStepUnit = TsXml.ParseTimeStepUnit("7Minute");
+            Assert.AreEqual(timeStepUnit, TSDateCalculator.TimeStepUnitCode.Minute);
+
+            timeStepUnit = TsXml.ParseTimeStepUnit("3HOUR");
+            Assert.AreEqual(timeStepUnit, TSDateCalculator.TimeStepUnitCode.Hour);
+
+            timeStepUnit = TsXml.ParseTimeStepUnit("1DAY");
+            Assert.AreEqual(timeStepUnit, TSDateCalculator.TimeStepUnitCode.Day);
+
+            timeStepUnit = TsXml.ParseTimeStepUnit("30day");
+            Assert.AreEqual(timeStepUnit, TSDateCalculator.TimeStepUnitCode.Day);
+
+            timeStepUnit = TsXml.ParseTimeStepUnit("8Week");
+            Assert.AreEqual(timeStepUnit, TSDateCalculator.TimeStepUnitCode.Week);
+
+            timeStepUnit = TsXml.ParseTimeStepUnit("80WEEK");
+            Assert.AreEqual(timeStepUnit, TSDateCalculator.TimeStepUnitCode.Week);
+
+            timeStepUnit = TsXml.ParseTimeStepUnit("200Week");
+            Assert.AreEqual(timeStepUnit, TSDateCalculator.TimeStepUnitCode.Week);
+
+            timeStepUnit = TsXml.ParseTimeStepUnit("Mon");
+            Assert.AreEqual(timeStepUnit, TSDateCalculator.TimeStepUnitCode.Month);
+
+            timeStepUnit = TsXml.ParseTimeStepUnit("8MON");
+            Assert.AreEqual(timeStepUnit, TSDateCalculator.TimeStepUnitCode.Month);
+
+            timeStepUnit = TsXml.ParseTimeStepUnit("23Month");
+            Assert.AreEqual(timeStepUnit, TSDateCalculator.TimeStepUnitCode.Month);
+
+            timeStepUnit = TsXml.ParseTimeStepUnit("YEAR");
+            Assert.AreEqual(timeStepUnit, TSDateCalculator.TimeStepUnitCode.Year);
+
+            timeStepUnit = TsXml.ParseTimeStepUnit("6Year");
+            Assert.AreEqual(timeStepUnit, TSDateCalculator.TimeStepUnitCode.Year);
+
+            timeStepUnit = TsXml.ParseTimeStepUnit("year");
+            Assert.AreEqual(timeStepUnit, TSDateCalculator.TimeStepUnitCode.Year);
+        }
+        // The method should throw exceptions for strings that can not be parsed
+        [TestMethod()]
+        public void ParseTimeStepUnit_Err()
+        {
+            TSDateCalculator.TimeStepUnitCode timeStepUnit;
+
+            try
+            {
+                timeStepUnit = TsXml.ParseTimeStepUnit("7282118");
+                Assert.Fail("Should have thrown exception");
+            }
+            catch (TSLibraryException e)
+            {
+                Assert.AreEqual(ErrCode.Enum.Xml_Unit_Name_Unrecognized, e.ErrCode);
+            }
+            try
+            {
+                timeStepUnit = TsXml.ParseTimeStepUnit("Totally Wrong");
+                Assert.Fail("Should have thrown exception");
+            }
+            catch (TSLibraryException e)
+            {
+                Assert.AreEqual(ErrCode.Enum.Xml_Unit_Name_Unrecognized, e.ErrCode);
+            }
+            try
+            {
+                timeStepUnit = TsXml.ParseTimeStepUnit("Monster");
+                Assert.Fail("Should have thrown exception");
+            }
+            catch (TSLibraryException e)
+            {
+                Assert.AreEqual(ErrCode.Enum.Xml_Unit_Name_Unrecognized, e.ErrCode);
+            }
+            try
+            {
+                timeStepUnit = TsXml.ParseTimeStepUnit("Minotaur");
+                Assert.Fail("Should have thrown exception");
+            }
+            catch (TSLibraryException e)
+            {
+                Assert.AreEqual(ErrCode.Enum.Xml_Unit_Name_Unrecognized, e.ErrCode);
+            }
+        }
+        #endregion
+
+
+        #region Test Methods for ParseTimeStepQuantity()
+        // The method should parse simple integers
+        [TestMethod()]
+        public void ParseTimeStepQuantity_Proper()
+        {
+            short timeStepQuantity;
+
+            timeStepQuantity = TsXml.ParseTimeStepQuantity("3");
+            Assert.AreEqual(timeStepQuantity, 3);
+
+            timeStepQuantity = TsXml.ParseTimeStepQuantity("29");
+            Assert.AreEqual(timeStepQuantity, 29);
+
+            timeStepQuantity = TsXml.ParseTimeStepQuantity("177");
+            Assert.AreEqual(timeStepQuantity, 177);
+
+        }
+        // The method should successfully parse strings that match the patterns
+        // used by HECDSS record name E parts.
+        [TestMethod()]
+        public void ParseTimeStepQuantity_DssStyle()
+        {
+            short timeStepQuantity;
+
+            timeStepQuantity = TsXml.ParseTimeStepQuantity("4Day");
+            Assert.AreEqual(timeStepQuantity, 4);
+
+            timeStepQuantity = TsXml.ParseTimeStepQuantity("19Min");
+            Assert.AreEqual(timeStepQuantity, 19);
+
+            timeStepQuantity = TsXml.ParseTimeStepQuantity("177Bozos");
+            Assert.AreEqual(timeStepQuantity, 177);
+        }
+        // The method should throw exceptions for strings that can not be parsed
+        [TestMethod()]
+        public void ParseTimeStepQuantity_Err()
+        {
+            short timeStepQuantity;
+
+            try
+            {
+                timeStepQuantity = TsXml.ParseTimeStepQuantity("ointment");
+                Assert.Fail("Should have thrown exception");
+            }
+            catch (TSLibraryException e)
+            {
+                Assert.AreEqual(ErrCode.Enum.Xml_Quantity_Unrecognized, e.ErrCode);
+            }
+            try
+            {
+                timeStepQuantity = TsXml.ParseTimeStepQuantity("()");
+                Assert.Fail("Should have thrown exception");
+            }
+            catch (TSLibraryException e)
+            {
+                Assert.AreEqual(ErrCode.Enum.Xml_Quantity_Unrecognized, e.ErrCode);
+            }
+        } 
+        #endregion
     
     }
 }

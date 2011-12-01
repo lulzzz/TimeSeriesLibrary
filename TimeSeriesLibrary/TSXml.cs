@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.IO;
 using System.Xml;
 
@@ -14,10 +15,19 @@ namespace TimeSeriesLibrary
     /// </summary>
     public class TSXml
     {
-        public ErrCode.Enum ErrorCode;
-
         private String TableName;
         private SqlConnection Connx;
+
+        private String reportedFileName;
+        public String ReportedFileName
+        {
+            get
+            {
+                if (reportedFileName == null) return "The XML file ";
+                else return reportedFileName;
+            }
+            set{ reportedFileName = value; }
+        }
 
 
         #region Class Constructor
@@ -71,7 +81,6 @@ namespace TimeSeriesLibrary
             String s;       // ephemeral String object
             String DataString="";  // String that holds the unparsed DataSeries
             int numTs = 0;  // The # of time series successfuly processed by this method
-            String reportedFileName;
             
             TSDateCalculator.TimeStepUnitCode TimeStepUnit = TSDateCalculator.TimeStepUnitCode.Day; // to be read from XML
             short TimeStepQuantity = 1;                       // to be read from XML
@@ -101,12 +110,12 @@ namespace TimeSeriesLibrary
             if (xmlFileName == null)
             {
                 xmlStream = new MemoryStream(Encoding.ASCII.GetBytes(xmlText));
-                reportedFileName = "The given XML text ";
+                ReportedFileName = "The given XML text ";
             }
             else
             {
                 xmlStream = new FileStream(xmlFileName, FileMode.Open);
-                reportedFileName = "The XML file '" + xmlFileName + "' ";
+                ReportedFileName = "The XML file '" + xmlFileName + "' ";
             }
 
             try
@@ -120,19 +129,19 @@ namespace TimeSeriesLibrary
                     {
                         if (!xmlReader.ReadToFollowing("Import"))
                             throw new TSLibraryException(ErrCode.Enum.Xml_File_Empty,
-                                        reportedFileName + "does not contain an <Import> element.");
+                                        ReportedFileName + "does not contain an <Import> element.");
                     }
                     catch
                     {
                         throw new TSLibraryException(ErrCode.Enum.Xml_File_Empty,
-                                    reportedFileName + "does not contain an <Import> element.");
+                                    ReportedFileName + "does not contain an <Import> element.");
                     }
                     // The file must contain at least one element named 'TimeSeries'.  Move to the first
                     // such element now.
                     if (!xmlReader.ReadToDescendant("TimeSeries"))
                         // if no such element is found then there is nothing to process
                         throw new TSLibraryException(ErrCode.Enum.Xml_File_Empty,
-                                    reportedFileName + "does not contain any <TimeSeries> elements.");
+                                    ReportedFileName + "does not contain any <TimeSeries> elements.");
                     // do-while loop through all elements named 'TimeSeries'.  There will be one iteration
                     // of this loop for each timeseries in the XML file.
                     do
@@ -173,8 +182,7 @@ namespace TimeSeriesLibrary
                                     case "TimeStepUnit":
                                         // TimeSeriesLibrary will store <TimeStepUnit> to the data table
                                         s = oneSeriesXmlReader.ReadElementContentAsString();
-                                        TimeStepUnit = (TSDateCalculator.TimeStepUnitCode)
-                                                            Enum.Parse(typeof(TSDateCalculator.TimeStepUnitCode), s);
+                                        TimeStepUnit = ParseTimeStepUnit(s);
                                         foundTimeStepUnit = true;
                                         // If it is an irregular time series
                                         if (TimeStepUnit == TSDateCalculator.TimeStepUnitCode.Irregular)
@@ -188,7 +196,8 @@ namespace TimeSeriesLibrary
 
                                     case "TimeStepQuantity":
                                         // TimeSeriesLibrary will store <TimeStepQuantity> to the data table
-                                        TimeStepQuantity = (short)oneSeriesXmlReader.ReadElementContentAsInt();
+                                        s = oneSeriesXmlReader.ReadElementContentAsString();
+                                        TimeStepQuantity = ParseTimeStepQuantity(s);
                                         foundTimeStepQuantity = true;
                                         break;
 
@@ -243,7 +252,7 @@ namespace TimeSeriesLibrary
                                 nameString = "unnamed time series";
                             else
                                 nameString = "time series named '" + tsImport.Name + "'";
-                            errorList = "Some required subelements were missing from " + nameString + " in " + reportedFileName + "\n";
+                            errorList = "Some required subelements were missing from " + nameString + " in " + ReportedFileName + "\n";
                             if (!foundStartDate) errorList += "\n<StartDate> was not found";
                             if (!foundTimeStepUnit) errorList += "\n<TimeStepUnit> was not found";
                             if (!foundTimeStepQuantity) errorList += "\n<TimeStepQuantity> was not found";
@@ -310,13 +319,101 @@ namespace TimeSeriesLibrary
                 // The information from the XmlException object is included in the error message
                 // that we throw here, and the XmlException is included as an inner exception.
                 throw new TSLibraryException(ErrCode.Enum.Xml_File_Malformed,
-                            reportedFileName + "is malformed.\n\n" + e.Message, e);
+                            ReportedFileName + "is malformed.\n\n" + e.Message, e);
             }
             
             return numTs;
         }
     	#endregion 
 
+
+        #region Method ParseTimeStepUnit() 
+        /// <summary>
+        /// This method returns the TimeStepUnitCode from the given string.  The method
+        /// will first attempt to parse the given string as a valid TimeStepUnitCode.
+        /// If that fails, then it attempts to parse the given string as a HECDSS record
+        /// name E part.  If that fails, then an exception is thrown.
+        /// </summary>
+        /// <param name="s">The string that is to be parsed to a TimeStepUnitCode</param>
+        /// <returns>TimeStepUnitCode that results from the given string</returns>
+        public TSDateCalculator.TimeStepUnitCode ParseTimeStepUnit(String s)
+        {
+            try
+            {   // First assume that the string is the name of a TimeStepUnitCode enum.
+                // If that fails then we'll try some more complicated assumptions.
+                return (TSDateCalculator.TimeStepUnitCode)
+                                    Enum.Parse(typeof(TSDateCalculator.TimeStepUnitCode), s);
+            }
+            catch { }
+
+            try
+            {
+                // Assume that the string is a number followed by the unit name.
+                // This pattern would be followed by data that came straight from 
+                // HECDSS record name E part.
+                String substring = Regex.Match(s, @"(\D)+").Value;
+                // Ensure that it is in title case (first letter is capital, others are lower case).
+                // An exception will be thrown (and caught) if extracted string is empty.
+                substring = substring.Substring(0, 1).ToUpper() + substring.Substring(1).ToLower();
+
+                // Check for abbreviated unit names that are used by HECDSS
+                if (substring == "Min")
+                    return TSDateCalculator.TimeStepUnitCode.Minute;
+                if (substring == "Mon")
+                    return TSDateCalculator.TimeStepUnitCode.Month;
+
+                // Now assume that the extracted string is the name of a TimeStepUnitCode enum.
+                return (TSDateCalculator.TimeStepUnitCode)
+                                    Enum.Parse(typeof(TSDateCalculator.TimeStepUnitCode), substring);
+            }
+            catch
+            {
+                throw new TSLibraryException(ErrCode.Enum.Xml_Unit_Name_Unrecognized,
+                            ReportedFileName + "contains an invalid <TimeStepUnit> element.\n\n" +
+                            "'" + s + "' is not a recognized time step unit name.");
+            }
+        }
+        
+        #endregion
+
+
+        #region Method Parse TimeStepQuantity()
+        /// <summary>
+        /// This method returns the TimeStepQuantity value from the given string.  The method
+        /// will first attempt to parse the given string as an integer.
+        /// If that fails, then it attempts to parse the given string as a HECDSS record
+        /// name E part.  If that fails, then an exception is thrown.
+        /// </summary>
+        /// <param name="s">The string that is to be parsed to a TimeStepQuantity</param>
+        /// <returns>TimeStepQuantity that results from the given string</returns>
+        public short ParseTimeStepQuantity(String s)
+        {
+            try
+            {   // First assume that the string is just an integer.
+                // If that fails then we'll try some more complicated assumptions.
+                return short.Parse(s);
+            }
+            catch { }
+
+            try
+            {
+                // Assume that the string is a number followed by the unit name.
+                // This pattern would be followed by data that came straight from 
+                // HECDSS record name E part.
+                String substring = Regex.Match(s, @"(\d)+").Value;
+
+                // Now assume that the extracted string is the name of a TimeStepUnitCode enum.
+                return short.Parse(substring);
+            }
+            catch
+            {
+                throw new TSLibraryException(ErrCode.Enum.Xml_Quantity_Unrecognized,
+                            ReportedFileName + "contains an invalid <TimeStepQuantity> element.\n\n" +
+                            "'" + s + "' can not be parsed.");
+            }
+        } 
+        #endregion
+    
     }
 
 }

@@ -44,11 +44,12 @@ namespace Sandbox
             connNumber = tsLib.OpenConnection(
                 "Data Source=.; Database=OasisOutput; Trusted_Connection=yes;");
 
+            ImportTest();
             //HashTest();
-            WriteOneSeriesIrreg();
+            //WriteOneSeriesIrreg();
             //WriteOneSeriesArray();
             //ReadOneSeriesModel();
-            WriteOneSeriesList();
+            //WriteOneSeriesList();
             //ReadOneSeriesArray();
         }
         private void MainWindowClosed(object sender, EventArgs e)
@@ -166,16 +167,17 @@ namespace Sandbox
         {
             int i;
             List<TSImport> l = new List<TSImport>();
+            tsLib.XmlImport("D:\\temp\\TimeSeriesLibrary\\basedata_11-22.dss.xml", l);
+            i = 2;
 
-            DateTime timerStart = DateTime.Now;
-            for (i = 0; i < nIter; i++)
-            {
-                tsLib.XmlImportWithList(connNumber, "FileStrm2",
-                            "D:\\OASIS\\_Build\\TimeSeriesLibrary\\TimeSeriesLibrary\\Sandbox\\test2irreg.xml", l);
-            }
-            DateTime timerEnd = DateTime.Now;
-            TimeSpan timerDiff = timerEnd - timerStart;
-            TimeLabelBlob.Content = String.Format("Imported --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
+            //DateTime timerStart = DateTime.Now;
+            //for (i = 0; i < nIter; i++)
+            //{
+            //    tsLib.XmlImport("D:\temp\TimeSeriesLibrary\basedata_11-22.dss.xml", l);
+            //}
+            //DateTime timerEnd = DateTime.Now;
+            //TimeSpan timerDiff = timerEnd - timerStart;
+            //TimeLabelBlob.Content = String.Format("Imported --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
         }
 
         void WriteOneSeriesIrreg()
