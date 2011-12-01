@@ -124,7 +124,17 @@ namespace TimeSeriesLibrary
         private void SetDetailFieldInt(ref int i, XmlReader xmlReader)
         {
             if (IsDetailed)
-                i = int.Parse(xmlReader.ReadElementContentAsString());
+            {
+                try
+                {
+                    i = int.Parse(xmlReader.ReadElementContentAsString());
+                }
+                catch
+                {
+                    //If the field is null, blank, or otherwise can't be read in as a string, it will throw an error.  0 is a default
+                    i = 0;
+                }
+            }
             else
                 AddUnprocessedElement(xmlReader.ReadOuterXml());
         }
