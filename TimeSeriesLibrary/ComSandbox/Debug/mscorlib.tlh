@@ -1,9 +1,9 @@
-﻿// Created by Microsoft (R) C/C++ Compiler Version 10.00.30319.01 (00ef1f66).
+﻿// Created by Microsoft (R) C/C++ Compiler Version 10.00.40219.01 (3309303a).
 //
-// d:\oasis\_build\timeserieslibrary\timeserieslibrary\comsandbox\debug\mscorlib.tlh
+// c:\oasis\_build\gui_ost\timeserieslibrary\timeserieslibrary\comsandbox\debug\mscorlib.tlh
 //
 // C++ source equivalent of Win32 type library mscorlib.tlb
-// compiler-generated file created 11/16/11 at 16:37:30 - DO NOT EDIT!
+// compiler-generated file created 11/30/11 at 22:09:04 - DO NOT EDIT!
 
 #pragma once
 #pragma pack(push, 8)
@@ -20169,7 +20169,7 @@ ILease : IDispatch
 // Wrapper method implementations
 //
 
-#include "d:\oasis\_build\timeserieslibrary\timeserieslibrary\comsandbox\debug\mscorlib.tli"
+#include "c:\oasis\_build\gui_ost\timeserieslibrary\timeserieslibrary\comsandbox\debug\mscorlib.tli"
 
 } // namespace mscorlib
 
