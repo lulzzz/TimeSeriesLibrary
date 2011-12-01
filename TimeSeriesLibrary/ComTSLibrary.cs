@@ -197,7 +197,7 @@ namespace TimeSeriesLibrary
             if (!ts.IsInitialized) ts.Initialize(id);
 
             // The operations will differ for regular and irregular time series
-            if (ts.TimeStepUnit == TSDateCalculator.TimeStepUnitCode.Irregular)
+            if (ts.TimeStepUnit == TSDateCalculator.TimeStepUnitCode.IRREGULAR)
             {
                 // IRREGULAR TIME SERIES
 

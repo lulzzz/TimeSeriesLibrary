@@ -6,6 +6,7 @@ using System.Data.SqlClient;
 using System.Text;
 using System.IO;
 using System.Xml;
+using System.Globalization;
 
 namespace TimeSeriesLibrary
 {
@@ -73,7 +74,7 @@ namespace TimeSeriesLibrary
             int numTs = 0;  // The # of time series successfuly processed by this method
             String reportedFileName;
             
-            TSDateCalculator.TimeStepUnitCode TimeStepUnit = TSDateCalculator.TimeStepUnitCode.Day; // to be read from XML
+            TSDateCalculator.TimeStepUnitCode TimeStepUnit = TSDateCalculator.TimeStepUnitCode.DAY; // to be read from XML
             short TimeStepQuantity = 1;                       // to be read from XML
             DateTime StartDate = DateTime.Parse("1/1/2000");  // to be read from XML
             double[] valueArray = null;                       // to be read from XML
@@ -173,11 +174,19 @@ namespace TimeSeriesLibrary
                                     case "TimeStepUnit":
                                         // TimeSeriesLibrary will store <TimeStepUnit> to the data table
                                         s = oneSeriesXmlReader.ReadElementContentAsString();
-                                        TimeStepUnit = (TSDateCalculator.TimeStepUnitCode)
-                                                            Enum.Parse(typeof(TSDateCalculator.TimeStepUnitCode), s);
+                                        try
+                                        {
+                                            TimeStepUnit = (TSDateCalculator.TimeStepUnitCode)
+                                                            Enum.Parse(typeof(TSDateCalculator.TimeStepUnitCode), s.ToUpper());
+                                        }
+                                        catch
+                                        {
+                                            //TODO: Error trap or default, you choose
+                                            TimeStepUnit = TSDateCalculator.TimeStepUnitCode.DAY;
+                                        }
                                         foundTimeStepUnit = true;
                                         // If it is an irregular time series
-                                        if (TimeStepUnit == TSDateCalculator.TimeStepUnitCode.Irregular)
+                                        if (TimeStepUnit == TSDateCalculator.TimeStepUnitCode.IRREGULAR)
                                         {
                                             // <TimeStepQuantity> and <StartDate> are unnecessary and irrelevant
                                             // to irregular time series
@@ -252,7 +261,7 @@ namespace TimeSeriesLibrary
                         }
                         // Now that we've established that all fields have been read, we can parse the 
                         // string of timeseries values into an array, and save the array to the database.
-                        if (TimeStepUnit == TSDateCalculator.TimeStepUnitCode.Irregular)
+                        if (TimeStepUnit == TSDateCalculator.TimeStepUnitCode.IRREGULAR)
                         {
                             // IRREGULAR TIME SERIES
 

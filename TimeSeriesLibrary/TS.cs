@@ -222,7 +222,7 @@ namespace TimeSeriesLibrary
             if (!IsInitialized) Initialize(id);
 
             // This method can only process regular-time-step series
-            if (TimeStepUnit == TSDateCalculator.TimeStepUnitCode.Irregular)
+            if (TimeStepUnit == TSDateCalculator.TimeStepUnitCode.IRREGULAR)
             {
                 throw new TSLibraryException(ErrCode.Enum.Record_Not_Regular,
                                 String.Format("The method can only process regular time series, but" +
@@ -266,7 +266,7 @@ namespace TimeSeriesLibrary
             if (!IsInitialized) Initialize(id);
 
             // This method can only process irregular-time-step series
-            if (TimeStepUnit != TSDateCalculator.TimeStepUnitCode.Irregular)
+            if (TimeStepUnit != TSDateCalculator.TimeStepUnitCode.IRREGULAR)
             {
                 throw new TSLibraryException(ErrCode.Enum.Record_Not_Irregular,
                                 String.Format("The method can only process irregular time series, but" +

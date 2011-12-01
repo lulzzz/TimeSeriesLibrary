@@ -18,12 +18,12 @@ namespace TimeSeriesLibrary_Test
         static List<TimeSeriesValue> IrregList1 = new List<TimeSeriesValue>();
         static List<TimeSeriesValue> IrregList2 = new List<TimeSeriesValue>();
         static List<TimeSeriesValue> RegList1 = new List<TimeSeriesValue>();
-            static TSDateCalculator.TimeStepUnitCode TimeStepUnit1 = TSDateCalculator.TimeStepUnitCode.Hour;
+            static TSDateCalculator.TimeStepUnitCode TimeStepUnit1 = TSDateCalculator.TimeStepUnitCode.HOUR;
             static short TimeStepQuantity1 = 3;
             static DateTime BlobStartDate1 = DateTime.Parse("1/1/1920 12:00 PM");
             static int TimeStepCount1 =500;
         static List<TimeSeriesValue> RegList2 = new List<TimeSeriesValue>();
-            static TSDateCalculator.TimeStepUnitCode TimeStepUnit2 = TSDateCalculator.TimeStepUnitCode.Month;
+            static TSDateCalculator.TimeStepUnitCode TimeStepUnit2 = TSDateCalculator.TimeStepUnitCode.MONTH;
             static short TimeStepQuantity2 = 1;
             static DateTime BlobStartDate2 = DateTime.Parse("3/3/1933 12:11 PM");
             static int TimeStepCount2 = 1144;
@@ -130,12 +130,12 @@ namespace TimeSeriesLibrary_Test
         [TestMethod()]
         public void ConvertBlobToListAllIrregTest1()
         {
-            ConvertBlobAll(IrregList1, TSDateCalculator.TimeStepUnitCode.Irregular, 0, BlobStartDate1);
+            ConvertBlobAll(IrregList1, TSDateCalculator.TimeStepUnitCode.IRREGULAR, 0, BlobStartDate1);
         }
         [TestMethod()]
         public void ConvertBlobToListAllIrregTest2()
         {
-            ConvertBlobAll(IrregList2, TSDateCalculator.TimeStepUnitCode.Irregular, 0, BlobStartDate2);
+            ConvertBlobAll(IrregList2, TSDateCalculator.TimeStepUnitCode.IRREGULAR, 0, BlobStartDate2);
         }
         [TestMethod()]
         public void ConvertBlobToListAllRegTest1()
@@ -192,22 +192,22 @@ namespace TimeSeriesLibrary_Test
         [TestMethod()]
         public void ConvertBlobToListLimitedIrregTest1()
         {
-            ConvertBlobLimited(IrregList1, TSDateCalculator.TimeStepUnitCode.Irregular, 0, BlobStartDate1, 3, 5, TimeStepCount1);
+            ConvertBlobLimited(IrregList1, TSDateCalculator.TimeStepUnitCode.IRREGULAR, 0, BlobStartDate1, 3, 5, TimeStepCount1);
         }
         [TestMethod()]
         public void ConvertBlobToListLimitedIrregTest2()
         {
-            ConvertBlobLimited(IrregList2, TSDateCalculator.TimeStepUnitCode.Irregular, 0, BlobStartDate2, 5, 13, TimeStepCount2);
+            ConvertBlobLimited(IrregList2, TSDateCalculator.TimeStepUnitCode.IRREGULAR, 0, BlobStartDate2, 5, 13, TimeStepCount2);
         }
         [TestMethod()]
         public void ConvertBlobToListLimitedIrregTest3()
         {
-            ConvertBlobLimited(IrregList2, TSDateCalculator.TimeStepUnitCode.Irregular, 0, BlobStartDate2, 0, 100, TimeStepCount2);
+            ConvertBlobLimited(IrregList2, TSDateCalculator.TimeStepUnitCode.IRREGULAR, 0, BlobStartDate2, 0, 100, TimeStepCount2);
         }
         [TestMethod()]
         public void ConvertBlobToListLimitedIrregTest4()
         {
-            ConvertBlobLimited(IrregList2, TSDateCalculator.TimeStepUnitCode.Irregular, 0, BlobStartDate2, 100, 0, TimeStepCount2);
+            ConvertBlobLimited(IrregList2, TSDateCalculator.TimeStepUnitCode.IRREGULAR, 0, BlobStartDate2, 100, 0, TimeStepCount2);
         }
         [TestMethod()]
         public void ConvertBlobToListLimitedRegTest1()
@@ -287,8 +287,8 @@ namespace TimeSeriesLibrary_Test
             byte[] chk1 = null, chk2 = null;
 
             Boolean ret = ComputeTestChecksums(
-                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, IrregList1, ref chk1,
-                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, duplicateList, ref chk2);
+                    TSDateCalculator.TimeStepUnitCode.IRREGULAR, 0, IrregList1, ref chk1,
+                    TSDateCalculator.TimeStepUnitCode.IRREGULAR, 0, duplicateList, ref chk2);
 
             Assert.IsTrue(ret);
         }
@@ -308,8 +308,8 @@ namespace TimeSeriesLibrary_Test
             byte[] chk1 = null, chk2 = null;
 
             Boolean ret = ComputeTestChecksums(
-                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, IrregList1, ref chk1,
-                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, duplicateList, ref chk2);
+                    TSDateCalculator.TimeStepUnitCode.IRREGULAR, 0, IrregList1, ref chk1,
+                    TSDateCalculator.TimeStepUnitCode.IRREGULAR, 0, duplicateList, ref chk2);
 
             Assert.IsFalse(ret);
         }
@@ -329,8 +329,8 @@ namespace TimeSeriesLibrary_Test
             byte[] chk1 = null, chk2 = null;
 
             Boolean ret = ComputeTestChecksums(
-                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, IrregList1, ref chk1,
-                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, duplicateList, ref chk2);
+                    TSDateCalculator.TimeStepUnitCode.IRREGULAR, 0, IrregList1, ref chk1,
+                    TSDateCalculator.TimeStepUnitCode.IRREGULAR, 0, duplicateList, ref chk2);
 
             Assert.IsFalse(ret);
         }
@@ -350,8 +350,8 @@ namespace TimeSeriesLibrary_Test
             byte[] chk1 = null, chk2 = null;
 
             Boolean ret = ComputeTestChecksums(
-                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, IrregList1, ref chk1,
-                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, duplicateList, ref chk2);
+                    TSDateCalculator.TimeStepUnitCode.IRREGULAR, 0, IrregList1, ref chk1,
+                    TSDateCalculator.TimeStepUnitCode.IRREGULAR, 0, duplicateList, ref chk2);
 
             Assert.IsFalse(ret);
         }
@@ -371,8 +371,8 @@ namespace TimeSeriesLibrary_Test
             byte[] chk1 = null, chk2 = null;
 
             Boolean ret = ComputeTestChecksums(
-                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, IrregList1, ref chk1,
-                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, duplicateList, ref chk2);
+                    TSDateCalculator.TimeStepUnitCode.IRREGULAR, 0, IrregList1, ref chk1,
+                    TSDateCalculator.TimeStepUnitCode.IRREGULAR, 0, duplicateList, ref chk2);
 
             Assert.IsFalse(ret);
         }
@@ -392,8 +392,8 @@ namespace TimeSeriesLibrary_Test
             byte[] chk1 = null, chk2 = null;
 
             Boolean ret = ComputeTestChecksums(
-                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, IrregList1, ref chk1,
-                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, duplicateList, ref chk2);
+                    TSDateCalculator.TimeStepUnitCode.IRREGULAR, 0, IrregList1, ref chk1,
+                    TSDateCalculator.TimeStepUnitCode.IRREGULAR, 0, duplicateList, ref chk2);
 
             Assert.IsFalse(ret);
         }
@@ -422,7 +422,7 @@ namespace TimeSeriesLibrary_Test
             // The only difference should be the "TimeStepUnit" parameter
             ret = ComputeTestChecksums(
                     TimeStepUnit1, TimeStepQuantity1, RegList1, ref chk1,
-                    TSDateCalculator.TimeStepUnitCode.Day, TimeStepQuantity1, duplicateList, ref chk2);
+                    TSDateCalculator.TimeStepUnitCode.DAY, TimeStepQuantity1, duplicateList, ref chk2);
 
             Assert.IsFalse(ret);
 
@@ -468,7 +468,7 @@ namespace TimeSeriesLibrary_Test
             try
             {
                 byte[] blobData = tsLib.ConvertListToBlobWithChecksum(
-                        TSDateCalculator.TimeStepUnitCode.Irregular, 0,
+                        TSDateCalculator.TimeStepUnitCode.IRREGULAR, 0,
                         IrregList1.Count, IrregList1.First().Date, IrregList1.Last().Date,
                         IrregList1, ref checksum);
                 Assert.IsTrue(true);
@@ -489,7 +489,7 @@ namespace TimeSeriesLibrary_Test
             try
             {
                 byte[] blobData = tsLib.ConvertListToBlobWithChecksum(
-                        TSDateCalculator.TimeStepUnitCode.Irregular, 3,
+                        TSDateCalculator.TimeStepUnitCode.IRREGULAR, 3,
                         IrregList1.Count, IrregList1.First().Date, IrregList1.Last().Date,
                         IrregList1, ref checksum);
                 Assert.Fail("Should have thrown exception");
@@ -509,7 +509,7 @@ namespace TimeSeriesLibrary_Test
             try
             {
                 byte[] blobData = tsLib.ConvertListToBlobWithChecksum(
-                        TSDateCalculator.TimeStepUnitCode.Irregular, 0,
+                        TSDateCalculator.TimeStepUnitCode.IRREGULAR, 0,
                         IrregList1.Count+3, IrregList1.First().Date, IrregList1.Last().Date,
                         IrregList1, ref checksum);
                 Assert.Fail("Should have thrown exception");
@@ -529,7 +529,7 @@ namespace TimeSeriesLibrary_Test
             try
             {
                 byte[] blobData = tsLib.ConvertListToBlobWithChecksum(
-                        TSDateCalculator.TimeStepUnitCode.Irregular, 0,
+                        TSDateCalculator.TimeStepUnitCode.IRREGULAR, 0,
                         IrregList1.Count, IrregList1.First().Date.AddDays(2), IrregList1.Last().Date,
                         IrregList1, ref checksum);
                 Assert.Fail("Should have thrown exception");
@@ -549,7 +549,7 @@ namespace TimeSeriesLibrary_Test
             try
             {
                 byte[] blobData = tsLib.ConvertListToBlobWithChecksum(
-                        TSDateCalculator.TimeStepUnitCode.Irregular, 0,
+                        TSDateCalculator.TimeStepUnitCode.IRREGULAR, 0,
                         IrregList1.Count, IrregList1.First().Date, IrregList1.Last().Date.AddDays(2),
                         IrregList1, ref checksum);
                 Assert.Fail("Should have thrown exception");

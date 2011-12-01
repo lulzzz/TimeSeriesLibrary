@@ -18,13 +18,13 @@ namespace TimeSeriesLibrary
         /// </summary>
         public enum TimeStepUnitCode : short
         {
-            Irregular = 0,
-            Minute = 1,
-            Hour = 2,
-            Day = 3,
-            Week = 4,
-            Month = 5,
-            Year = 6
+            IRREGULAR = 0,
+            MINUTE = 1,
+            HOUR = 2,
+            DAY = 3,
+            WEEK = 4,
+            MONTH = 5,
+            YEAR = 6
         } 
         #endregion
 
@@ -49,22 +49,22 @@ namespace TimeSeriesLibrary
             // we can call the corresponding 'Add' method.
             switch (unit)
             {
-                case TimeStepUnitCode.Minute:
+                case TimeStepUnitCode.MINUTE:
                     calcDate = startDate.AddMinutes(stepSize * numSteps);
                     break;
-                case TimeStepUnitCode.Hour:
+                case TimeStepUnitCode.HOUR:
                     calcDate = startDate.AddHours(stepSize * numSteps);
                     break;
-                case TimeStepUnitCode.Day:
+                case TimeStepUnitCode.DAY:
                     calcDate = startDate.AddDays(stepSize * numSteps);
                     break;
-                case TimeStepUnitCode.Week:
+                case TimeStepUnitCode.WEEK:
                     calcDate = startDate.AddDays(stepSize * numSteps * 7);
                     break;
-                case TimeStepUnitCode.Month:
+                case TimeStepUnitCode.MONTH:
                     calcDate = startDate.AddMonths(stepSize * numSteps);
                     break;
-                case TimeStepUnitCode.Year:
+                case TimeStepUnitCode.YEAR:
                     calcDate = startDate.AddYears(stepSize * numSteps);
                     break;
                 default:
@@ -111,27 +111,27 @@ namespace TimeSeriesLibrary
             // statement inside of a loop.
             switch (unit)
             {
-                case TimeStepUnitCode.Minute:
+                case TimeStepUnitCode.MINUTE:
                     for (i = 0; calcDate < endDate; i++)
                         calcDate = calcDate.AddMinutes(stepSize);
                     break;
-                case TimeStepUnitCode.Hour:
+                case TimeStepUnitCode.HOUR:
                     for (i = 0; calcDate < endDate; i++)
                         calcDate = calcDate.AddHours(stepSize);
                     break;
-                case TimeStepUnitCode.Day:
+                case TimeStepUnitCode.DAY:
                     for (i = 0; calcDate < endDate; i++)
                         calcDate = calcDate.AddDays(stepSize);
                     break;
-                case TimeStepUnitCode.Week:
+                case TimeStepUnitCode.WEEK:
                     for (i = 0; calcDate < endDate; i++)
                         calcDate = calcDate.AddDays(stepSize * 7);
                     break;
-                case TimeStepUnitCode.Month:
+                case TimeStepUnitCode.MONTH:
                     for (i = 0; calcDate < endDate; i++)
                         calcDate = calcDate.AddMonths(stepSize);
                     break;
-                case TimeStepUnitCode.Year:
+                case TimeStepUnitCode.YEAR:
                     for (i = 0; calcDate < endDate; i++)
                         calcDate = calcDate.AddYears(stepSize);
                     break;

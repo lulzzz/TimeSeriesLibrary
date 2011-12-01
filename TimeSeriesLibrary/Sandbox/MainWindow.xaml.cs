@@ -236,10 +236,10 @@ namespace Sandbox
             //           3, 1, nVals, valList, StartDate);
 
             testId1 = tsLib.WriteValues(connNumber, "FileStrm2",
-                            (short)TSDateCalculator.TimeStepUnitCode.Irregular, 0, dateValList);
+                            (short)TSDateCalculator.TimeStepUnitCode.IRREGULAR, 0, dateValList);
 
             testId2 = tsLib.WriteValues(connNumber, "FileStrm2",
-                            (short)TSDateCalculator.TimeStepUnitCode.Day, 3, dateValList);
+                            (short)TSDateCalculator.TimeStepUnitCode.DAY, 3, dateValList);
 
 
             List<TimeSeriesValue> dv = new List<TimeSeriesValue>();

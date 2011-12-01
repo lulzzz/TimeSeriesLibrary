@@ -53,7 +53,7 @@ namespace TimeSeriesLibrary
                     int timeStepCount, TSDateValueStruct[] dateValueArray)
         {
             // Most of the parameters are straightforward
-            TimeStepUnit = TSDateCalculator.TimeStepUnitCode.Irregular;
+            TimeStepUnit = TSDateCalculator.TimeStepUnitCode.IRREGULAR;
             TimeStepQuantity = 0;
             TimeStepCount = timeStepCount;
             // Determine the date of the first and last time step from the input array

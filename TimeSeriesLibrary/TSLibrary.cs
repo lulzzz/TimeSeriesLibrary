@@ -123,7 +123,7 @@ namespace TimeSeriesLibrary
         {
             int nValuesRead = 0;
 
-            if (timeStepUnit == TSDateCalculator.TimeStepUnitCode.Irregular)
+            if (timeStepUnit == TSDateCalculator.TimeStepUnitCode.IRREGULAR)
             {
                 // IRREGULAR TIME SERIES
 
@@ -194,7 +194,7 @@ namespace TimeSeriesLibrary
         {
             int timeStepCount = dateValueList.Count;
 
-            if (timeStepUnit == TSDateCalculator.TimeStepUnitCode.Irregular)
+            if (timeStepUnit == TSDateCalculator.TimeStepUnitCode.IRREGULAR)
             {
                 // IRREGULAR TIME SERIES
 
@@ -496,7 +496,7 @@ namespace TimeSeriesLibrary
             if (nReqValues == 0) nReqValues = ts.TimeStepCount;
 
             // The operations will differ for regular and irregular time series
-            if (ts.TimeStepUnit == TSDateCalculator.TimeStepUnitCode.Irregular)
+            if (ts.TimeStepUnit == TSDateCalculator.TimeStepUnitCode.IRREGULAR)
             {
                 // IRREGULAR TIME SERIES
 
@@ -612,7 +612,7 @@ namespace TimeSeriesLibrary
             int nOutValues = dateValueList.Count;
             DateTime outStartDate = dateValueList[0].Date;
 
-            if ((TSDateCalculator.TimeStepUnitCode)timeStepUnit == TSDateCalculator.TimeStepUnitCode.Irregular)
+            if ((TSDateCalculator.TimeStepUnitCode)timeStepUnit == TSDateCalculator.TimeStepUnitCode.IRREGULAR)
             {
                 // IRREGULAR TIME SERIES
 

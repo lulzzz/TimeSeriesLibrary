@@ -265,7 +265,7 @@ namespace TimeSeriesLibrary
                 8 + 8;                       // StartDate and EndDate
 
             // Error check
-            if (timeStepUnit == TSDateCalculator.TimeStepUnitCode.Irregular
+            if (timeStepUnit == TSDateCalculator.TimeStepUnitCode.IRREGULAR
                         && timeStepQuantity != 0)
             {
                 throw new TSLibraryException(ErrCode.Enum.Checksum_Quantity_Nonzero,

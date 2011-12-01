@@ -96,9 +96,9 @@ namespace TimeSeriesLibrary_Test
             Assert.AreEqual(TsImportList[2].Name, "IRREGULARCLARENCE");
 
             // Verify TimeStepUnit in import list
-            Assert.AreEqual(TsImportList[0].TimeStepUnit, TSDateCalculator.TimeStepUnitCode.Hour);
-            Assert.AreEqual(TsImportList[1].TimeStepUnit, TSDateCalculator.TimeStepUnitCode.Day);
-            Assert.AreEqual(TsImportList[2].TimeStepUnit, TSDateCalculator.TimeStepUnitCode.Irregular);
+            Assert.AreEqual(TsImportList[0].TimeStepUnit, TSDateCalculator.TimeStepUnitCode.HOUR);
+            Assert.AreEqual(TsImportList[1].TimeStepUnit, TSDateCalculator.TimeStepUnitCode.DAY);
+            Assert.AreEqual(TsImportList[2].TimeStepUnit, TSDateCalculator.TimeStepUnitCode.IRREGULAR);
 
             // Verify TimeStepQuantity in import list
             Assert.AreEqual(TsImportList[0].TimeStepQuantity, 1);
@@ -356,7 +356,7 @@ namespace TimeSeriesLibrary_Test
             // Correct number of items added to import list?
             Assert.AreEqual(TsImportList.Count, 1);
             // Verify TimeStepUnit in import list
-            Assert.AreEqual(TsImportList[0].TimeStepUnit, TSDateCalculator.TimeStepUnitCode.Month);
+            Assert.AreEqual(TsImportList[0].TimeStepUnit, TSDateCalculator.TimeStepUnitCode.MONTH);
             // Verify TimeStepQuantity in import list
             Assert.AreEqual(TsImportList[0].TimeStepQuantity, 6);
             // Verify TimeStepCount in import list
