@@ -15,11 +15,11 @@ namespace TimeSeriesLibrary
         /// <summary>
         /// The date of the time step
         /// </summary>
-        public DateTime Date;
+        public DateTime Date { get; set; }
         /// <summary>
         /// The value of the time series on the time step
         /// </summary>
-        public double Value;
+        public double Value { get; set; }
 
         /// <summary>
         /// Operator for converting from TSDateValueStruct struct instance to TimeSeriesValue object.

@@ -44,9 +44,9 @@ namespace Sandbox
             connNumber = tsLib.OpenConnection(
                 "Data Source=.; Database=OasisOutput; Trusted_Connection=yes;");
 
-            ImportTest();
+            //ImportTest();
             //HashTest();
-            //WriteOneSeriesIrreg();
+            WriteOneSeriesIrreg();
             //WriteOneSeriesArray();
             //ReadOneSeriesModel();
             //WriteOneSeriesList();
@@ -62,7 +62,7 @@ namespace Sandbox
         {
             //ImportTest();
             //ReadArrayTest();
-            //ReadListTest();
+            ReadListTest();
             //WriteArrayTest();
             //WriteListTest();
             //DeleteTest();
@@ -284,23 +284,23 @@ namespace Sandbox
         //    TimeSpan timerDiff = timerEnd - timerStart;
         //    TimeLabelBlob.Content = String.Format("BLOBBED --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
         //}
-        //void ReadListTest()
-        //{
-        //    int ret, i;
+        void ReadListTest()
+        {
+            int ret, i;
 
-        //    List<double> valList = new List<double>();
+            List<TimeSeriesValue> valList = new List<TimeSeriesValue>();
 
-        //    DateTime timerStart = DateTime.Now;
-        //    for (i = 0; i < nIter; i++)
-        //    {
-        //        TimeLabelBlob.Content = String.Format("Iteration {0}", i);
-        //        ret = tsLib.ReadValuesRegular(connNumber, "FileStrm2",
-        //                        testId1, nVals, ref valList, StartDate);
-        //    }
-        //    DateTime timerEnd = DateTime.Now;
-        //    TimeSpan timerDiff = timerEnd - timerStart;
-        //    TimeLabelBlob.Content = String.Format("BLOBBED --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
-        //}
+            DateTime timerStart = DateTime.Now;
+            for (i = 0; i < nIter; i++)
+            {
+                TimeLabelBlob.Content = String.Format("Iteration {0}", i);
+                ret = tsLib.ReadAllDatesValues(connNumber, "FileStrm2",
+                                testId1, ref valList);
+            }
+            DateTime timerEnd = DateTime.Now;
+            TimeSpan timerDiff = timerEnd - timerStart;
+            TimeLabelBlob.Content = String.Format("BLOBBED --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
+        }
 
 
         //void WriteArrayTest()
