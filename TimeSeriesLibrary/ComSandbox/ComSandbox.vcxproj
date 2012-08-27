@@ -95,6 +95,11 @@
   <ItemGroup>
     <ResourceCompile Include="ComSandbox.rc" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\TimeSeriesLibrary.csproj">
+      <Project>{1fdac323-a742-4375-8033-00e11714f084}</Project>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
