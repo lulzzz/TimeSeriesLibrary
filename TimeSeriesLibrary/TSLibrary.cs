@@ -315,7 +315,7 @@ namespace TimeSeriesLibrary
                                 nReqValues, dateArray, reqStartDate);
         }
         public void FillSeriesDateArray(
-                    int connectionNumber, String tableName, Guid id,
+                    int connectionNumber, String tableName, int id,
                     int nReqValues, DateTime[] dateArray, DateTime reqStartDate)
         {
             // Get the connection that we'll pass along.
@@ -384,7 +384,7 @@ namespace TimeSeriesLibrary
         #region Public methods for READING time series from database
 
         /// <summary>
-        /// This method reads the time series matching the given GUID, using the given
+        /// This method reads the time series matching the given ID, using the given
         /// database connection number and database table name, and stores the values into
         /// the given List of double-precision floats.  The method starts populating the
         /// list at the given start date, filling in no more than the number of values
@@ -396,14 +396,14 @@ namespace TimeSeriesLibrary
         /// </summary>
         /// <param name="connectionNumber">The serial number of the connection that is used to read the time series</param>
         /// <param name="tableName">The name of the database table that contains the time series</param>
-        /// <param name="id">GUID value identifying the time series to read</param>
+        /// <param name="id">ID value identifying the time series to read</param>
         /// <param name="nReqValues">The maximum number of values that the method will fill into the list</param>
         /// <param name="valueList">The List that the method will fill</param>
         /// <param name="reqStartDate">The earliest date that the method will enter into the list</param>
         /// <param name="reqEndDate">The latest date that the method will enter into the list</param>
         /// <returns>The number of values that the method added to the list</returns>
         public int ReadValuesRegular(
-                int connectionNumber, String tableName, Guid id,
+                int connectionNumber, String tableName, int id,
                 int nReqValues, ref List<double> valueList, DateTime reqStartDate, DateTime reqEndDate)
         {
             // Get the connection that we'll pass along.
@@ -421,7 +421,7 @@ namespace TimeSeriesLibrary
         }
 
         /// <summary>
-        /// This method reads the time series matching the given GUID, using the given
+        /// This method reads the time series matching the given ID, using the given
         /// database connection number and database table name, and stores the values into
         /// the given list of TimeSeriesValue objects (date/value pairs).  The method will 
         /// read regular or irregular time series.
@@ -432,12 +432,12 @@ namespace TimeSeriesLibrary
         /// </summary>
         /// <param name="connectionNumber">The serial number of the connection that is used to read the time series</param>
         /// <param name="tableName">The name of the database table that contains the time series</param>
-        /// <param name="id">GUID value identifying the time series to read</param>
+        /// <param name="id">ID value identifying the time series to read</param>
         /// <param name="dateValueList">The list that the method will fill</param>
         /// <returns>The number of values that the method added to the list</returns>
         // usage: for GUI to retrieve an entire time series.  The length of the list is allocated in this method.
         public int ReadAllDatesValues(
-                int connectionNumber, String tableName, Guid id,
+                int connectionNumber, String tableName, int id,
                 ref List<TimeSeriesValue> dateValueList)
         {
             // Get the connection that we'll pass along.
@@ -457,7 +457,7 @@ namespace TimeSeriesLibrary
         }
 
         /// <summary>
-        /// This method reads the time series matching the given GUID, using the given
+        /// This method reads the time series matching the given ID, using the given
         /// database connection number and database table name, and stores the values into
         /// the given List of TimeSeriesValue objects (date/value pairs).  The method starts populating
         /// the array at the given start date, filling in no more than the number of values
@@ -471,7 +471,7 @@ namespace TimeSeriesLibrary
         /// </summary>
         /// <param name="connectionNumber">The serial number of the connection that is used to read the time series</param>
         /// <param name="tableName">The name of the database table that contains the time series</param>
-        /// <param name="id">GUID value identifying the time series to read</param>
+        /// <param name="id">ID value identifying the time series to read</param>
         /// <param name="nReqValues">The maximum number of values that the method will fill into the array.
         /// If 0 is given, then no maximum number of values is applied.</param>
         /// <param name="dateValueList">The list that the method will fill</param>
@@ -479,7 +479,7 @@ namespace TimeSeriesLibrary
         /// <param name="reqEndDate">The latest date that the method will enter into the array</param>
         /// <returns>The number of values that the method added to the list</returns>
         public int ReadLimitedDatesValues(
-                int connectionNumber, String tableName, Guid id,
+                int connectionNumber, String tableName, int id,
                 int nReqValues, ref List<TimeSeriesValue> dateValueList, DateTime reqStartDate, DateTime reqEndDate)
         {
             // Get the connection that we'll pass along.
@@ -562,8 +562,8 @@ namespace TimeSeriesLibrary
         /// <param name="nOutValues">The number of values in the list to be written to the database</param>
         /// <param name="valueList">list of time series values to be written to database</param>
         /// <param name="outStartDate">date of the first time step in the series</param>
-        /// <returns>GUID value identifying the database record that was created</returns>
-        public Guid WriteValuesRegular(
+        /// <returns>ID value identifying the database record that was created</returns>
+        public int WriteValuesRegular(
                     int connectionNumber, String tableName,
                     short timeStepUnit, short timeStepQuantity,
                     int nOutValues, List<double> valueList, DateTime outStartDate)
@@ -596,8 +596,8 @@ namespace TimeSeriesLibrary
         /// For instance, if the time step is 6 hours long, then this value is 6.  If the timeStepUnit is Irregular, then
         /// the method will ignore the timeStepQuantity value.</param>
         /// <param name="dateValueList">the list of time series date/value pairs to be written to database</param>
-        /// <returns>GUID value identifying the database record that was created</returns>
-        public Guid WriteValues(
+        /// <returns>ID value identifying the database record that was created</returns>
+        public int WriteValues(
                     int connectionNumber, String tableName,
                     short timeStepUnit, short timeStepQuantity,
                     List<TimeSeriesValue> dateValueList)
@@ -646,10 +646,10 @@ namespace TimeSeriesLibrary
         /// </summary>
         /// <param name="connectionNumber">The serial number of the connection that is used to access the time series</param>
         /// <param name="tableName">The name of the database table that time series will be deleted from</param>
-        /// <param name="id">The GUID identifying the record to delete</param>
+        /// <param name="id">The ID identifying the record to delete</param>
         /// <returns>true if a record was deleted, false if no records were deleted</returns>
         public bool DeleteSeries(
-                int connectionNumber, String tableName, Guid id)
+                int connectionNumber, String tableName, int id)
         {
             // Get the connection that we'll pass along.
             SqlConnection connx = GetConnectionFromId(connectionNumber);

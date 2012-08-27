@@ -30,7 +30,7 @@ namespace TimeSeriesLibrary
         /// <summary>
         /// unique identifier for the database record
         /// </summary>
-        public Guid Id = new Guid();
+        public int Id;
         /// <summary>
         /// object that contains the meta-parameter values that TimeSeriesLibrary must maintain alongside the BLOB
         /// </summary>
@@ -143,14 +143,14 @@ namespace TimeSeriesLibrary
         /// or write the time series, whether or not those functions will need the entire
         /// set of data values.
         /// </summary>
-        /// <param name="id">GUID id of the time series record</param>
-        public Boolean Initialize(Guid id)
+        /// <param name="id">ID of the time series record</param>
+        public Boolean Initialize(int id)
         {
             // store the method's input parameters
             Id = id;
             // Define the SQL query
             String comm = String.Format("select TimeStepUnit,TimeStepQuantity,TimeStepCount,StartDate,EndDate " +
-                                        "from {0} where Guid='{1}'", TableName, Id);
+                                        "from {0} where Id='{1}'", TableName, Id);
             // SqlDataAdapter object will use the query to fill the DataTable
             using (SqlDataAdapter adp = new SqlDataAdapter(comm, Connx))
             {
@@ -196,7 +196,7 @@ namespace TimeSeriesLibrary
         {
             // note: by including 'where 1=0', we ensure that an empty resultset will be returned.
             return String.Format("select" +
-                                 "  Guid, TimeStepUnit, TimeStepQuantity, TimeStepCount, StartDate, EndDate, Checksum, ValueBlob" +
+                                 "  Id, TimeStepUnit, TimeStepQuantity, TimeStepCount, StartDate, EndDate, Checksum, ValueBlob" +
                                  "  from {0} where 1=0", TableName);
         }
         #endregion
@@ -204,18 +204,18 @@ namespace TimeSeriesLibrary
 
         #region ReadValuesRegular() Method
         /// <summary>
-        /// Method reads the time series matching the given GUID, storing the values into
+        /// Method reads the time series matching the given ID, storing the values into
         /// the given array of double-precision floats.  The method starts populating the
         /// array at the given start date, filling in no more than the number of values
         /// that are requested.
         /// </summary>
-        /// <param name="id">GUID id of the time series</param>
+        /// <param name="id">ID of the time series</param>
         /// <param name="nReqValues">number of values requested to read</param>
         /// <param name="valueArray">array requested to fill with values</param>
         /// <param name="reqStartDate">The earliest date in the time series that will be written to the array of values</param>
         /// <param name="reqEndDate">The latest date in the time series that will be written to the array of values</param>
         /// <returns>The number of values actually filled into the array</returns>
-        public unsafe int ReadValuesRegular(Guid id,
+        public unsafe int ReadValuesRegular(int id,
             int nReqValues, double[] valueArray, DateTime reqStartDate, DateTime reqEndDate)
         {
             // Initialize class fields other than the BLOB of data values
@@ -226,7 +226,7 @@ namespace TimeSeriesLibrary
             {
                 throw new TSLibraryException(ErrCode.Enum.Record_Not_Regular,
                                 String.Format("The method can only process regular time series, but" +
-                                "the record with Guid {0} is irregular.", id));
+                                "the record with Id {0} is irregular.", id));
             }
             // If the start or end date requested by the caller are such that the stored time series
             // does not overlap, then we don't need to go any further.
@@ -248,18 +248,18 @@ namespace TimeSeriesLibrary
 
         #region ReadValuesIrregular() Method
         /// <summary>
-        /// Method reads the irregular time series matching the given GUID, storing the dates and
+        /// Method reads the irregular time series matching the given ID, storing the dates and
         /// values into the given array of TSDateValueStruct (a struct containing the date/value pair).
         /// The method starts populating the array at the given start date, filling in no more than
         /// the number of values, that are requested, and not reading past the given end date
         /// </summary>
-        /// <param name="id">GUID id of the time series</param>
+        /// <param name="id">ID id of the time series</param>
         /// <param name="nReqValues">number of values requested to read</param>
         /// <param name="dateValueArray">array requrested to fill with date/value pairs</param>
         /// <param name="reqStartDate">start date requested</param>
         /// <param name="reqEndDate">end date requested</param>
         /// <returns>The number of values actually filled into the array</returns>
-        public unsafe int ReadValuesIrregular(Guid id,
+        public unsafe int ReadValuesIrregular(int id,
             int nReqValues, TSDateValueStruct[] dateValueArray, DateTime reqStartDate, DateTime reqEndDate)
         {
             // Initialize class fields other than the BLOB of data values
@@ -270,7 +270,7 @@ namespace TimeSeriesLibrary
             {
                 throw new TSLibraryException(ErrCode.Enum.Record_Not_Irregular,
                                 String.Format("The method can only process irregular time series, but" +
-                                "the record with Guid {0} is regular.", id));
+                                "the record with Id {0} is regular.", id));
             }
             // If the start or end date requested by the caller are such that the stored time series
             // does not overlap, then we don't need to go any further.
@@ -293,12 +293,12 @@ namespace TimeSeriesLibrary
         /// <summary>
         /// This method contains the operations to read the BLOB from the database table.
         /// </summary>
-        /// <param name="id">GUID identifying the time series record to read</param>
+        /// <param name="id">ID identifying the time series record to read</param>
         /// <param name="blobData">the byte array that is populated from the database BLOB</param>
-        private unsafe void ReadValues(Guid id, ref byte[] blobData)
+        private unsafe void ReadValues(int id, ref byte[] blobData)
         {
             // SQL statement that will only give us the BLOB of data values
-            String comm = String.Format("select ValueBlob from {0} where Guid='{1}' ",
+            String comm = String.Format("select ValueBlob from {0} where Id='{1}' ",
                                     TableName, Id);
             // SqlDataAdapter object will use the query to fill the DataTable
             using (SqlDataAdapter adp = new SqlDataAdapter(comm, Connx))
@@ -361,8 +361,8 @@ namespace TimeSeriesLibrary
         /// <param name="nOutValues">The number of values in the array to be written to the database</param>
         /// <param name="outStartDate">The date of the first time step</param>
         /// <param name="valueArray">The array of values to be written to the database</param>
-        /// <returns>GUID value identifying the database record that was created</returns>
-        public unsafe Guid WriteValuesRegular(
+        /// <returns>ID value identifying the database record that was created</returns>
+        public unsafe int WriteValuesRegular(
                     bool doWriteToDB, TSImport tsImport,
                     short timeStepUnit, short timeStepQuantity, 
                     int nOutValues, DateTime outStartDate, double[] valueArray)
@@ -400,8 +400,8 @@ namespace TimeSeriesLibrary
         /// <param name="tsImport">TSImport object into which the method will record values that it has computed.
         /// <param name="nOutValues">The number of values in the array to be written to the database</param>
         /// <param name="dateValueArray">The array of values to be written to the database</param>
-        /// <returns>GUID value identifying the database record that was created</returns>
-        public unsafe Guid WriteValuesIrregular(
+        /// <returns>ID value identifying the database record that was created</returns>
+        public unsafe int WriteValuesIrregular(
                     bool doWriteToDB, TSImport tsImport,
                     int nOutValues, TSDateValueStruct[] dateValueArray)
         {
@@ -431,8 +431,8 @@ namespace TimeSeriesLibrary
         /// This method contains the actual operations to write the BLOB and its meta-parameters to the database.
         /// </summary>
         /// <param name="blobData">the blob (byte array) of time series values to be written</param>
-        /// <returns>GUID value identifying the database record that was created</returns>
-        private unsafe Guid WriteValues(byte[] blobData)
+        /// <returns>ID value identifying the database record that was created</returns>
+        private unsafe int WriteValues(byte[] blobData)
         {
             // SQL statement that gives us a resultset for the DataTable object.  Note that
             // this query is rigged so that it will always return 0 records.  This is because
@@ -462,10 +462,7 @@ namespace TimeSeriesLibrary
                     // represents a record that we will add to the database table.
                     DataRow currentRow = dTable.NewRow();
 
-                    // NewGuid method generates a GUID value that is virtually guaranteed to be unique
-                    Id = Guid.NewGuid();
                     // transfer all of the data into the DataRow object
-                    currentRow["Guid"] = Id;
                     currentRow["TimeStepUnit"] = (short)TimeStepUnit;
                     currentRow["TimeStepQuantity"] = TimeStepQuantity;
                     currentRow["TimeStepCount"] = TimeStepCount;
@@ -474,27 +471,43 @@ namespace TimeSeriesLibrary
                     currentRow["Checksum"] = Checksum;
                     currentRow["ValueBlob"] = blobData;
                     dTable.Rows.Add(currentRow);
+                    // This event handler will make sure that we can get the ID after the record is updated
+                    adp.RowUpdating += Adapter_RowUpdating;
                     // Save the DataRow object to the database
                     adp.Update(dTable);
+                    // now get the id of the new record
+                    Id = (int)currentRow["Id"];
+                    // unsubscribe from the event handler
+                    adp.RowUpdating -= Adapter_RowUpdating;
                 }
             }
 
             return Id;
+        }
+        /// <summary>
+        /// This event hanlder modifies the SqlDataAdapter's SQL command in such a way to ensure
+        /// that we can read the ID on the record that was updated.  Source:
+        /// http://stackoverflow.com/a/12105428
+        /// </summary>
+        private void Adapter_RowUpdating(object sender, SqlRowUpdatingEventArgs e)
+        {
+            e.Command.CommandText += "; SELECT ID = SCOPE_IDENTITY()";
+            e.Command.UpdatedRowSource = UpdateRowSource.FirstReturnedRecord;
         }
         #endregion
 
 
         #region DeleteSeries() Method
         /// <summary>
-        /// Method deletes the single record from the table which matches the given GUID
+        /// Method deletes the single record from the table which matches the given ID
         /// </summary>
-        /// <param name="id">The GUID identifying the record to delete</param>
+        /// <param name="id">The ID identifying the record to delete</param>
         /// <returns>true if a record was deleted, false if no records were deleted</returns>
-        public Boolean DeleteSeries(Guid id)
+        public Boolean DeleteSeries(int id)
         {
             Id = id;
             // Simple SQL statement to delete the selected record
-            String comm = String.Format("delete from {0} where Guid='{1}' ",
+            String comm = String.Format("delete from {0} where Id='{1}' ",
                                     TableName, Id);
             // SqlCommand object allows us to execute the command
             SqlCommand sqlCommand = new SqlCommand(comm, Connx);
@@ -548,15 +561,15 @@ namespace TimeSeriesLibrary
         #region FillDateArray() Method
         /// <summary>
         /// Method fills in the values of the given array of DateTime values with the dates for
-        /// each time step in the time series that matches the given GUID id.  The array is filled
+        /// each time step in the time series that matches the given ID.  The array is filled
         /// starting at the given start date, or the start date of the database record, whichever
         /// is earliest.  The array is filled up the the given number of values.
         /// </summary>
-        /// <param name="id">GUID id of the time series</param>
+        /// <param name="id">ID of the time series</param>
         /// <param name="nReqValues">number of values requested to be filled</param>
         /// <param name="dateArray">array requested to fill with values</param>
         /// <param name="reqStartDate">start date requested</param>
-        public unsafe void FillDateArray(Guid id,
+        public unsafe void FillDateArray(int id,
             int nReqValues, DateTime[] dateArray, DateTime reqStartDate)
         {
             // Initialize class fields

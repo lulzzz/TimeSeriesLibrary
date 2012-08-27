@@ -27,19 +27,19 @@ namespace TimeSeriesLibrary
         System.Data.SqlClient.SqlConnection GetConnectionFromId(int connectionNumber);
 
         [ComVisible(true)]
-        int ReadDatesValuesUnsafe(int connectionNumber, string tableName, Guid id, int nReqValues, TSDateValueStruct[] dateValueArray, DateTime reqStartDate, DateTime reqEndDate);
+        int ReadDatesValuesUnsafe(int connectionNumber, string tableName, int id, int nReqValues, TSDateValueStruct[] dateValueArray, DateTime reqStartDate, DateTime reqEndDate);
         [ComVisible(true)]
-        int ReadValuesRegularUnsafe(int connectionNumber, string tableName, Guid id, int nReqValues, double[] valueArray, DateTime reqStartDate, DateTime reqEndDate);
+        int ReadValuesRegularUnsafe(int connectionNumber, string tableName, int id, int nReqValues, double[] valueArray, DateTime reqStartDate, DateTime reqEndDate);
 
         [ComVisible(true)]
-        Guid WriteValuesIrregularUnsafe(int connectionNumber, string tableName, int nOutValues, TSDateValueStruct[] dateValueArray);
+        int WriteValuesIrregularUnsafe(int connectionNumber, string tableName, int nOutValues, TSDateValueStruct[] dateValueArray);
         [ComVisible(true)]
-        Guid WriteValuesRegularUnsafe(int connectionNumber, string tableName, short timeStepUnit, short timeStepQuantity, int nOutValues, double[] valueArray, DateTime outStartDate);
+        int WriteValuesRegularUnsafe(int connectionNumber, string tableName, short timeStepUnit, short timeStepQuantity, int nOutValues, double[] valueArray, DateTime outStartDate);
 
         [ComVisible(true)]
         bool DeleteMatchingSeries(int connectionNumber, string tableName, string whereClause);
         [ComVisible(true)]
-        bool DeleteSeries(int connectionNumber, string tableName, Guid id);
+        bool DeleteSeries(int connectionNumber, string tableName, int id);
 
         [ComVisible(true)]
         int XmlImport(int connectionNumber, string tableName, string xmlFileName);
@@ -51,7 +51,7 @@ namespace TimeSeriesLibrary
         [ComVisible(true)]
         void FillDateArray(short timeStepUnit, short timeStepQuantity, int nReqValues, DateTime[] dateArray, DateTime reqStartDate);
         [ComVisible(true)]
-        void FillSeriesDateArray(int connectionNumber, string tableName, Guid id, int nReqValues, DateTime[] dateArray, DateTime reqStartDate);
+        void FillSeriesDateArray(int connectionNumber, string tableName, int id, int nReqValues, DateTime[] dateArray, DateTime reqStartDate);
         [ComVisible(true)]
         int CountTimeSteps(DateTime startDate, DateTime endDate, short unit, short stepSize);
     } 
@@ -134,7 +134,7 @@ namespace TimeSeriesLibrary
         #region Public methods for READING time series
 
         /// <summary>
-        /// This method reads the time series matching the given GUID, using the given
+        /// This method reads the time series matching the given ID, using the given
         /// database connection number and database table name, and stores the values into
         /// the given array of double-precision floats.  The method starts populating the
         /// array at the given start date, filling in no more than the number of values
@@ -146,7 +146,7 @@ namespace TimeSeriesLibrary
         /// </summary>
         /// <param name="connectionNumber">The serial number of the connection that is used to read the time series</param>
         /// <param name="tableName">The name of the database table that contains the time series</param>
-        /// <param name="id">GUID value identifying the time series to read</param>
+        /// <param name="id">ID value identifying the time series to read</param>
         /// <param name="nReqValues">The maximum number of values that the method will fill into the array</param>
         /// <param name="valueArray">The array that the method will fill</param>
         /// <param name="reqStartDate">The earliest date that the method will enter into the array</param>
@@ -154,7 +154,7 @@ namespace TimeSeriesLibrary
         // usage: for onevar to read model output, b/c it does not need dates for each timeseries
         [ComVisible(true)]
         public unsafe int ReadValuesRegularUnsafe(
-                int connectionNumber, String tableName, Guid id,
+                int connectionNumber, String tableName, int id,
                 int nReqValues, double[] valueArray, DateTime reqStartDate, DateTime reqEndDate)
         {
             // Get the connection that we'll pass along.
@@ -166,7 +166,7 @@ namespace TimeSeriesLibrary
         }
 
         /// <summary>
-        /// This method reads the time series matching the given GUID, using the given
+        /// This method reads the time series matching the given ID, using the given
         /// database connection number and database table name, and stores the values into
         /// the given array of TSDateValueStruct structs (date/value pairs).  The method starts populating the
         /// array at the given start date, filling in no more than the number of values
@@ -176,7 +176,7 @@ namespace TimeSeriesLibrary
         /// </summary>
         /// <param name="connectionNumber">The serial number of the connection that is used to read the time series</param>
         /// <param name="tableName">The name of the database table that contains the time series</param>
-        /// <param name="id">GUID value identifying the time series to read</param>
+        /// <param name="id">ID value identifying the time series to read</param>
         /// <param name="nReqValues">The maximum number of values that the method will fill into the array</param>
         /// <param name="dateValueArray">The array that the method will fill</param>
         /// <param name="reqStartDate">The earliest date that the method will enter into the array</param>
@@ -184,7 +184,7 @@ namespace TimeSeriesLibrary
         // usage: general model/onevar input
         [ComVisible(true)]
         public unsafe int ReadDatesValuesUnsafe(
-                int connectionNumber, String tableName, Guid id,
+                int connectionNumber, String tableName, int id,
                 int nReqValues, TSDateValueStruct[] dateValueArray, DateTime reqStartDate, DateTime reqEndDate)
         {
             // Get the connection that we'll pass along.
@@ -234,7 +234,6 @@ namespace TimeSeriesLibrary
                 }
                 nValuesRead = i;
             }
-            //return ts.ReadValuesRegular(id, nReqValues, valueArray, reqStartDate);
             return nValuesRead;
         }
 
@@ -265,9 +264,9 @@ namespace TimeSeriesLibrary
         /// <param name="nOutValues">The number of values in the array to be written to the database</param>
         /// <param name="valueArray">array of time series values to be written to database</param>
         /// <param name="outStartDate">date of the first time step in the series</param>
-        /// <returns>GUID value identifying the database record that was created</returns>
+        /// <returns>ID value identifying the database record that was created</returns>
         [ComVisible(true)]
-        public unsafe Guid WriteValuesRegularUnsafe(
+        public unsafe int WriteValuesRegularUnsafe(
                     int connectionNumber, String tableName,
                     short timeStepUnit, short timeStepQuantity,
                     int nOutValues, double[] valueArray, DateTime outStartDate)
@@ -292,9 +291,9 @@ namespace TimeSeriesLibrary
         /// <param name="tableName">The name of the database table that time series will be written to</param>
         /// <param name="nOutValues">The number of values in the array to be written to the database</param>
         /// <param name="dateValueArray">the array of time series date/value pairs to be written to database</param>
-        /// <returns>GUID value identifying the database record that was created</returns>
+        /// <returns>ID value identifying the database record that was created</returns>
         [ComVisible(true)]
-        public unsafe Guid WriteValuesIrregularUnsafe(
+        public unsafe int WriteValuesIrregularUnsafe(
                     int connectionNumber, String tableName,
                     int nOutValues, TSDateValueStruct[] dateValueArray)
         {
@@ -317,11 +316,11 @@ namespace TimeSeriesLibrary
         /// </summary>
         /// <param name="connectionNumber">The serial number of the connection that is used to access the time series</param>
         /// <param name="tableName">The name of the database table that time series will be deleted from</param>
-        /// <param name="id">The GUID identifying the record to delete</param>
+        /// <param name="id">The ID identifying the record to delete</param>
         /// <returns>true if a record was deleted, false if no records were deleted</returns>
         [ComVisible(true)]
         public bool DeleteSeries(
-                int connectionNumber, String tableName, Guid id)
+                int connectionNumber, String tableName, int id)
         {
             // Get the connection that we'll pass along.
             SqlConnection connx = GetConnectionFromId(connectionNumber);
@@ -420,7 +419,7 @@ namespace TimeSeriesLibrary
         }
         [ComVisible(true)]
         public void FillSeriesDateArray(
-                    int connectionNumber, String tableName, Guid id,
+                    int connectionNumber, String tableName, int id,
                     int nReqValues, DateTime[] dateArray, DateTime reqStartDate)
         {
             // Get the connection that we'll pass along.

@@ -36,10 +36,10 @@ namespace TimeSeriesLibrary
         /// </summary>
         public String Name;
         /// <summary>
-        /// The GUID that identifies the record that was created for this timeseries in 
+        /// The ID that identifies the record that was created for this timeseries in 
         /// the the database.  If the database was not written to, then this field is meaningless.
         /// </summary>
-        public Guid Id;
+        public int Id;
         /// <summary>
         /// A string of XML elements, including the surrounding tags, that were not directly processed
         /// by the TimeSeriesLibrary.  The design calls for the caller to process these elements
@@ -175,7 +175,7 @@ namespace TimeSeriesLibrary
         /// a BLOB (byte array),
         /// the meta parameters of the BLOB,
         /// the MD5 checksum for the BLOB and its meta parameters,
-        /// the Id (GUID) of the database record for the time series.
+        /// the ID of the database record for the time series.
         /// </summary>
         /// <param name="tsp">The TS object that values will be copied from</param>
         /// <param name="blobData">the BLOB (byte array) of time series values</param>
