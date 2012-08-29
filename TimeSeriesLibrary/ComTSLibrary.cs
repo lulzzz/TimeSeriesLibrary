@@ -19,15 +19,29 @@ namespace TimeSeriesLibrary
     [ComVisible(true)]
     public interface _ComTSLibrary
     {
+        /// <summary>
+        /// Opens a new connection for the time series library to use.  The new connection 
+        /// is added to a list and assigned a serial number within the list.  The method returns
+        /// the serial number of the new connection.
+        /// </summary>
+        /// <param name="connectionString">The connection string used to open the connection.</param>
+        /// <returns>The serial number that was automatically assigned to the new connection.</returns>
         [ComVisible(true)]
         int OpenConnection(string connectionString);
+        /// <summary>
+        /// Closes the connection identified with the given serial number.  When the
+        /// connection is closed, it is removed from the list of connections available to
+        /// the time series library, and the serial number no longer refers to this
+        /// connection.
+        /// </summary>
+        /// <param name="connectionNumber">The serial number of the connection to be closed</param>
         [ComVisible(true)]
         void CloseConnection(int connectionNumber);
         [ComVisible(true)]
         System.Data.SqlClient.SqlConnection GetConnectionFromId(int connectionNumber);
 
         [ComVisible(true)]
-        int ReadDatesValuesUnsafe(int connectionNumber, string tableName, int id, int nReqValues, TSDateValueStruct[] dateValueArray, DateTime reqStartDate, DateTime reqEndDate);
+        int ReadDatesValuesUnsafe(int connectionNumber, string tableName, int id, int nReqValues, ref TSDateValueStruct[] dateValueArray, DateTime reqStartDate, DateTime reqEndDate);
         [ComVisible(true)]
         int ReadValuesRegularUnsafe(int connectionNumber, string tableName, int id, int nReqValues, double[] valueArray, DateTime reqStartDate, DateTime reqEndDate);
 
@@ -185,7 +199,7 @@ namespace TimeSeriesLibrary
         [ComVisible(true)]
         public unsafe int ReadDatesValuesUnsafe(
                 int connectionNumber, String tableName, int id,
-                int nReqValues, TSDateValueStruct[] dateValueArray, DateTime reqStartDate, DateTime reqEndDate)
+                int nReqValues, ref TSDateValueStruct[] dateValueArray, DateTime reqStartDate, DateTime reqEndDate)
         {
             // Get the connection that we'll pass along.
             SqlConnection connx = GetConnectionFromId(connectionNumber);
@@ -440,4 +454,6 @@ namespace TimeSeriesLibrary
 
 
     }
+
+
 }

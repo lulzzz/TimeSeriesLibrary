@@ -149,7 +149,7 @@ namespace TimeSeriesLibrary
             // store the method's input parameters
             Id = id;
             // Define the SQL query
-            String comm = String.Format("select TimeStepUnit,TimeStepQuantity,TimeStepCount,StartDate,EndDate " +
+            String comm = String.Format("select TimeStepUnit,TimeStepQuantity,RecordCount,StartDate,EndDate " +
                                         "from {0} where Id='{1}'", TableName, Id);
             // SqlDataAdapter object will use the query to fill the DataTable
             using (SqlDataAdapter adp = new SqlDataAdapter(comm, Connx))
@@ -172,9 +172,9 @@ namespace TimeSeriesLibrary
                                     "Found zero records using query:\n\n." + comm);
                 }
                 // Assign properties from table to this object
-                TimeStepUnit = (TSDateCalculator.TimeStepUnitCode)dTable.Rows[0].Field<short>("TimeStepUnit");
-                TimeStepQuantity = dTable.Rows[0].Field<short>("TimeStepQuantity");
-                TimeStepCount = dTable.Rows[0].Field<int>("TimeStepCount");
+                TimeStepUnit = (TSDateCalculator.TimeStepUnitCode)dTable.Rows[0].Field<int>("TimeStepUnit");
+                TimeStepQuantity = (short)dTable.Rows[0].Field<int>("TimeStepQuantity");
+                TimeStepCount = dTable.Rows[0].Field<int>("RecordCount");
                 BlobStartDate = dTable.Rows[0].Field<DateTime>("StartDate");
                 BlobEndDate = dTable.Rows[0].Field<DateTime>("EndDate");
             }
@@ -196,7 +196,7 @@ namespace TimeSeriesLibrary
         {
             // note: by including 'where 1=0', we ensure that an empty resultset will be returned.
             return String.Format("select" +
-                                 "  Id, TimeStepUnit, TimeStepQuantity, TimeStepCount, StartDate, EndDate, Checksum, ValueBlob" +
+                                 "  Id, TimeStepUnit, TimeStepQuantity, RecordCount, StartDate, EndDate, Checksum, ValueBlob" +
                                  "  from {0} where 1=0", TableName);
         }
         #endregion
@@ -465,7 +465,7 @@ namespace TimeSeriesLibrary
                     // transfer all of the data into the DataRow object
                     currentRow["TimeStepUnit"] = (short)TimeStepUnit;
                     currentRow["TimeStepQuantity"] = TimeStepQuantity;
-                    currentRow["TimeStepCount"] = TimeStepCount;
+                    currentRow["RecordCount"] = TimeStepCount;
                     currentRow["StartDate"] = BlobStartDate;
                     currentRow["EndDate"] = BlobEndDate;
                     currentRow["Checksum"] = Checksum;
