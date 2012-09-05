@@ -224,12 +224,12 @@ namespace TimeSeriesLibrary
         /// <param name="tsp"></param>
         /// <param name="blobData"></param>
         /// <returns></returns>
-        public static byte[] ComputeChecksum(TSParameters tsp, byte[] blobData)
+        public static byte[] ComputeChecksum(TSParameters tsp, List<ITimeSeriesTrace> traceList)
         {
             // simply unpack the TSParameters object and call the overload of this method
             return ComputeChecksum(tsp.TimeStepUnit, tsp.TimeStepQuantity,
-                        tsp.TimeStepCount, tsp.BlobStartDate, tsp.BlobEndDate, 
-                        blobData);
+                        tsp.TimeStepCount, tsp.BlobStartDate, tsp.BlobEndDate,
+                        traceList);
         }
 
         /// <summary>
@@ -248,7 +248,7 @@ namespace TimeSeriesLibrary
         public static byte[] ComputeChecksum(
                     TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
                     int timeStepCount, DateTime blobStartDate, DateTime blobEndDate,
-                    byte[] blobData)
+                    List<ITimeSeriesTrace> traceList)
         {
             // The MD5 Checksum will be computed from two byte arrays.  The first byte array contains
             // a series of meta parameters that TimeSeriesLibrary that are inherently linked with the
@@ -293,10 +293,37 @@ namespace TimeSeriesLibrary
 
             // MD5CryptoServiceProvider object has methods to compute the Checksum
             MD5CryptoServiceProvider md5Hasher = new MD5CryptoServiceProvider();
+            // loop through all traces
+            foreach(ITimeSeriesTrace traceObject in traceList)
+                // feed the checksum of the trace into the MD5 hash computer
+                md5Hasher.TransformBlock(traceObject.Checksum, 0, 16, null, 0);
             // feed the short byte array of meta-parameters into the MD5 hash computer
-            md5Hasher.TransformBlock(binArray, 0, LengthOfParamInputForChecksum, binArray, 0);
+            md5Hasher.TransformFinalBlock(binArray, 0, LengthOfParamInputForChecksum);
+            // return the hash (Checksum) value
+            return md5Hasher.Hash;
+        }
+        public static byte[] ComputeTraceChecksum(ITimeSeriesTrace traceObject)
+        {
+            // The MD5 Checksum will be computed from two byte arrays.  The first byte array contains
+            // the trace number and the second byte array is the time series array itself.
+
+            // Byte array for the series of meta parameters that are fed into the MD5 algorithm first.
+            byte[] binArray = new byte[sizeof(Int32)];
+            // MemoryStream and BinaryWriter objects allow us to write data into the byte array
+            MemoryStream binStream = new MemoryStream(binArray);
+            BinaryWriter binWriter = new BinaryWriter(binStream);
+
+            // Write relevant meta-parameters (not including the BLOB itself) into a short byte array
+
+            // Trace Number
+            binWriter.Write(traceObject.TraceNumber);
+
+            // MD5CryptoServiceProvider object has methods to compute the Checksum
+            MD5CryptoServiceProvider md5Hasher = new MD5CryptoServiceProvider();
+            // feed the short byte array into the MD5 hash computer
+            md5Hasher.TransformBlock(binArray, 0, sizeof(Int32), binArray, 0);
             // feed the BLOB of timeseries values into the MD5 hash computer
-            md5Hasher.TransformFinalBlock(blobData, 0, blobData.Length);
+            md5Hasher.TransformFinalBlock(traceObject.ValueBlob, 0, traceObject.ValueBlob.Length);
             // return the hash (Checksum) value
             return md5Hasher.Hash;
         }

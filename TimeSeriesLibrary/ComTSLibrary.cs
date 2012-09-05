@@ -41,22 +41,22 @@ namespace TimeSeriesLibrary
         System.Data.SqlClient.SqlConnection GetConnectionFromId(int connectionNumber);
 
         [ComVisible(true)]
-        int ReadDatesValuesUnsafe(int connectionNumber, string tableName, int id, int nReqValues, ref TSDateValueStruct[] dateValueArray, DateTime reqStartDate, DateTime reqEndDate);
+        int ReadDatesValuesUnsafe(int connectionNumber, string tableName, String traceTableName, int id, int traceNumber, int nReqValues, ref TSDateValueStruct[] dateValueArray, DateTime reqStartDate, DateTime reqEndDate);
         [ComVisible(true)]
-        int ReadValuesRegularUnsafe(int connectionNumber, string tableName, int id, int nReqValues, double[] valueArray, DateTime reqStartDate, DateTime reqEndDate);
+        int ReadValuesRegularUnsafe(int connectionNumber, string tableName, String traceTableName, int id, int traceNumber, int nReqValues, double[] valueArray, DateTime reqStartDate, DateTime reqEndDate);
 
         [ComVisible(true)]
-        int WriteValuesIrregularUnsafe(int connectionNumber, string tableName, int nOutValues, TSDateValueStruct[] dateValueArray);
+        int WriteValuesIrregularUnsafe(int connectionNumber, string tableName, String traceTableName, int traceNumber, int nOutValues, TSDateValueStruct[] dateValueArray);
         [ComVisible(true)]
-        int WriteValuesRegularUnsafe(int connectionNumber, string tableName, short timeStepUnit, short timeStepQuantity, int nOutValues, double[] valueArray, DateTime outStartDate);
+        int WriteValuesRegularUnsafe(int connectionNumber, string tableName, String traceTableName, int traceNumber, short timeStepUnit, short timeStepQuantity, int nOutValues, double[] valueArray, DateTime outStartDate);
 
         [ComVisible(true)]
-        bool DeleteMatchingSeries(int connectionNumber, string tableName, string whereClause);
+        bool DeleteMatchingSeries(int connectionNumber, string tableName, String traceTableName, string whereClause);
         [ComVisible(true)]
-        bool DeleteSeries(int connectionNumber, string tableName, int id);
+        bool DeleteSeries(int connectionNumber, string tableName, String traceTableName, int id);
 
         [ComVisible(true)]
-        int XmlImport(int connectionNumber, string tableName, string xmlFileName);
+        int XmlImport(int connectionNumber, string tableName, String traceTableName, string xmlFileName);
         //[ComVisible(true)]
         //int XmlImportWithList(int connectionNumber, string tableName, string xmlFileName, System.Collections.Generic.List<TSImport> tsImportList);
 
@@ -65,7 +65,7 @@ namespace TimeSeriesLibrary
         [ComVisible(true)]
         void FillDateArray(short timeStepUnit, short timeStepQuantity, int nReqValues, DateTime[] dateArray, DateTime reqStartDate);
         [ComVisible(true)]
-        void FillSeriesDateArray(int connectionNumber, string tableName, int id, int nReqValues, DateTime[] dateArray, DateTime reqStartDate);
+        void FillSeriesDateArray(int connectionNumber, string tableName, String traceTableName, int id, int nReqValues, DateTime[] dateArray, DateTime reqStartDate);
         [ComVisible(true)]
         int CountTimeSteps(DateTime startDate, DateTime endDate, short unit, short stepSize);
     } 
@@ -160,7 +160,9 @@ namespace TimeSeriesLibrary
         /// </summary>
         /// <param name="connectionNumber">The serial number of the connection that is used to read the time series</param>
         /// <param name="tableName">The name of the database table that contains the time series</param>
+        /// <param name="traceTableName">The name of the database table that stores the BLOB for a single trace</param>
         /// <param name="id">ID value identifying the time series to read</param>
+        /// <param name="traceNumber">number of the trace to read</param>
         /// <param name="nReqValues">The maximum number of values that the method will fill into the array</param>
         /// <param name="valueArray">The array that the method will fill</param>
         /// <param name="reqStartDate">The earliest date that the method will enter into the array</param>
@@ -168,15 +170,15 @@ namespace TimeSeriesLibrary
         // usage: for onevar to read model output, b/c it does not need dates for each timeseries
         [ComVisible(true)]
         public unsafe int ReadValuesRegularUnsafe(
-                int connectionNumber, String tableName, int id,
+                int connectionNumber, String tableName, String traceTableName, int id, int traceNumber,
                 int nReqValues, double[] valueArray, DateTime reqStartDate, DateTime reqEndDate)
         {
             // Get the connection that we'll pass along.
             SqlConnection connx = GetConnectionFromId(connectionNumber);
             // Construct new TS object with SqlConnection object and table name
-            TS ts = new TS(connx, tableName);
+            TS ts = new TS(connx, tableName, traceTableName);
 
-            return ts.ReadValuesRegular(id, nReqValues, valueArray, reqStartDate, reqEndDate);
+            return ts.ReadValuesRegular(id, traceNumber, nReqValues, valueArray, reqStartDate, reqEndDate);
         }
 
         /// <summary>
@@ -190,7 +192,9 @@ namespace TimeSeriesLibrary
         /// </summary>
         /// <param name="connectionNumber">The serial number of the connection that is used to read the time series</param>
         /// <param name="tableName">The name of the database table that contains the time series</param>
+        /// <param name="traceTableName">The name of the database table that stores the BLOB for a single trace</param>
         /// <param name="id">ID value identifying the time series to read</param>
+        /// <param name="traceNumber">number of the trace to read</param>
         /// <param name="nReqValues">The maximum number of values that the method will fill into the array</param>
         /// <param name="dateValueArray">The array that the method will fill</param>
         /// <param name="reqStartDate">The earliest date that the method will enter into the array</param>
@@ -198,13 +202,13 @@ namespace TimeSeriesLibrary
         // usage: general model/onevar input
         [ComVisible(true)]
         public unsafe int ReadDatesValuesUnsafe(
-                int connectionNumber, String tableName, int id,
+                int connectionNumber, String tableName, String traceTableName, int id, int traceNumber,
                 int nReqValues, ref TSDateValueStruct[] dateValueArray, DateTime reqStartDate, DateTime reqEndDate)
         {
             // Get the connection that we'll pass along.
             SqlConnection connx = GetConnectionFromId(connectionNumber);
             // Construct new TS object with SqlConnection object and table name
-            TS ts = new TS(connx, tableName);
+            TS ts = new TS(connx, tableName, traceTableName);
 
             int nValuesRead = 0;
             // Read the meta-parameters of the time series so that we'll know if it's regular or irregular
@@ -216,7 +220,7 @@ namespace TimeSeriesLibrary
                 // IRREGULAR TIME SERIES
 
                 // Read the date/value array from the database
-                nValuesRead = ts.ReadValuesIrregular(id, nReqValues, dateValueArray, reqStartDate, reqEndDate);
+                nValuesRead = ts.ReadValuesIrregular(id, traceNumber, nReqValues, dateValueArray, reqStartDate, reqEndDate);
             }
             else
             {
@@ -225,7 +229,7 @@ namespace TimeSeriesLibrary
                 // Allocate an array to hold the time series' data values
                 double[] valueArray = new double[nReqValues];
                 // Read the data values from the database
-                nValuesRead = ts.ReadValuesRegular(id, nReqValues, valueArray, reqStartDate, reqEndDate);
+                nValuesRead = ts.ReadValuesRegular(id, traceNumber, nReqValues, valueArray, reqStartDate, reqEndDate);
                 // Allocate an array to hold the time series' date values
                 DateTime[] dateArray = new DateTime[nValuesRead];
                 // Fill the array with the date values corresponding to the time steps defined
@@ -272,6 +276,8 @@ namespace TimeSeriesLibrary
         /// </summary>
         /// <param name="connectionNumber">The serial number of the connection that is used to write the time series</param>
         /// <param name="tableName">The name of the database table that time series will be written to</param>
+        /// <param name="traceTableName">The name of the database table that stores the BLOB for a single trace</param>
+        /// <param name="traceNumber">number of the trace to read</param>
         /// <param name="timeStepUnit">TSDateCalculator.TimeStepUnitCode value for Minute,Hour,Day,Week,Month, or Year</param>
         /// <param name="timeStepQuantity">The number of the given unit that defines the time step.
         /// For instance, if the time step is 6 hours long, then this value is 6.</param>
@@ -281,16 +287,16 @@ namespace TimeSeriesLibrary
         /// <returns>ID value identifying the database record that was created</returns>
         [ComVisible(true)]
         public unsafe int WriteValuesRegularUnsafe(
-                    int connectionNumber, String tableName,
+                    int connectionNumber, String tableName, String traceTableName, int traceNumber,
                     short timeStepUnit, short timeStepQuantity,
                     int nOutValues, double[] valueArray, DateTime outStartDate)
         {
             // Get the connection that we'll pass along.
             SqlConnection connx = GetConnectionFromId(connectionNumber);
             // Construct new TS object with SqlConnection object and table name
-            TS ts = new TS(connx, tableName);
+            TS ts = new TS(connx, tableName, traceTableName);
 
-            return ts.WriteValuesRegular(true, null, timeStepUnit, timeStepQuantity, 
+            return ts.WriteValuesRegular(true, null, traceNumber, timeStepUnit, timeStepQuantity, 
                             nOutValues, outStartDate, valueArray);
         }
 
@@ -303,20 +309,22 @@ namespace TimeSeriesLibrary
         /// </summary>
         /// <param name="connectionNumber">The serial number of the connection that is used to write the time series</param>
         /// <param name="tableName">The name of the database table that time series will be written to</param>
+        /// <param name="traceTableName">The name of the database table that stores the BLOB for a single trace</param>
+        /// <param name="traceNumber">number of the trace to read</param>
         /// <param name="nOutValues">The number of values in the array to be written to the database</param>
         /// <param name="dateValueArray">the array of time series date/value pairs to be written to database</param>
         /// <returns>ID value identifying the database record that was created</returns>
         [ComVisible(true)]
         public unsafe int WriteValuesIrregularUnsafe(
-                    int connectionNumber, String tableName,
+                    int connectionNumber, String tableName, String traceTableName, int traceNumber,
                     int nOutValues, TSDateValueStruct[] dateValueArray)
         {
             // Get the connection that we'll pass along.
             SqlConnection connx = GetConnectionFromId(connectionNumber);
             // Construct new TS object with SqlConnection object and table name
-            TS ts = new TS(connx, tableName);
+            TS ts = new TS(connx, tableName, traceTableName);
 
-            return ts.WriteValuesIrregular(true, null, nOutValues, dateValueArray);
+            return ts.WriteValuesIrregular(true, null, traceNumber, nOutValues, dateValueArray);
         }
 
         #endregion
@@ -330,16 +338,17 @@ namespace TimeSeriesLibrary
         /// </summary>
         /// <param name="connectionNumber">The serial number of the connection that is used to access the time series</param>
         /// <param name="tableName">The name of the database table that time series will be deleted from</param>
+        /// <param name="traceTableName">The name of the database table that stores the BLOB for a single trace</param>
         /// <param name="id">The ID identifying the record to delete</param>
         /// <returns>true if a record was deleted, false if no records were deleted</returns>
         [ComVisible(true)]
         public bool DeleteSeries(
-                int connectionNumber, String tableName, int id)
+                int connectionNumber, String tableName, String traceTableName, int id)
         {
             // Get the connection that we'll pass along.
             SqlConnection connx = GetConnectionFromId(connectionNumber);
             // Construct new TS object with SqlConnection object and table name
-            TS ts = new TS(connx, tableName);
+            TS ts = new TS(connx, tableName, traceTableName);
 
             return ts.DeleteSeries(id);
         }
@@ -351,17 +360,18 @@ namespace TimeSeriesLibrary
         /// </summary>
         /// <param name="connectionNumber">The serial number of the connection that is used to access the time series</param>
         /// <param name="tableName">The name of the database table that time series will be deleted from</param>
+        /// <param name="traceTableName">The name of the database table that stores the BLOB for a single trace</param>
         /// <param name="whereClause">The WHERE clause of a SQL command, not including the word WHERE.
         /// For example, to delete delete all records where Id > 55, use the text "Id > 55".</param>
         /// <returns>true if one or more records were deleted, false if no records were deleted</returns>
         [ComVisible(true)]
         public bool DeleteMatchingSeries(
-                int connectionNumber, String tableName, String whereClause)
+                int connectionNumber, String tableName, String traceTableName, String whereClause)
         {
             // Get the connection that we'll pass along.
             SqlConnection connx = GetConnectionFromId(connectionNumber);
             // Construct new TS object with SqlConnection object and table name
-            TS ts = new TS(connx, tableName);
+            TS ts = new TS(connx, tableName, traceTableName);
 
             return ts.DeleteMatchingSeries(whereClause);
         }
@@ -380,6 +390,7 @@ namespace TimeSeriesLibrary
         /// </summary>
         /// <param name="connectionNumber">The serial number of the connection that is used to write to the database</param>
         /// <param name="tableName">The name of the database table that time series will be written to</param>
+        /// <param name="traceTableName">The name of the database table that stores the BLOB for a single trace</param>
         /// <param name="xmlFileName">The file name (with path) of an XML file that defines one or more time series to import</param>
         /// <param name="tsImportList">A List of TSImport objects that the method adds to--one item for each time series
         /// that is saved to the database.  The List must already be instantiated before calling this method.
@@ -387,13 +398,13 @@ namespace TimeSeriesLibrary
         /// <returns>The number of time series records that were successfully stored</returns>
         //[ComVisible(true)]
         // TODO: this is not COM friendly due to the List<> object
-        public int XmlImportWithList(int connectionNumber, String tableName, String xmlFileName,
+        public int XmlImportWithList(int connectionNumber, String tableName, String traceTableName, String xmlFileName,
                         List<TSImport> tsImportList)
         {
             // Get the connection that we'll pass along.
             SqlConnection connx = GetConnectionFromId(connectionNumber);
             // Construct new TSXml object with SqlConnection object and table name
-            TSXml tsXml = new TSXml(connx, tableName);
+            TSXml tsXml = new TSXml(connx, tableName, traceTableName);
 
             return tsXml.ReadAndStore(xmlFileName, null, tsImportList, true, false);
         }
@@ -404,14 +415,15 @@ namespace TimeSeriesLibrary
         /// </summary>
         /// <param name="connectionNumber">The serial number of the connection that is used to write to the database</param>
         /// <param name="tableName">The name of the database table that time series will be written to</param>
+        /// <param name="traceTableName">The name of the database table that stores the BLOB for a single trace</param>
         /// <param name="xmlFileName">The file name (with path) of an XML file that defines one or more time series to import</param>
         /// <returns>The number of time series records that were successfully stored</returns>
         [ComVisible(true)]
-        public int XmlImport(int connectionNumber, String tableName, String xmlFileName)
+        public int XmlImport(int connectionNumber, String tableName, String traceTableName, String xmlFileName)
         {
             // Simply let the sister method do all the processing,
             // but pass it a local List<TSImport> instance that won't be saved.
-            return XmlImportWithList(connectionNumber, tableName, xmlFileName, new List<TSImport>());
+            return XmlImportWithList(connectionNumber, tableName, traceTableName, xmlFileName, new List<TSImport>());
         }
         #endregion
 
@@ -433,13 +445,13 @@ namespace TimeSeriesLibrary
         }
         [ComVisible(true)]
         public void FillSeriesDateArray(
-                    int connectionNumber, String tableName, int id,
+                    int connectionNumber, String tableName, String traceTableName, int id,
                     int nReqValues, DateTime[] dateArray, DateTime reqStartDate)
         {
             // Get the connection that we'll pass along.
             SqlConnection connx = GetConnectionFromId(connectionNumber);
             // Construct new TS object with SqlConnection object and table name
-            TS ts = new TS(connx, tableName);
+            TS ts = new TS(connx, tableName, traceTableName);
 
             ts.FillDateArray(id, nReqValues, dateArray, reqStartDate);
         }

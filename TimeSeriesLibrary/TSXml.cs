@@ -16,6 +16,7 @@ namespace TimeSeriesLibrary
     public class TSXml
     {
         private String TableName;
+        private String TraceTableName;
         private SqlConnection Connx;
 
         private String reportedFileName;
@@ -36,10 +37,12 @@ namespace TimeSeriesLibrary
         /// </summary>
         /// <param name="connx">SqlConnection object that this object will use</param>
         /// <param name="tableName">Name of the table in the database that stores this object's records</param>
-        public TSXml(SqlConnection connx, String tableName)
+        /// <param name="traceTableName">The name of the database table that stores the BLOB for a single trace</param>
+        public TSXml(SqlConnection connx, String tableName, String traceTableName)
         {
             Connx = connx;
             TableName = tableName;
+            TraceTableName = traceTableName;
         }
         /// <summary>
         /// Class constructor that should be invoked if the XML object will NOT save to the database
@@ -281,9 +284,9 @@ namespace TimeSeriesLibrary
                                 dateValueArray[i / 3] = tsv;
                             }
                             // The TS object is used to save one record to the database table
-                            TS ts = new TS(Connx, TableName);
+                            TS ts = new TS(Connx, TableName, TraceTableName);
                             // Write to the database and record values in the TSImport object
-                            ts.WriteValuesIrregular(storeToDatabase, tsImport, dateValueArray.Length, dateValueArray);
+                            ts.WriteValuesIrregular(storeToDatabase, tsImport, tsImport.TraceNumber, dateValueArray.Length, dateValueArray);
                             // Done with the TS object.
                             ts = null;
                         }
@@ -295,9 +298,9 @@ namespace TimeSeriesLibrary
                             valueArray = DataString.Split(new char[] { }, StringSplitOptions.RemoveEmptyEntries)
                                             .Select(z => double.Parse(z)).ToArray();
                             // The TS object is used to save one record to the database table
-                            TS ts = new TS(Connx, TableName);
+                            TS ts = new TS(Connx, TableName, TraceTableName);
                             // Write to the database and record values in the TSImport object
-                            ts.WriteValuesRegular(storeToDatabase, tsImport,
+                            ts.WriteValuesRegular(storeToDatabase, tsImport, tsImport.TraceNumber,
                                                 (short)TimeStepUnit, TimeStepQuantity,
                                                 valueArray.Length, StartDate, valueArray);
                             // Done with the TS object.

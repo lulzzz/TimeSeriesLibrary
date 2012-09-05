@@ -23,6 +23,10 @@ namespace TimeSeriesLibrary
         /// </summary>
         private String TableName;
         /// <summary>
+        /// name of the database table that stores the BLOB for a single trace of this time series
+        /// </summary>
+        private String TraceTableName;
+        /// <summary>
         /// This value is true if the meta parameters have been read from the database.
         /// </summary>
         public Boolean IsInitialized;
@@ -109,11 +113,13 @@ namespace TimeSeriesLibrary
         /// </summary>
         /// <param name="connx">SqlConnection object that this object will use</param>
         /// <param name="tableName">Name of the table in the database that stores this object's record</param>
-        public TS(SqlConnection connx, String tableName)
+        /// <param name="traceTableName">The name of the database table that stores the BLOB for a single trace</param>
+        public TS(SqlConnection connx, String tableName, String traceTableName)
         {
             // Store the method parameters in class fields
             Connx = connx;
             TableName = tableName;
+            TraceTableName = traceTableName;
             // Mark this time series as uninitialized
             // (because the meta parameters have not yet been read from the database)
             IsInitialized = false;
@@ -121,8 +127,6 @@ namespace TimeSeriesLibrary
         /// <summary>
         /// Class constructor that should be used if the TS object will not read or write to database
         /// </summary>
-        /// <param name="connx">SqlConnection object that this object will use</param>
-        /// <param name="tableName">Name of the table in the database that stores this object's record</param>
         public TS()
         {
             // These field values reflect that the database is not accessed
@@ -144,11 +148,14 @@ namespace TimeSeriesLibrary
         /// set of data values.
         /// </summary>
         /// <param name="id">ID of the time series record</param>
-        public Boolean Initialize(int id)
+        /// <returns>true if a record was found, false if no record was found</returns>
+        public Boolean Initialize(int id, Boolean mustHaveOneRecord=false)
         {
             // store the method's input parameters
             Id = id;
             // Define the SQL query
+            
+            // TODO: add Id and Checksum so that this can be used for both reading and writing
             String comm = String.Format("select TimeStepUnit,TimeStepQuantity,RecordCount,StartDate,EndDate " +
                                         "from {0} where Id='{1}'", TableName, Id);
             // SqlDataAdapter object will use the query to fill the DataTable
@@ -168,8 +175,11 @@ namespace TimeSeriesLibrary
                 // There should be at least 1 row in the DataTable object
                 if (dTable.Rows.Count < 1)
                 {
-                    throw new TSLibraryException(ErrCode.Enum.Record_Not_Found_Table,
+                    if (mustHaveOneRecord)
+                        throw new TSLibraryException(ErrCode.Enum.Record_Not_Found_Table,
                                     "Found zero records using query:\n\n." + comm);
+                    else
+                        return false;
                 }
                 // Assign properties from table to this object
                 TimeStepUnit = (TSDateCalculator.TimeStepUnitCode)dTable.Rows[0].Field<int>("TimeStepUnit");
@@ -204,18 +214,19 @@ namespace TimeSeriesLibrary
 
         #region ReadValuesRegular() Method
         /// <summary>
-        /// Method reads the time series matching the given ID, storing the values into
+        /// Method reads the time series matching the given ID and trace number, storing the values into
         /// the given array of double-precision floats.  The method starts populating the
         /// array at the given start date, filling in no more than the number of values
         /// that are requested.
         /// </summary>
         /// <param name="id">ID of the time series</param>
+        /// <param name="traceNumber">number of the trace to read</param>
         /// <param name="nReqValues">number of values requested to read</param>
         /// <param name="valueArray">array requested to fill with values</param>
         /// <param name="reqStartDate">The earliest date in the time series that will be written to the array of values</param>
         /// <param name="reqEndDate">The latest date in the time series that will be written to the array of values</param>
         /// <returns>The number of values actually filled into the array</returns>
-        public unsafe int ReadValuesRegular(int id,
+        public unsafe int ReadValuesRegular(int id, int traceNumber,
             int nReqValues, double[] valueArray, DateTime reqStartDate, DateTime reqEndDate)
         {
             // Initialize class fields other than the BLOB of data values
@@ -236,7 +247,7 @@ namespace TimeSeriesLibrary
             // byte array (the BLOB) that will be read from the database.
             Byte[] blobData = null;
             // method ReadValues reads data from the database into the byte array
-            ReadValues(id, ref blobData);
+            ReadValues(id, traceNumber, ref blobData);
             // Convert the BLOB into an array of double values (valueArray)
             return TSBlobCoder.ConvertBlobToArrayRegular(TimeStepUnit, TimeStepQuantity,
                                 BlobStartDate, true,
@@ -248,18 +259,19 @@ namespace TimeSeriesLibrary
 
         #region ReadValuesIrregular() Method
         /// <summary>
-        /// Method reads the irregular time series matching the given ID, storing the dates and
+        /// Method reads the irregular time series matching the given ID and trace number, storing the dates and
         /// values into the given array of TSDateValueStruct (a struct containing the date/value pair).
         /// The method starts populating the array at the given start date, filling in no more than
         /// the number of values, that are requested, and not reading past the given end date
         /// </summary>
         /// <param name="id">ID id of the time series</param>
+        /// <param name="traceNumber">number of the trace to read</param>
         /// <param name="nReqValues">number of values requested to read</param>
         /// <param name="dateValueArray">array requrested to fill with date/value pairs</param>
         /// <param name="reqStartDate">start date requested</param>
         /// <param name="reqEndDate">end date requested</param>
         /// <returns>The number of values actually filled into the array</returns>
-        public unsafe int ReadValuesIrregular(int id,
+        public unsafe int ReadValuesIrregular(int id, int traceNumber,
             int nReqValues, TSDateValueStruct[] dateValueArray, DateTime reqStartDate, DateTime reqEndDate)
         {
             // Initialize class fields other than the BLOB of data values
@@ -280,7 +292,7 @@ namespace TimeSeriesLibrary
             // byte array (the BLOB) that will be read from the database.
             Byte[] blobData = null;
             // method ReadValues reads data from the database into the byte array
-            ReadValues(id, ref blobData);
+            ReadValues(id, traceNumber, ref blobData);
             // convert the byte array into date/value pairs
             return TSBlobCoder.ConvertBlobToArrayIrregular(true, nReqValues, reqStartDate, reqEndDate,
                             blobData, dateValueArray);
@@ -295,11 +307,11 @@ namespace TimeSeriesLibrary
         /// </summary>
         /// <param name="id">ID identifying the time series record to read</param>
         /// <param name="blobData">the byte array that is populated from the database BLOB</param>
-        private unsafe void ReadValues(int id, ref byte[] blobData)
+        private unsafe void ReadValues(int id, int traceNumber, ref byte[] blobData)
         {
             // SQL statement that will only give us the BLOB of data values
-            String comm = String.Format("select ValueBlob from {0} where Id='{1}' ",
-                                    TableName, Id);
+            String comm = String.Format("select ValueBlob from {0} where TimeSeries_Id='{1}' and TraceNumber='{2}' ",
+                                    TraceTableName, Id, traceNumber);
             // SqlDataAdapter object will use the query to fill the DataTable
             using (SqlDataAdapter adp = new SqlDataAdapter(comm, Connx))
             {
@@ -312,7 +324,7 @@ namespace TimeSeriesLibrary
                 catch(Exception e)
                 {   // The query failed
                     throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
-                                    "Table '" + TableName + "' could not be opened using query:\n\n." + comm, e);
+                                    "Table '" + TraceTableName + "' could not be opened using query:\n\n." + comm, e);
                 }
                 // There should be at least 1 row in the table
                 if (dTable.Rows.Count < 1)
@@ -342,7 +354,7 @@ namespace TimeSeriesLibrary
         private void ErrorCheckWriteValues(bool doWriteToDB, TSImport tsImport)
         {
             // TODO: create an error code and throw exception
-            if (doWriteToDB && (TableName == null || Connx == null))
+            if (doWriteToDB && (TableName == null || Connx == null || TraceTableName == null))
             {
             }
         }
@@ -364,6 +376,7 @@ namespace TimeSeriesLibrary
         /// <returns>ID value identifying the database record that was created</returns>
         public unsafe int WriteValuesRegular(
                     bool doWriteToDB, TSImport tsImport,
+                    int traceNumber,
                     short timeStepUnit, short timeStepQuantity, 
                     int nOutValues, DateTime outStartDate, double[] valueArray)
         {
@@ -380,7 +393,7 @@ namespace TimeSeriesLibrary
 
             // WriteValues method will handle all of the database interaction
             if (doWriteToDB)
-                WriteValues(blobData);
+                WriteValues(blobData, traceNumber);
             // Save the information that this method has computed into a TSImport object
             if (tsImport != null)
                 tsImport.RecordFromTS(this, blobData);
@@ -403,6 +416,7 @@ namespace TimeSeriesLibrary
         /// <returns>ID value identifying the database record that was created</returns>
         public unsafe int WriteValuesIrregular(
                     bool doWriteToDB, TSImport tsImport,
+                    int traceNumber,
                     int nOutValues, TSDateValueStruct[] dateValueArray)
         {
             ErrorCheckWriteValues(doWriteToDB, tsImport);
@@ -416,7 +430,7 @@ namespace TimeSeriesLibrary
 
             // WriteValues method will handle all of the database interaction
             if (doWriteToDB)
-                return WriteValues(blobData);
+                return WriteValues(blobData, traceNumber);
             // Save the information that this method has computed into a TSImport object
             if (tsImport != null)
                 tsImport.RecordFromTS(this, blobData);
@@ -432,8 +446,17 @@ namespace TimeSeriesLibrary
         /// </summary>
         /// <param name="blobData">the blob (byte array) of time series values to be written</param>
         /// <returns>ID value identifying the database record that was created</returns>
-        private unsafe int WriteValues(byte[] blobData)
+        private unsafe int WriteValues(byte[] blobData, int traceNumber)
         {
+            // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+            // TODO: This method should only write to Table 1 if a record does not yet exist.
+            // The method might only need to write to Table 2.  The method might need to 
+            // read table 1 to verify that it has the right values.
+            // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+
+
+
+
             // SQL statement that gives us a resultset for the DataTable object.  Note that
             // this query is rigged so that it will always return 0 records.  This is because
             // we only want the resultset to define the fields of the DataTable object.
