@@ -17,7 +17,7 @@ namespace TimeSeriesLibrary
         #region Method ConvertBlobToArrayRegular
         /// <summary>
         /// This method converts a BLOB (byte array) to an array of regular time step timeseries 
-        /// values (double precision floats).  The caller must give meta parameters of the
+        /// values (double precision floats).  The caller must give parameters of the
         /// time series, such as time step size and start date.  The method will convert
         /// only a portion of the BLOB if the applyLimits parameter is true, according to
         /// the parameter values nReqValues, reqStartDate, and reqEndDate.  If the 
@@ -233,9 +233,10 @@ namespace TimeSeriesLibrary
         }
 
         /// <summary>
-        /// Method computes an MD5 Checksum for the timeseries.  The input to the MD5 hash includes the 
-        /// timeseries' BLOB of values, plus a short string of numbers that TimeSeriesLibrary
-        /// is responsible for keeping in accord with the BLOB.
+        /// This method computes an MD5 Checksum for the timeseries.  The input to the MD5 hash includes
+        /// the list of parameters of the time series, and the list of checksums for each of the traces in
+        /// the time series ensemble.  The list of the traces' checksums are passed to this method within 
+        /// a list of ITimeSeriesTrace objects.
         /// </summary>
         /// <param name="timeStepUnit">TSDateCalculator.TimeStepUnitCode value for Minute,Hour,Day,Week,Month, Year, or Irregular</param>
         /// <param name="timeStepQuantity">The number of the given unit that defines the time step.
@@ -243,19 +244,22 @@ namespace TimeSeriesLibrary
         /// <param name="timeStepCount">The number of time steps stored in the BLOB</param>
         /// <param name="blobStartDate">Date of the first time step in the BLOB</param>
         /// <param name="blobEndDate">Date of the last time step in the BLOB</param>
-        /// <param name="blobData">the BLOB (byte array) of timeseries values</param>
+        /// <param name="traceList">a list of trace object whose checksums have already been computed.</param>
         /// <returns>the Checksum as a byte[16] array</returns>
         public static byte[] ComputeChecksum(
                     TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
                     int timeStepCount, DateTime blobStartDate, DateTime blobEndDate,
                     List<ITimeSeriesTrace> traceList)
         {
-            // The MD5 Checksum will be computed from two byte arrays.  The first byte array contains
-            // a series of meta parameters that TimeSeriesLibrary that are inherently linked with the
-            // time series array.  The second byte array is the time series array itself.
+            // The MD5 Checksum will be computed from two basic parts.  The first part is
+            // the list of the checksums of each trace in the time series.  The second is
+            // the list of parameters that define the time series.  The Checksum will be
+            // computed from these inputs expressed as byte arrays.  The first part--the
+            // checksums of the individual traces--is already stored as a set of byte arrays.
+            // For the second part we must take some extra measures to express the list of
+            // parameters as a byte array.
 
-
-            // This constant expresses the length of the byte array of meta parameters.  The
+            // This constant expresses the length of the byte array of parameters.  The
             // calculation of the constant must be in accord with the parameters that are 
             // actually assigned into the byte array below.
             const int LengthOfParamInputForChecksum =
@@ -273,13 +277,13 @@ namespace TimeSeriesLibrary
                                 "zero in order to ensure consistency in the checksum." );
             }
 
-            // Byte array for the series of meta parameters that are fed into the MD5 algorithm first.
+            // Byte array for the series of parameters that are fed into the MD5 algorithm
             byte[] binArray = new byte[LengthOfParamInputForChecksum];
             // MemoryStream and BinaryWriter objects allow us to write data into the byte array
             MemoryStream binStream = new MemoryStream(binArray);
             BinaryWriter binWriter = new BinaryWriter(binStream);
 
-            // Write relevant meta-parameters (not including the BLOB itself) into a short byte array
+            // Write relevant parameters (not including the BLOB itself) into a short byte array
 
             // TimeStepUnit
             binWriter.Write((short)timeStepUnit);
@@ -293,27 +297,39 @@ namespace TimeSeriesLibrary
 
             // MD5CryptoServiceProvider object has methods to compute the Checksum
             MD5CryptoServiceProvider md5Hasher = new MD5CryptoServiceProvider();
+            // make sure that we have a list of traces that is ordered by trace number
+            List<ITimeSeriesTrace> orderedTraceList = traceList.OrderBy(t => t.TraceNumber).ToList();
             // loop through all traces
-            foreach(ITimeSeriesTrace traceObject in traceList)
+            foreach(ITimeSeriesTrace traceObject in orderedTraceList)
                 // feed the checksum of the trace into the MD5 hash computer
                 md5Hasher.TransformBlock(traceObject.Checksum, 0, 16, null, 0);
-            // feed the short byte array of meta-parameters into the MD5 hash computer
+            // feed the short byte array of parameters into the MD5 hash computer
             md5Hasher.TransformFinalBlock(binArray, 0, LengthOfParamInputForChecksum);
             // return the hash (Checksum) value
             return md5Hasher.Hash;
         }
+        /// <summary>
+        /// This method computes the checksum for an individual trace of a time series, where the time
+        /// series is understood to be an ensemble of one or more traces.  The checksum of a trace is
+        /// computed from the trace number and from the BLOB that contains the values for each time 
+        /// step of the time series.
+        /// </summary>
+        /// <param name="traceObject">an ITimeSeriesTrace object that contains the trace number and the 
+        /// BLOB for this trace.  The BLOB must be computed before calling this method, as the method will
+        /// not compute it.</param>
+        /// <returns>the Checksum as a byte[16] array</returns>
         public static byte[] ComputeTraceChecksum(ITimeSeriesTrace traceObject)
         {
             // The MD5 Checksum will be computed from two byte arrays.  The first byte array contains
             // the trace number and the second byte array is the time series array itself.
 
-            // Byte array for the series of meta parameters that are fed into the MD5 algorithm first.
+            // Byte array for the series of parameters that are fed into the MD5 algorithm first.
             byte[] binArray = new byte[sizeof(Int32)];
             // MemoryStream and BinaryWriter objects allow us to write data into the byte array
             MemoryStream binStream = new MemoryStream(binArray);
             BinaryWriter binWriter = new BinaryWriter(binStream);
 
-            // Write relevant meta-parameters (not including the BLOB itself) into a short byte array
+            // Write relevant parameters (not including the BLOB itself) into a short byte array
 
             // Trace Number
             binWriter.Write(traceObject.TraceNumber);

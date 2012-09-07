@@ -238,6 +238,9 @@ namespace TimeSeriesLibrary
                     List<TimeSeriesValue> dateValueList,
                     ref byte[] checksum)
         {
+
+            throw new NotImplementedException();
+            /*
             // Error checks
             if (dateValueList.Count != timeStepCount)
                 throw new TSLibraryException(ErrCode.Enum.Checksum_Improper_Count);
@@ -252,7 +255,7 @@ namespace TimeSeriesLibrary
             checksum = TSBlobCoder.ComputeChecksum(timeStepUnit, timeStepQuantity,
                         timeStepCount, blobStartDate, blobEndDate, blobData);
             
-            return blobData;
+            return blobData;*/
         }
         #endregion
 
