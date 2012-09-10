@@ -39,22 +39,22 @@ namespace TimeSeriesLibrary
         /// <summary>
         /// object that contains the meta-parameter values that TimeSeriesLibrary must maintain alongside the BLOB
         /// </summary>
-        public TSParameters tsParameters = new TSParameters();
+        public TSParameters TSParameters = new TSParameters();
         /// <summary>
         /// MD5 Checksum computed from the BLOB and meta-parameters when the timeseries is saved to database.
         /// </summary>
         public Byte[] Checksum; 
         #endregion
 
-        #region Properties linked to tsParameters field
+        #region Properties linked to TSParameters field
         /// <summary>
         /// code for the units that measure the regular time step (e.g. hour, day, month)
         /// </summary>
         // This property simply refers to a field of the TSParameters object
         public TSDateCalculator.TimeStepUnitCode TimeStepUnit
         {
-            get { return tsParameters.TimeStepUnit; }
-            set { tsParameters.TimeStepUnit = value; }
+            get { return TSParameters.TimeStepUnit; }
+            set { TSParameters.TimeStepUnit = value; }
         }
         /// <summary>
         /// number of units per time step (e.g. Quantity=6 for 6-hour time steps)
@@ -62,8 +62,8 @@ namespace TimeSeriesLibrary
         // This property simply refers to a field of the TSParameters object
         public short TimeStepQuantity
         {
-            get { return tsParameters.TimeStepQuantity; }
-            set { tsParameters.TimeStepQuantity = value; }
+            get { return TSParameters.TimeStepQuantity; }
+            set { TSParameters.TimeStepQuantity = value; }
         }
         /// <summary>
         /// Date of the first time step stored in the databasepublic 
@@ -71,8 +71,8 @@ namespace TimeSeriesLibrary
         // This property simply refers to a field of the TSParameters object
         public DateTime BlobStartDate
         {
-            get { return tsParameters.BlobStartDate; }
-            set { tsParameters.BlobStartDate = value; }
+            get { return TSParameters.BlobStartDate; }
+            set { TSParameters.BlobStartDate = value; }
         }
         /// <summary>
         /// Date of the last time step stored in the database
@@ -80,8 +80,8 @@ namespace TimeSeriesLibrary
         // This property simply refers to a field of the TSParameters object
         public DateTime BlobEndDate
         {
-            get { return tsParameters.BlobEndDate; }
-            set { tsParameters.BlobEndDate = value; }
+            get { return TSParameters.BlobEndDate; }
+            set { TSParameters.BlobEndDate = value; }
         }
         /// <summary>
         /// The number of time steps stored in the database
@@ -89,8 +89,8 @@ namespace TimeSeriesLibrary
         // This property simply refers to a field of the TSParameters object
         public int TimeStepCount
         {
-            get { return tsParameters.TimeStepCount; }
-            set { tsParameters.TimeStepCount = value; }
+            get { return TSParameters.TimeStepCount; }
+            set { TSParameters.TimeStepCount = value; }
         }
         #endregion
 
@@ -381,20 +381,17 @@ namespace TimeSeriesLibrary
         {
             ErrorCheckWriteValues(doWriteToDB, tsImport);
             // The method's parameters are used to compute the meta-parameters of this time series
-            tsParameters.SetParametersRegular(
+            TSParameters.SetParametersRegular(
                     (TSDateCalculator.TimeStepUnitCode)timeStepUnit, timeStepQuantity,
                     timeStepCount, outStartDate);
+            IsInitialized = true;
             // Compute the Checksum for this time series ensemble.  Because this is a newly
             // written series, there are not yet any traces to incorporate into the checksum
             // (presumably those will be added later).
-            Checksum = TSBlobCoder.ComputeChecksum(tsParameters, new List<ITimeSeriesTrace>());
+            Checksum = TSBlobCoder.ComputeChecksum(TSParameters, new List<ITimeSeriesTrace>());
             // WriteValues method will handle all of the database interaction
             if (doWriteToDB)
                 WriteParameters(extraParamNames, extraParamValues);
-            // Save the information that this method has computed into a TSImport object
-            if (tsImport != null)
-                throw new NotImplementedException();
-                //tsImport.RecordFromTS(this, blobData);
 
             return Id;
         }
@@ -425,18 +422,15 @@ namespace TimeSeriesLibrary
         {
             ErrorCheckWriteValues(doWriteToDB, tsImport);
             // The method's parameters are used to compute the meta-parameters of this time series
-            tsParameters.SetParametersIrregular(timeStepCount, outStartDate, outEndDate);
+            TSParameters.SetParametersIrregular(timeStepCount, outStartDate, outEndDate);
+            IsInitialized = true;
             // Compute the Checksum for this time series ensemble.  Because this is a newly
             // written series, there are not yet any traces to incorporate into the checksum
             // (presumably those will be added later).
-            Checksum = TSBlobCoder.ComputeChecksum(tsParameters, new List<ITimeSeriesTrace>());
+            Checksum = TSBlobCoder.ComputeChecksum(TSParameters, new List<ITimeSeriesTrace>());
             // WriteValues method will handle all of the database interaction
             if (doWriteToDB)
                 WriteParameters(extraParamNames, extraParamValues);
-            // Save the information that this method has computed into a TSImport object
-            if (tsImport != null)
-                throw new NotImplementedException();
-                //tsImport.RecordFromTS(this, blobData);
 
             return Id;
         }
@@ -539,16 +533,21 @@ namespace TimeSeriesLibrary
                                 String.Format("The method can only process regular time series, but" +
                                 "the record with Id {0} is irregular.", id));
             }
-            ITimeSeriesTrace traceObject = new TSTrace { TraceNumber = traceNumber };
+            ITimeSeriesTrace traceObject;
+            if(tsImport!=null)
+                traceObject = tsImport.TraceList[0];
+            else
+                traceObject = new TSTrace { TraceNumber = traceNumber };
             // Convert the array of double values into a byte array...a BLOB
             traceObject.ValueBlob = TSBlobCoder.ConvertArrayToBlobRegular(TimeStepCount, valueArray);
             // compute the Checksum for this trace
             traceObject.Checksum = TSBlobCoder.ComputeTraceChecksum(traceObject);
 
             // Write a new record to the trace table
-            WriteTrace(traceObject);
+            if(doWriteToDB)
+                WriteTrace(traceObject);
             // update the checksum in the parameters table
-            UpdateParametersChecksum();
+            UpdateParametersChecksum(doWriteToDB, tsImport);
         }
         /// <summary>
         /// This method writes a new record to the trace table for an irregular time step series.
@@ -579,16 +578,21 @@ namespace TimeSeriesLibrary
                                 String.Format("The method can only process irregular time series, but" +
                                 "the record with Id {0} is regular.", id));
             }
-            ITimeSeriesTrace traceObject = new TSTrace { TraceNumber = traceNumber };
+            ITimeSeriesTrace traceObject;
+            if (tsImport != null)
+                traceObject = tsImport.TraceList[0];
+            else
+                traceObject = new TSTrace { TraceNumber = traceNumber };
             // Convert the array of double values into a byte array...a BLOB
             traceObject.ValueBlob = TSBlobCoder.ConvertArrayToBlobIrregular(TimeStepCount, dateValueArray);
             // compute the Checksum for this trace
             traceObject.Checksum = TSBlobCoder.ComputeTraceChecksum(traceObject);
 
             // Write a new record to the trace table
-            WriteTrace(traceObject);
+            if (doWriteToDB)
+                WriteTrace(traceObject);
             // update the checksum in the parameters table
-            UpdateParametersChecksum();
+            UpdateParametersChecksum(doWriteToDB, tsImport);
         }
         /// <summary>
         /// This method writes the data contained in the traceObject parameter into a single
@@ -640,58 +644,69 @@ namespace TimeSeriesLibrary
         /// This method updates the value in the Checksum field of the parameters table.
         /// It does not modify any other fields.
         /// </summary>
-        private void UpdateParametersChecksum()
+        private void UpdateParametersChecksum(bool doWriteToDB, TSImport tsImport)
         {
+            String comm;
             // This List will contain one item for each trace for this time series.  The primary
             // purpose of the list is to store the checksum for each trace, since the checksum
             // of the timeseries is computed from the list of checksums from each of its traces.
-            List<ITimeSeriesTrace> traceObjects = new List<ITimeSeriesTrace>();
+            List<ITimeSeriesTrace> traceObjects;
+            if (tsImport != null)
+                traceObjects = tsImport.TraceList;
+            else
+                traceObjects = new List<ITimeSeriesTrace>();
 
-            //
-            // Query the Trace table to get all traces for this time series
-
-            // SQL statement that gives us a resultset for the DataTable object.
-            String comm = String.Format("select TraceNumber, Checksum" +
-                                 "  from {0} where TimeSeries_Id={1} order by TraceNumber", TraceTableName, Id);
-            // SqlDataAdapter object will use the query to fill the DataTable
-            using (SqlDataAdapter adp = new SqlDataAdapter(comm, Connx))
+            if (doWriteToDB)
             {
-                // SqlCommandBuilder object must be instantiated in order for us to call
-                // the Update method of the SqlDataAdapter.  Interestingly, we only need to
-                // instantiate this object--we don't need to use it in any other way.
-                using (SqlCommandBuilder bld = new SqlCommandBuilder(adp))
+                //
+                // Query the Trace table to get all traces for this time series
+
+                // SQL statement that gives us a resultset for the DataTable object.
+                comm = String.Format("select TraceNumber, Checksum" +
+                                     "  from {0} where TimeSeries_Id={1} order by TraceNumber", TraceTableName, Id);
+                // SqlDataAdapter object will use the query to fill the DataTable
+                using (SqlDataAdapter adp = new SqlDataAdapter(comm, Connx))
                 {
-                    DataTable dTable = new DataTable();
-                    // Execute the query to fill the DataTable object
-                    try
+                    // SqlCommandBuilder object must be instantiated in order for us to call
+                    // the Update method of the SqlDataAdapter.  Interestingly, we only need to
+                    // instantiate this object--we don't need to use it in any other way.
+                    using (SqlCommandBuilder bld = new SqlCommandBuilder(adp))
                     {
-                        adp.Fill(dTable);
-                    }
-                    catch (Exception e)
-                    {   // The query failed
-                        throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
-                                        "Table '" + ParametersTableName + "' could not be opened using query:\n\n." + comm, e);
-                    }
-                    // Loop through all traces, and record the values that will be needed to compute the
-                    // checksum of the ensemble time series.  Note that this does not include the BLOB 
-                    // of the trace.
-                    foreach (DataRow row in dTable.Rows)
-                    {
-                        ITimeSeriesTrace traceObject = new TSTrace();
-                        traceObject.TraceNumber = (int)row["TraceNumber"];
-                        traceObject.Checksum = (byte[])row["Checksum"];
-                        traceObjects.Add(traceObject);
+                        DataTable dTable = new DataTable();
+                        // Execute the query to fill the DataTable object
+                        try
+                        {
+                            adp.Fill(dTable);
+                        }
+                        catch (Exception e)
+                        {   // The query failed
+                            throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
+                                            "Table '" + ParametersTableName + "' could not be opened using query:\n\n." + comm, e);
+                        }
+                        // Loop through all traces, and record the values that will be needed to compute the
+                        // checksum of the ensemble time series.  Note that this does not include the BLOB 
+                        // of the trace.
+                        foreach (DataRow row in dTable.Rows)
+                        {
+                            ITimeSeriesTrace traceObject = new TSTrace();
+                            traceObject.TraceNumber = (int)row["TraceNumber"];
+                            traceObject.Checksum = (byte[])row["Checksum"];
+                            traceObjects.Add(traceObject);
+                        }
                     }
                 }
             }
             // Compute the new checksum of the ensemble
             Checksum = TSBlobCoder.ComputeChecksum(TimeStepUnit, TimeStepQuantity, TimeStepCount,
                                      BlobStartDate, BlobEndDate, traceObjects);
-            // write the new checksum to the parameters table
-            comm = String.Format("update {0} set Checksum={1} where Id={2}",
-                            ParametersTableName, ByteArrayToString(Checksum), Id);
-            SqlCommand sqlCommand = new SqlCommand(comm, Connx);
-            sqlCommand.ExecuteNonQuery();
+            if (doWriteToDB)
+            {
+                // write the new checksum to the parameters table
+                comm = String.Format("update {0} set Checksum={1} where Id={2}",
+                                ParametersTableName, ByteArrayToString(Checksum), Id);
+                SqlCommand sqlCommand = new SqlCommand(comm, Connx);
+                sqlCommand.ExecuteNonQuery();
+            }
         }
         #endregion
 
@@ -857,7 +872,7 @@ namespace TimeSeriesLibrary
             /*
                         ErrorCheckWriteValues(doWriteToDB, tsImport);
                         // The method's parameters are used to compute the meta-parameters of this time series
-                        tsParameters.SetParametersRegular(
+                        TSParameters.SetParametersRegular(
                                 (TSDateCalculator.TimeStepUnitCode)timeStepUnit, timeStepQuantity, 
                                 nOutValues, outStartDate);
 
@@ -900,12 +915,12 @@ namespace TimeSeriesLibrary
             /*
             ErrorCheckWriteValues(doWriteToDB, tsImport);
             // The method's parameters are used to compute the meta-parameters of this time series
-            tsParameters.SetParametersIrregular(nOutValues, dateValueArray);
+            TSParameters.SetParametersIrregular(nOutValues, dateValueArray);
 
             // Convert the array of double values into a byte array...a BLOB
             Byte[] blobData = TSBlobCoder.ConvertArrayToBlobIrregular(TimeStepCount, dateValueArray);
             // compute the Checksum
-            Checksum = TSBlobCoder.ComputeChecksum(tsParameters, blobData);
+            Checksum = TSBlobCoder.ComputeChecksum(TSParameters, blobData);
 
             // WriteValues method will handle all of the database interaction
             if (doWriteToDB)

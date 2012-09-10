@@ -55,8 +55,6 @@ namespace TimeSeriesLibrary
         public String EPart;
         public String Units;
         public String TimeSeriesType;
-        public int TraceNumber;
-
         
         // These fields are meta-parameters of the BLOB that must be recorded in a consistent
         // manner with the BLOB itself.  The fields are recorded to the TSImport object
@@ -67,12 +65,10 @@ namespace TimeSeriesLibrary
         public DateTime BlobStartDate;
         public DateTime BlobEndDate;
         public byte[] Checksum;
-        
-        /// <summary>
-        /// The BLOB (byte array) of time series values that was created by TimeSeriesLibrary.
-        /// </summary>
-        public byte[] BlobData;  // This is only recorded by non-detailed XML methods.
 
+        // This list contains an object for each trace of the time series.  Each object
+        // in the list contains a trace number, a BLOB containing time series values, and a checksum.
+        public List<ITimeSeriesTrace> TraceList = new List<ITimeSeriesTrace>();
 
         #region Class Constructor
         /// <summary>
@@ -93,6 +89,10 @@ namespace TimeSeriesLibrary
         public TSImport(Boolean isDetailed)
         {
             IsDetailed = isDetailed;
+
+            // Add a single trace to TraceList.  Currently, the library is not designed to
+            // build a list of more than one trace.
+            TraceList.Add(new TSTrace());
         }
         #endregion
 
@@ -106,7 +106,22 @@ namespace TimeSeriesLibrary
         public void SetEPart(XmlReader xmlReader) { SetDetailFieldString(ref EPart, xmlReader); }
         public void SetUnits(XmlReader xmlReader) { SetDetailFieldString(ref Units, xmlReader); }
         public void SetTimeSeriesType(XmlReader xmlReader) { SetDetailFieldString(ref TimeSeriesType, xmlReader); }
-        public void SetTraceNumber(XmlReader xmlReader) { SetDetailFieldInt(ref TraceNumber, xmlReader, 1); }
+
+        public void SetTraceNumber(XmlReader xmlReader) 
+        {
+            String tagName = xmlReader.Name;
+            String s = xmlReader.ReadElementContentAsString();
+
+            if (IsDetailed)
+            {
+                if (s == String.Empty)
+                    TraceList[0].TraceNumber = 1;
+                else
+                    TraceList[0].TraceNumber = int.Parse(s);
+            }
+            else
+                AddUnprocessedElement(xmlReader.ReadOuterXml());
+        }
 
         // The field that is passed as a parameter will be assigned from the current XML 
         // element if IsDetailed is true.  Otherwise, the XML element is recorded in the 
@@ -129,7 +144,7 @@ namespace TimeSeriesLibrary
             if (IsDetailed)
             {
                 if (s == String.Empty)
-                    i = (int)defaultVal;
+                    i = defaultVal;
                 else
                     i = int.Parse(s);
             }
@@ -154,8 +169,8 @@ namespace TimeSeriesLibrary
 
         #region Method RecordFromTSParameters()
         /// <summary>
-        /// This method copies the meta parameters of a BLOB from a TSParameters object
-        /// (which is designed to hold meta parameters) into this TSImport object.
+        /// This method copies the parameters of a time series from a TSParameters object
+        /// into this TSImport object.
         /// </summary>
         /// <param name="tsp">The TSParameters object that values will be copied from</param>
         public void RecordFromTSParameters(TSParameters tsp)
@@ -172,20 +187,16 @@ namespace TimeSeriesLibrary
         #region Method RecordFromTS()
         /// <summary>
         /// This method copies into this TSImport object:
-        /// a BLOB (byte array),
-        /// the meta parameters of the BLOB,
-        /// the MD5 checksum for the BLOB and its meta parameters,
-        /// the ID of the database record for the time series.
+        ///      the parameters of the time series
+        ///      the MD5 checksum for the entire time series
+        ///      the ID of the database record for the time series.
         /// </summary>
         /// <param name="tsp">The TS object that values will be copied from</param>
-        /// <param name="blobData">the BLOB (byte array) of time series values</param>
-        public void RecordFromTS(TS ts, byte[] blobData)
+        public void RecordFromTS(TS ts)
         {
             Id = ts.Id;
-            RecordFromTSParameters(ts.tsParameters);
+            RecordFromTSParameters(ts.TSParameters);
             Checksum = ts.Checksum;
-            if(IsDetailed)
-                BlobData = blobData;
         }
         #endregion
 

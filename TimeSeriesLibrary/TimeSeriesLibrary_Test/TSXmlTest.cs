@@ -127,14 +127,14 @@ namespace TimeSeriesLibrary_Test
             // original trial.  However, it is good if the test flags any change, to ensure that the
             // developer can account for any change.  E.g., if the original value was incorrect, then
             // that should be documented and the new output should be scrutinized.
-            Assert.AreEqual(BitConverter.ToString(TsImportList[0].Checksum), "18-40-AD-03-C4-26-FE-2F-A5-21-5A-1A-A4-27-CF-5B");
-            Assert.AreEqual(BitConverter.ToString(TsImportList[1].Checksum), "18-58-54-B8-B7-BC-B5-4A-B3-C1-BB-EC-44-2E-81-7F");
-            Assert.AreEqual(BitConverter.ToString(TsImportList[2].Checksum), "A9-E0-24-D3-B7-E3-6F-29-73-08-AA-2A-AC-4A-64-5D");
+            Assert.AreEqual(BitConverter.ToString(TsImportList[0].Checksum), "AA-EE-42-CD-C9-80-0D-28-DB-3B-A9-0B-81-1D-E8-E9");
+            Assert.AreEqual(BitConverter.ToString(TsImportList[1].Checksum), "BE-FB-A0-80-94-E4-27-55-43-0D-5C-1E-BA-CC-9E-5E");
+            Assert.AreEqual(BitConverter.ToString(TsImportList[2].Checksum), "52-75-33-AB-4D-2D-5B-D5-44-6F-2D-55-55-A2-76-1B");
 
             List<TimeSeriesValue> tsvList = null;
             // Verify BLOB # 1 in import list
             TsLib.ConvertBlobToListAll(TsImportList[0].TimeStepUnit, TsImportList[0].TimeStepQuantity,
-                        TsImportList[0].BlobStartDate, TsImportList[0].BlobData,
+                        TsImportList[0].BlobStartDate, TsImportList[0].TraceList[0].ValueBlob,
                         ref tsvList);
             Assert.AreEqual(tsvList.Count, 9);
             Assert.AreEqual(tsvList[0].Value, 12.3);
@@ -143,7 +143,7 @@ namespace TimeSeriesLibrary_Test
             Assert.AreEqual(tsvList[8].Value, 12.4);
             // Verify BLOB # 2 in import list
             TsLib.ConvertBlobToListAll(TsImportList[1].TimeStepUnit, TsImportList[1].TimeStepQuantity,
-                        TsImportList[1].BlobStartDate, TsImportList[1].BlobData,
+                        TsImportList[1].BlobStartDate, TsImportList[1].TraceList[0].ValueBlob,
                         ref tsvList);
             Assert.AreEqual(tsvList.Count, 11);
             Assert.AreEqual(tsvList[0].Value, 12.5);
@@ -152,7 +152,7 @@ namespace TimeSeriesLibrary_Test
             Assert.AreEqual(tsvList[10].Value, 12.6);
             // Verify BLOB # 3 in import list
             TsLib.ConvertBlobToListAll(TsImportList[2].TimeStepUnit, TsImportList[2].TimeStepQuantity,
-                        TsImportList[2].BlobStartDate, TsImportList[2].BlobData,
+                        TsImportList[2].BlobStartDate, TsImportList[2].TraceList[0].ValueBlob,
                         ref tsvList);
             Assert.AreEqual(tsvList.Count, 17);
             Assert.AreEqual(tsvList[0].Value, 312.5); Assert.AreEqual(tsvList[0].Date, DateTime.Parse("01/01/1930 11:59:00"));
@@ -183,9 +183,9 @@ namespace TimeSeriesLibrary_Test
             Assert.AreEqual(TsImportList[1].TimeSeriesType, "INST-VAL");
             Assert.AreEqual(TsImportList[2].TimeSeriesType, "INST-VAL");
             // Verify TraceNumber in import list
-            Assert.AreEqual(TsImportList[0].TraceNumber, 2);
-            Assert.AreEqual(TsImportList[1].TraceNumber, 5);
-            Assert.AreEqual(TsImportList[2].TraceNumber, 22);
+            Assert.AreEqual(TsImportList[0].TraceList[0].TraceNumber, 2);
+            Assert.AreEqual(TsImportList[1].TraceList[0].TraceNumber, 5);
+            Assert.AreEqual(TsImportList[2].TraceList[0].TraceNumber, 22);
             // Verify UnprocessedElements in import list
             Assert.AreEqual(TsImportList[1].UnprocessedElements, null);
             Assert.AreEqual(TsImportList[2].UnprocessedElements, " <OldManTag></OldManTag> <Schlap>Spoing-oing-oing</Schlap>");

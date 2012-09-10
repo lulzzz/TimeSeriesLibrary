@@ -300,7 +300,7 @@ namespace TimeSeriesLibrary
         {
             // Construct new TSXml object without SqlConnection object and table name
             TSXml tsXml = new TSXml();
-            // Method in the TSXML object does all the work
+            // Method in the TSXml object does all the work
             return tsXml.ReadAndStore(xmlFileName, null, tsImportList, false, true);
         }
         /// <summary>
@@ -324,7 +324,7 @@ namespace TimeSeriesLibrary
             SqlConnection connx = GetConnectionFromId(connectionNumber);
             // Construct new TSXml object with SqlConnection object and table name
             TSXml tsXml = new TSXml(connx, tableName, traceTableName);
-            // Method in the TSXML object does all the work
+            // Method in the TSXml object does all the work
             return tsXml.ReadAndStore(xmlFileName, null, tsImportList, true, true);
         }
         #endregion

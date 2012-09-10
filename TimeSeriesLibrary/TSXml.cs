@@ -62,6 +62,10 @@ namespace TimeSeriesLibrary
         /// list 'tsImportList', which records metadata of the timeseries that is not processed
         /// directly by TimeSeriesLibrary.  Therefore, the process that calls TimeSeriesLibrary
         /// can process tsImportList to complete the importation of the timeseries.
+        /// 
+        /// NOTE: The method will currently not connect more than one trace to a time series.
+        /// It effectively assumes that every time series contains one trace.
+        /// 
         /// </summary>
         /// <param name="xmlFileName">Name of the file that will be read.  If xmlText is null,
         /// then this parameter must be non-null, and vice-versa.</param>
@@ -69,9 +73,9 @@ namespace TimeSeriesLibrary
         /// then this parameter must be non-null, and vice-versa.</param>
         /// <param name="tsImportList">List of TSImport objects that this function records for 
         /// each series that is imported.  This method appends the list.</param>
-        /// <param name="storeToDatabase">If true, then this method will write the timeseries from 
+        /// <param name="shouldStoreToDatabase">If true, then this method will write the timeseries from 
         /// the XML file to database.  If false, then this method does not write to database.</param>
-        /// <param name="recordDetails">If true, then this method stores the BLOB and detailed
+        /// <param name="shouldRecordDetails">If true, then this method stores the BLOB and detailed
         /// elements to the list of TSImport objects.  If false, then this method does not store
         /// the BLOB to the TSImport object, and all fields that TimeSeriesLibrary does not process
         /// are stored to the TSImport object's UnprocessedElements field.</param>
@@ -79,7 +83,7 @@ namespace TimeSeriesLibrary
         public int ReadAndStore(
                         String xmlFileName, String xmlText,
                         List<TSImport> tsImportList,
-                        Boolean storeToDatabase, Boolean recordDetails)
+                        Boolean shouldStoreToDatabase, Boolean shouldRecordDetails)
         {
             String s;       // ephemeral String object
             String DataString="";  // String that holds the unparsed DataSeries
@@ -100,7 +104,7 @@ namespace TimeSeriesLibrary
             if (xmlFileName != null && xmlText != null)
                 throw new TSLibraryException(ErrCode.Enum.Xml_Memory_File_Exclusion,
                             "The method's xmlFileName and xmlText parameters can not both be non-null.");
-            if(storeToDatabase && Connx==null)
+            if(shouldStoreToDatabase && Connx==null)
                 throw new TSLibraryException(ErrCode.Enum.Xml_Connection_Not_Initialized,
                             "The method is directed to store results to database, " +
                             "but a database connection has not been assigned in the constructor.");
@@ -153,7 +157,7 @@ namespace TimeSeriesLibrary
                         XmlReader oneSeriesXmlReader = xmlReader.ReadSubtree();
                         // A new TSImport object will store properties of this time series that the TimeSeriesLibrary
                         // is not designed to handle.
-                        TSImport tsImport = new TSImport(recordDetails);
+                        TSImport tsImport = new TSImport(shouldRecordDetails);
                         // Flags will indicate if the XML is missing any data
                         foundTimeStepUnit = foundTimeStepQuantity = foundStartDate = foundValueArray = false;
 
@@ -286,7 +290,11 @@ namespace TimeSeriesLibrary
                             // The TS object is used to save one record to the database table
                             TS ts = new TS(Connx, TableName, TraceTableName);
                             // Write to the database and record values in the TSImport object
-                            ts.WriteValuesIrregular(storeToDatabase, tsImport, tsImport.TraceNumber, dateValueArray.Length, dateValueArray);
+                            ts.WriteParametersIrregular(shouldStoreToDatabase, tsImport,
+                                    dateValueArray.Count(), StartDate, dateValueArray.Last().Date, null, null);
+                            ts.WriteTraceIrregular(0, shouldStoreToDatabase, tsImport,
+                                    tsImport.TraceList[0].TraceNumber, dateValueArray);
+                            tsImport.RecordFromTS(ts);
                             // Done with the TS object.
                             ts = null;
                         }
@@ -300,9 +308,11 @@ namespace TimeSeriesLibrary
                             // The TS object is used to save one record to the database table
                             TS ts = new TS(Connx, TableName, TraceTableName);
                             // Write to the database and record values in the TSImport object
-                            ts.WriteValuesRegular(storeToDatabase, tsImport, tsImport.TraceNumber,
-                                                (short)TimeStepUnit, TimeStepQuantity,
-                                                valueArray.Length, StartDate, valueArray);
+                            ts.WriteParametersRegular(shouldStoreToDatabase, tsImport,
+                                    (short)TimeStepUnit, TimeStepQuantity, valueArray.Count(), StartDate, null, null);
+                            ts.WriteTraceRegular(0, shouldStoreToDatabase, tsImport,
+                                    tsImport.TraceList[0].TraceNumber, valueArray);
+                            tsImport.RecordFromTS(ts);
                             // Done with the TS object.
                             ts = null;
                         }
