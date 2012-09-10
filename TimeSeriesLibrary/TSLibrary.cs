@@ -217,7 +217,10 @@ namespace TimeSeriesLibrary
         }
         /// <summary>
         /// This method converts a List of TimeSeriesValue objects into a BLOB (byte array) of
-        /// time series values and computes a checksum from the BLOB and its meta parameters.
+        /// time series values and computes a checksum from the BLOB.  The BLOB and the checksum
+        /// are both stored in the ITimeSeriesTrace parameter.  The TraceNumber property of the
+        /// ITimeSeriesTrace parameter must be set before calling this method.
+        /// 
         /// The entire List is converted into the BLOB--i.e., the method does not take any 
         /// parameters for limiting the size of the List that is created.  This method will
         /// throw exceptions if the meta-parameters that are passed in are not consistent
@@ -230,17 +233,16 @@ namespace TimeSeriesLibrary
         /// <param name="blobStartDate">Date of the first time step in the BLOB</param>
         /// <param name="blobEndDate">Date of the last time step in the BLOB</param>
         /// <param name="dateValueList">A List of TimeSeriesValue objects that will be converted to a BLOB</param>
-        /// <param name="checksum">The checksum (a 16-byte array) that will be computed by the method</param>
+        /// <param name="traceObject">an object which contains the a TraceNumber property that is used to 
+        /// compute the checksum.  The computed BLOB and checksum are both saved to the appropriate properties
+        /// of this object.</param>
         /// <returns>The BLOB (byte array) of time series values that was created from dateValueList</returns>
         public byte[] ConvertListToBlobWithChecksum(
                     TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
                     int timeStepCount, DateTime blobStartDate, DateTime blobEndDate,
-                    List<TimeSeriesValue> dateValueList,
-                    ref byte[] checksum)
+                    List<TimeSeriesValue> dateValueList, 
+                    ITimeSeriesTrace traceObject)
         {
-
-            throw new NotImplementedException();
-            /*
             // Error checks
             if (dateValueList.Count != timeStepCount)
                 throw new TSLibraryException(ErrCode.Enum.Checksum_Improper_Count);
@@ -250,15 +252,38 @@ namespace TimeSeriesLibrary
                 throw new TSLibraryException(ErrCode.Enum.Checksum_Improper_EndDate);
             
             // Convert the List dateValueList into a BLOB.  The sibling method does all the work.
-            byte[] blobData = ConvertListToBlob(timeStepUnit, dateValueList);
+            traceObject.ValueBlob = ConvertListToBlob(timeStepUnit, dateValueList);
             // Method in TSBlobCoder class computes the checksum
-            checksum = TSBlobCoder.ComputeChecksum(timeStepUnit, timeStepQuantity,
-                        timeStepCount, blobStartDate, blobEndDate, blobData);
-            
-            return blobData;*/
+            traceObject.Checksum = TSBlobCoder.ComputeTraceChecksum(traceObject);
+
+            return traceObject.ValueBlob;
         }
         #endregion
 
+        #region ComputeChecksum method
+        /// <summary>
+        /// This method computes an MD5 Checksum for the timeseries.  The input to the MD5 hash includes
+        /// the list of parameters of the time series, and the list of checksums for each of the traces in
+        /// the time series ensemble.  The list of the traces' checksums are passed to this method within 
+        /// a list of ITimeSeriesTrace objects.
+        /// </summary>
+        /// <param name="timeStepUnit">TSDateCalculator.TimeStepUnitCode value for Minute,Hour,Day,Week,Month, Year, or Irregular</param>
+        /// <param name="timeStepQuantity">The number of the given unit that defines the time step.
+        /// For instance, if the time step is 6 hours long, then this value is 6.</param>
+        /// <param name="timeStepCount">The number of time steps stored in the BLOB</param>
+        /// <param name="blobStartDate">Date of the first time step in the BLOB</param>
+        /// <param name="blobEndDate">Date of the last time step in the BLOB</param>
+        /// <param name="traceList">a list of trace object whose checksums have already been computed.</param>
+        /// <returns>the Checksum as a byte[16] array</returns>
+        public byte[] ComputeChecksum(
+                    TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
+                    int timeStepCount, DateTime blobStartDate, DateTime blobEndDate,
+                    List<ITimeSeriesTrace> traceList)
+        {
+            return TSBlobCoder.ComputeChecksum(timeStepUnit, timeStepQuantity, timeStepCount,
+                    blobStartDate, blobEndDate, traceList);
+        } 
+        #endregion
 
         #region Public methods for XML import
 
@@ -306,7 +331,7 @@ namespace TimeSeriesLibrary
 
 
         #region Public methods for computing date values
-        DateTime IncrementDate(DateTime startDate, TSDateCalculator.TimeStepUnitCode unit,
+        public DateTime IncrementDate(DateTime startDate, TSDateCalculator.TimeStepUnitCode unit,
                     short stepSize, int numSteps)
         {
             return TSDateCalculator.IncrementDate(startDate, unit, stepSize, numSteps);

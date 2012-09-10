@@ -215,7 +215,7 @@ namespace TimeSeriesLibrary
         #endregion
 
 
-        #region ComputeChecksum() Method
+        #region ComputeChecksum() Methods
         /// <summary>
         /// Method computes an MD5 Checksum for the timeseries.  The input to the MD5 hash includes the 
         /// timeseries' BLOB of values, plus a TSParameters object that contains a short string of 
