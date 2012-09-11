@@ -50,15 +50,14 @@ namespace TimeSeriesLibrary
         /// TSParameters object, using the input parameters given to the method.
         /// </summary>
         public void SetParametersIrregular(
-                    int timeStepCount, TSDateValueStruct[] dateValueArray)
+                    int timeStepCount, DateTime blobStartDate, DateTime blobEndDate)
         {
             // Most of the parameters are straightforward
             TimeStepUnit = TSDateCalculator.TimeStepUnitCode.Irregular;
             TimeStepQuantity = 0;
             TimeStepCount = timeStepCount;
-            // Determine the date of the first and last time step from the input array
-            BlobStartDate = dateValueArray[0].Date;
-            BlobEndDate = dateValueArray[TimeStepCount - 1].Date;
+            BlobStartDate = blobStartDate;
+            BlobEndDate = blobEndDate;
         }
     
     

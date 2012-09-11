@@ -33,8 +33,8 @@ namespace Sandbox
 
         int connNumber;
         TSLibrary tsLib = new TSLibrary();
-        Guid testId1 = new Guid();
-        Guid testId2 = new Guid();
+        int testId1;
+        int testId2;
         DateTime StartDate = new DateTime(1928, 1, 1, 23, 59, 0);
 
         public MainWindow()

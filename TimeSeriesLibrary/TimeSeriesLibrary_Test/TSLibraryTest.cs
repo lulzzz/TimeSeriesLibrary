@@ -248,24 +248,24 @@ namespace TimeSeriesLibrary_Test
 
         // This method is reused by the actual test methods that follow
         public Boolean ComputeTestChecksums(
-                TSDateCalculator.TimeStepUnitCode u1, short q1, List<TimeSeriesValue> list1, ref byte[] chk1,
-                TSDateCalculator.TimeStepUnitCode u2, short q2, List<TimeSeriesValue> list2, ref byte[] chk2)
+                TSDateCalculator.TimeStepUnitCode u1, short q1, List<TimeSeriesValue> list1, ITimeSeriesTrace trace1,
+                TSDateCalculator.TimeStepUnitCode u2, short q2, List<TimeSeriesValue> list2, ITimeSeriesTrace trace2)
         {
             TSLibrary tsLib = new TSLibrary();
 
             tsLib.ConvertListToBlobWithChecksum(
                 u1, q1, list1.Count,
-                list1[0].Date, list1[list1.Count - 1].Date, list1, ref chk1);
+                list1[0].Date, list1[list1.Count - 1].Date, list1, trace1);
 
             tsLib.ConvertListToBlobWithChecksum(
                 u2, q2, list2.Count,
-                list2[0].Date, list2[list2.Count - 1].Date, list2, ref chk2);
+                list2[0].Date, list2[list2.Count - 1].Date, list2, trace2);
 
-            Assert.IsTrue(chk1.Length == 16);
-            Assert.IsTrue(chk2.Length == 16);
+            Assert.IsTrue(trace1.Checksum.Length == 16);
+            Assert.IsTrue(trace2.Checksum.Length == 16);
 
-            for (int i = 0; i < chk1.Length; i++)
-                if (chk1[i] != chk2[i])
+            for (int i = 0; i < trace2.Checksum.Length; i++)
+                if (trace1.Checksum[i] != trace2.Checksum[i])
                     return false;
 
             return true;
@@ -275,7 +275,7 @@ namespace TimeSeriesLibrary_Test
         // Note that this test seems trivial -- equal inputs have to result in equal outputs.
         // However, it seemed important to test this behavior and I couldn't think of how else to do it.
         [TestMethod()]
-        public void ChecksumIdenticalTest()
+        public void ChecksumIdenticalReg()
         {
             List<TimeSeriesValue> duplicateList = new List<TimeSeriesValue>();
 
@@ -284,11 +284,12 @@ namespace TimeSeriesLibrary_Test
             {
                 duplicateList.Add(new TimeSeriesValue { Date = tsv.Date, Value = tsv.Value });
             }
-            byte[] chk1 = null, chk2 = null;
+            TSTrace trace1 = new TSTrace { TraceNumber = 1 };
+            TSTrace trace2 = new TSTrace { TraceNumber = 1 };
 
             Boolean ret = ComputeTestChecksums(
-                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, IrregList1, ref chk1,
-                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, duplicateList, ref chk2);
+                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, IrregList1, trace1,
+                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, duplicateList, trace2);
 
             Assert.IsTrue(ret);
         }
@@ -305,11 +306,12 @@ namespace TimeSeriesLibrary_Test
             // Slightly alter one date in the list
             duplicateList[5].Date = duplicateList[5].Date.AddMinutes(12);
 
-            byte[] chk1 = null, chk2 = null;
+            TSTrace trace1 = new TSTrace { TraceNumber = 1 };
+            TSTrace trace2 = new TSTrace { TraceNumber = 1 };
 
             Boolean ret = ComputeTestChecksums(
-                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, IrregList1, ref chk1,
-                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, duplicateList, ref chk2);
+                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, IrregList1, trace1,
+                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, duplicateList, trace2);
 
             Assert.IsFalse(ret);
         }
@@ -326,11 +328,32 @@ namespace TimeSeriesLibrary_Test
             // Slightly alter one value in the list
             duplicateList[17].Value *= 1.02;
 
-            byte[] chk1 = null, chk2 = null;
+            TSTrace trace1 = new TSTrace { TraceNumber = 1 };
+            TSTrace trace2 = new TSTrace { TraceNumber = 1 };
 
             Boolean ret = ComputeTestChecksums(
-                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, IrregList1, ref chk1,
-                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, duplicateList, ref chk2);
+                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, IrregList1, trace1,
+                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, duplicateList, trace2);
+
+            Assert.IsFalse(ret);
+        }
+        [TestMethod()]
+        public void ChecksumDiffTest5()
+        {
+            List<TimeSeriesValue> duplicateList = new List<TimeSeriesValue>();
+
+            // Create an identical array by deep copy
+            foreach (TimeSeriesValue tsv in IrregList1)
+            {
+                duplicateList.Add(new TimeSeriesValue { Date = tsv.Date, Value = tsv.Value });
+            }
+            // Trace numbers are different
+            TSTrace trace1 = new TSTrace { TraceNumber = 1 };
+            TSTrace trace2 = new TSTrace { TraceNumber = 3 };
+
+            Boolean ret = ComputeTestChecksums(
+                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, IrregList1, trace1,
+                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, duplicateList, trace2);
 
             Assert.IsFalse(ret);
         }
@@ -347,11 +370,12 @@ namespace TimeSeriesLibrary_Test
             // Slightly alter one value in the list
             duplicateList[177].Value *= 1.2;
 
-            byte[] chk1 = null, chk2 = null;
+            TSTrace trace1 = new TSTrace { TraceNumber = 1 };
+            TSTrace trace2 = new TSTrace { TraceNumber = 1 };
 
             Boolean ret = ComputeTestChecksums(
-                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, IrregList1, ref chk1,
-                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, duplicateList, ref chk2);
+                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, IrregList1, trace1,
+                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, duplicateList, trace2);
 
             Assert.IsFalse(ret);
         }
@@ -368,11 +392,12 @@ namespace TimeSeriesLibrary_Test
             // remove the last time step in the list
             duplicateList.RemoveAt(duplicateList.Count - 1);
 
-            byte[] chk1 = null, chk2 = null;
+            TSTrace trace1 = new TSTrace { TraceNumber = 1 };
+            TSTrace trace2 = new TSTrace { TraceNumber = 1 };
 
             Boolean ret = ComputeTestChecksums(
-                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, IrregList1, ref chk1,
-                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, duplicateList, ref chk2);
+                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, IrregList1, trace1,
+                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, duplicateList, trace2);
 
             Assert.IsFalse(ret);
         }
@@ -389,70 +414,15 @@ namespace TimeSeriesLibrary_Test
             // remove a value from the middle of the list
             duplicateList.RemoveAt(150);
 
-            byte[] chk1 = null, chk2 = null;
+            TSTrace trace1 = new TSTrace { TraceNumber = 1 };
+            TSTrace trace2 = new TSTrace { TraceNumber = 1 };
 
             Boolean ret = ComputeTestChecksums(
-                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, IrregList1, ref chk1,
-                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, duplicateList, ref chk2);
+                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, IrregList1, trace1,
+                    TSDateCalculator.TimeStepUnitCode.Irregular, 0, duplicateList, trace2);
 
             Assert.IsFalse(ret);
         }
-        // This compound test method checks that the meta parameters are properly included in the
-        // Checksum.  In the tests, the BLOB should be identical, but the meta parameters are different.
-        [TestMethod()]
-        public void ChecksumDiffParamTest()
-        {
-            List<TimeSeriesValue> duplicateList = new List<TimeSeriesValue>();
-
-            // Create an identical array by deep copy
-            foreach (TimeSeriesValue tsv in RegList1)
-            {
-                duplicateList.Add(new TimeSeriesValue { Date = tsv.Date, Value = tsv.Value });
-            }
-            byte[] chk1 = null, chk2 = null;
-
-            Boolean ret;
-            // The only difference should be the "TimeStepQuantity" parameter
-            ret = ComputeTestChecksums(
-                    TimeStepUnit1, TimeStepQuantity1, RegList1, ref chk1,
-                    TimeStepUnit1, (short)(TimeStepQuantity1 + 1), duplicateList, ref chk2);
-
-            Assert.IsFalse(ret);
-
-            // The only difference should be the "TimeStepUnit" parameter
-            ret = ComputeTestChecksums(
-                    TimeStepUnit1, TimeStepQuantity1, RegList1, ref chk1,
-                    TSDateCalculator.TimeStepUnitCode.Day, TimeStepQuantity1, duplicateList, ref chk2);
-
-            Assert.IsFalse(ret);
-
-            // The only difference should be the "BlobStartDate" parameter
-            duplicateList[0].Date = duplicateList[0].Date.AddMinutes(12);
-            ret = ComputeTestChecksums(
-                    TimeStepUnit1, TimeStepQuantity1, RegList1, ref chk1,
-                    TimeStepUnit1, TimeStepQuantity1, duplicateList, ref chk2);
-
-            Assert.IsFalse(ret);
-
-            // undo the change from above
-            duplicateList[0].Date = RegList1[0].Date;
-            // The only difference should be the "BlobEndDate" parameter
-            duplicateList[duplicateList.Count - 1].Date = duplicateList[duplicateList.Count - 1].Date.AddMinutes(-24);
-            ret = ComputeTestChecksums(
-                    TimeStepUnit1, TimeStepQuantity1, RegList1, ref chk1,
-                    TimeStepUnit1, TimeStepQuantity1, duplicateList, ref chk2);
-
-            Assert.IsFalse(ret);
-
-            // undo the change from above
-            duplicateList[duplicateList.Count - 1].Date = RegList1[duplicateList.Count - 1].Date;
-            // Should be identical, to ensure that the above tests were what they were supposed to be
-            ret = ComputeTestChecksums(
-                    TimeStepUnit1, TimeStepQuantity1, RegList1, ref chk1,
-                    TimeStepUnit1, TimeStepQuantity1, duplicateList, ref chk2);
-
-            Assert.IsTrue(ret);
-        } 
         #endregion
 
 
@@ -463,14 +433,14 @@ namespace TimeSeriesLibrary_Test
         public void ConvertListToBlobWithChecksum_Err0()
         {
             TSLibrary tsLib = new TSLibrary();
-            byte[] checksum = null;
+            TSTrace traceObject = new TSTrace { TraceNumber = 1 };
 
             try
             {
                 byte[] blobData = tsLib.ConvertListToBlobWithChecksum(
                         TSDateCalculator.TimeStepUnitCode.Irregular, 0,
                         IrregList1.Count, IrregList1.First().Date, IrregList1.Last().Date,
-                        IrregList1, ref checksum);
+                        IrregList1, traceObject);
                 Assert.IsTrue(true);
             }
             catch (TSLibraryException)
@@ -478,40 +448,19 @@ namespace TimeSeriesLibrary_Test
                 Assert.Fail("Should not throw any exceptions");
             }
         }
-        // Method should throw an exception b/c the TimeStepQuantity must
-        // be zero when the TimeStepUnit==Irregular.
-        [TestMethod()]
-        public void ConvertListToBlobWithChecksum_Err1()
-        {
-            TSLibrary tsLib = new TSLibrary();
-            byte[] checksum = null;
-
-            try
-            {
-                byte[] blobData = tsLib.ConvertListToBlobWithChecksum(
-                        TSDateCalculator.TimeStepUnitCode.Irregular, 3,
-                        IrregList1.Count, IrregList1.First().Date, IrregList1.Last().Date,
-                        IrregList1, ref checksum);
-                Assert.Fail("Should have thrown exception");
-            }
-            catch (TSLibraryException e)
-            {
-                Assert.AreEqual(ErrCode.Enum.Checksum_Quantity_Nonzero, e.ErrCode);
-            }
-        }
         // Method should throw an exception b/c the TimeStepCount is wrong
         [TestMethod()]
         public void ConvertListToBlobWithChecksum_Err2()
         {
             TSLibrary tsLib = new TSLibrary();
-            byte[] checksum = null;
+            TSTrace traceObject = new TSTrace { TraceNumber = 1 };
 
             try
             {
                 byte[] blobData = tsLib.ConvertListToBlobWithChecksum(
                         TSDateCalculator.TimeStepUnitCode.Irregular, 0,
                         IrregList1.Count+3, IrregList1.First().Date, IrregList1.Last().Date,
-                        IrregList1, ref checksum);
+                        IrregList1, traceObject);
                 Assert.Fail("Should have thrown exception");
             }
             catch (TSLibraryException e)
@@ -524,14 +473,14 @@ namespace TimeSeriesLibrary_Test
         public void ConvertListToBlobWithChecksum_Err3()
         {
             TSLibrary tsLib = new TSLibrary();
-            byte[] checksum = null;
+            TSTrace traceObject = new TSTrace { TraceNumber = 1 };
 
             try
             {
                 byte[] blobData = tsLib.ConvertListToBlobWithChecksum(
                         TSDateCalculator.TimeStepUnitCode.Irregular, 0,
                         IrregList1.Count, IrregList1.First().Date.AddDays(2), IrregList1.Last().Date,
-                        IrregList1, ref checksum);
+                        IrregList1, traceObject);
                 Assert.Fail("Should have thrown exception");
             }
             catch (TSLibraryException e)
@@ -544,19 +493,555 @@ namespace TimeSeriesLibrary_Test
         public void ConvertListToBlobWithChecksum_Err4()
         {
             TSLibrary tsLib = new TSLibrary();
-            byte[] checksum = null;
+            TSTrace traceObject = new TSTrace { TraceNumber = 1 };
 
             try
             {
                 byte[] blobData = tsLib.ConvertListToBlobWithChecksum(
                         TSDateCalculator.TimeStepUnitCode.Irregular, 0,
                         IrregList1.Count, IrregList1.First().Date, IrregList1.Last().Date.AddDays(2),
-                        IrregList1, ref checksum);
+                        IrregList1, traceObject);
                 Assert.Fail("Should have thrown exception");
             }
             catch (TSLibraryException e)
             {
                 Assert.AreEqual(ErrCode.Enum.Checksum_Improper_EndDate, e.ErrCode);
+            }
+        }
+
+        #endregion
+
+
+        #region Test Methods for ComputeChecksum()
+
+        #region helper methods
+        // This method is reused by the actual test methods that follow
+        public Boolean ComputeTestChecksums(
+                TSDateCalculator.TimeStepUnitCode u1, short q1, int c1,
+                    DateTime sDate1, DateTime eDate1, List<ITimeSeriesTrace> traceList1,
+                TSDateCalculator.TimeStepUnitCode u2, short q2, int c2,
+                    DateTime sDate2, DateTime eDate2, List<ITimeSeriesTrace> traceList2)
+        {
+            TSLibrary tsLib = new TSLibrary();
+
+            byte[] b1 = tsLib.ComputeChecksum(u1, q1, c1, sDate1, eDate1, traceList1);
+            byte[] b2 = tsLib.ComputeChecksum(u2, q2, c2, sDate2, eDate2, traceList2);
+
+            Assert.IsTrue(b1.Length == 16);
+            Assert.IsTrue(b2.Length == 16);
+
+            for (int i = 0; i < b2.Length; i++)
+                if (b1[i] != b2[i])
+                    return false;
+
+            return true;
+        }
+        public List<ITimeSeriesTrace> Get3TracesRegular(
+                    TSDateCalculator.TimeStepUnitCode u1, short q1, int c1,
+                    DateTime sDate1, out DateTime eDate1,
+                    Boolean shouldPerturb = false,
+                    int perturbTraceIndex = 0, int perturbStep = 0, 
+                    double perturbVal = 0, double perturbMinutes = 0)
+        {
+            eDate1 = DateTime.Now;  // dummy
+            TSLibrary tsLib = new TSLibrary();
+            List<ITimeSeriesTrace> traceList = new List<ITimeSeriesTrace>();
+
+            for (int t = 0; t < 3; t++)
+            {
+                TSTrace trace1 = new TSTrace { TraceNumber = t + 1 };
+                List<TimeSeriesValue> tsValues = new List<TimeSeriesValue>();
+                DateTime curDate = sDate1;
+                Double curVal = 20;
+                for (int i = 0; i < c1; i++)
+                {
+                    tsValues.Add(new TimeSeriesValue { Date = curDate, Value = curVal });
+                    curDate = tsLib.IncrementDate(curDate, u1, q1, 1);
+                    curVal = curVal + i / (t + 1);
+                }
+                // make a perturbation if called for
+                if (shouldPerturb && t==perturbTraceIndex)
+                {
+                    tsValues[perturbStep].Value += perturbVal;
+                    tsValues[perturbStep].Date = tsValues[perturbStep].Date.AddMinutes(perturbMinutes);
+                }
+                eDate1 = tsValues.Last().Date;
+                tsLib.ConvertListToBlobWithChecksum(
+                        u1, q1, c1,
+                        sDate1, eDate1, tsValues, trace1);
+
+                traceList.Add(trace1);
+            }
+            return traceList;
+        }
+        public List<ITimeSeriesTrace> Get3TracesIrregular(
+                    int c1, DateTime sDate1, out DateTime eDate1,
+                    Boolean shouldPerturb = false,
+                    int perturbTraceIndex = 0, int perturbStep = 0,
+                    double perturbVal = 0, double perturbMinutes = 0)
+        {
+            eDate1 = DateTime.Now;  // dummy
+            TSLibrary tsLib = new TSLibrary();
+            List<ITimeSeriesTrace> traceList = new List<ITimeSeriesTrace>();
+
+            for (int t = 0; t < 3; t++)
+            {
+                TSTrace trace1 = new TSTrace { TraceNumber = t + 1 };
+                List<TimeSeriesValue> tsValues = new List<TimeSeriesValue>();
+                DateTime curDate = sDate1;
+                Double curVal = 20;
+                for (int i = 0; i < c1; i++)
+                {
+                    tsValues.Add(new TimeSeriesValue { Date = curDate, Value = curVal });
+                    curDate = curDate.AddDays(i / 2);
+                    curVal = curVal + i / (t+1);
+                }
+                // make a perturbation if called for
+                if (shouldPerturb && t == perturbTraceIndex)
+                {
+                    tsValues[perturbStep].Value += perturbVal;
+                    tsValues[perturbStep].Date = tsValues[perturbStep].Date.AddMinutes(perturbMinutes);
+                }
+                eDate1 = tsValues.Last().Date;
+                tsLib.ConvertListToBlobWithChecksum(
+                        TSDateCalculator.TimeStepUnitCode.Irregular, 0, c1,
+                        sDate1, eDate1, tsValues, trace1);
+
+                traceList.Add(trace1);
+            }
+            return traceList;
+        } 
+        #endregion
+
+        #region test regular time step
+        [TestMethod()]
+        public void ComputeChecksumIdenticalReg()
+        {
+            TSDateCalculator.TimeStepUnitCode timeStepUnit = TSDateCalculator.TimeStepUnitCode.Day;
+            short timeStepQuanitity = 2;
+            int timeStepCount = 50;
+            DateTime sDate = DateTime.Parse("1/1/1935"), eDate;
+
+            List<ITimeSeriesTrace> traceList1 = Get3TracesRegular
+                    (timeStepUnit, timeStepQuanitity, timeStepCount, sDate, out eDate);
+            List<ITimeSeriesTrace> traceList2 = Get3TracesRegular
+                    (timeStepUnit, timeStepQuanitity, timeStepCount, sDate, out eDate);
+
+            Boolean ret = ComputeTestChecksums(
+                    timeStepUnit, timeStepQuanitity, timeStepCount, sDate, eDate, traceList1,
+                    timeStepUnit, timeStepQuanitity, timeStepCount, sDate, eDate, traceList2);
+
+            Assert.IsTrue(ret);
+        }
+        [TestMethod()]
+        public void ComputeChecksumDiffReg1()
+        {
+            TSDateCalculator.TimeStepUnitCode timeStepUnit = TSDateCalculator.TimeStepUnitCode.Day;
+            short timeStepQuanitity = 2;
+            int timeStepCount = 50;
+            DateTime sDate = DateTime.Parse("1/1/1935"), eDate;
+
+            List<ITimeSeriesTrace> traceList1 = Get3TracesRegular
+                    (timeStepUnit, timeStepQuanitity, timeStepCount, sDate, out eDate);
+            List<ITimeSeriesTrace> traceList2 = Get3TracesRegular
+                    (timeStepUnit, timeStepQuanitity, timeStepCount, sDate, out eDate);
+
+            // remove one trace from list 1
+            traceList1.RemoveAt(2);
+
+            Boolean ret = ComputeTestChecksums(
+                    timeStepUnit, timeStepQuanitity, timeStepCount, sDate, eDate, traceList1,
+                    timeStepUnit, timeStepQuanitity, timeStepCount, sDate, eDate, traceList2);
+
+            Assert.IsFalse(ret);
+        }
+        [TestMethod()]
+        public void ComputeChecksumDiffReg2()
+        {
+            TSDateCalculator.TimeStepUnitCode timeStepUnit = TSDateCalculator.TimeStepUnitCode.Day;
+            short timeStepQuanitity = 2;
+            int timeStepCount = 50;
+            DateTime sDate = DateTime.Parse("1/1/1935"), eDate;
+
+            List<ITimeSeriesTrace> traceList1 = Get3TracesRegular
+                    (timeStepUnit, timeStepQuanitity, timeStepCount, sDate, out eDate,
+                    true, 1, 20, 13.2);  // change one value
+            List<ITimeSeriesTrace> traceList2 = Get3TracesRegular
+                    (timeStepUnit, timeStepQuanitity, timeStepCount, sDate, out eDate);
+
+            Boolean ret = ComputeTestChecksums(
+                    timeStepUnit, timeStepQuanitity, timeStepCount, sDate, eDate, traceList1,
+                    timeStepUnit, timeStepQuanitity, timeStepCount, sDate, eDate, traceList2);
+
+            Assert.IsFalse(ret);
+        }
+        [TestMethod()]
+        public void ComputeChecksumDiffReg3()
+        {
+            TSDateCalculator.TimeStepUnitCode timeStepUnit = TSDateCalculator.TimeStepUnitCode.Day;
+            short timeStepQuanitity = 2;
+            int timeStepCount = 50;
+            DateTime sDate = DateTime.Parse("1/1/1935"), eDate;
+
+            List<ITimeSeriesTrace> traceList1 = Get3TracesRegular
+                    (timeStepUnit, timeStepQuanitity, timeStepCount, sDate, out eDate,
+                    true, 2, 40, 0.0001);  // change one value
+            List<ITimeSeriesTrace> traceList2 = Get3TracesRegular
+                    (timeStepUnit, timeStepQuanitity, timeStepCount, sDate, out eDate);
+
+            Boolean ret = ComputeTestChecksums(
+                    timeStepUnit, timeStepQuanitity, timeStepCount, sDate, eDate, traceList1,
+                    timeStepUnit, timeStepQuanitity, timeStepCount, sDate, eDate, traceList2);
+
+            Assert.IsFalse(ret);
+        }
+        [TestMethod()]
+        public void ComputeChecksumIdenticalRegA()
+        {
+            TSDateCalculator.TimeStepUnitCode timeStepUnit = TSDateCalculator.TimeStepUnitCode.Day;
+            short timeStepQuanitity = 2;
+            int timeStepCount = 50;
+            DateTime sDate = DateTime.Parse("1/1/1935"), eDate;
+
+            // Only use one trace
+            List<ITimeSeriesTrace> traceList1 = Get3TracesRegular
+                    (timeStepUnit, timeStepQuanitity, timeStepCount, sDate, out eDate).Take(1).ToList();
+            List<ITimeSeriesTrace> traceList2 = Get3TracesRegular
+                    (timeStepUnit, timeStepQuanitity, timeStepCount, sDate, out eDate).Take(1).ToList();
+
+            Boolean ret = ComputeTestChecksums(
+                    timeStepUnit, timeStepQuanitity, timeStepCount, sDate, eDate, traceList1,
+                    timeStepUnit, timeStepQuanitity, timeStepCount, sDate, eDate, traceList2);
+
+            Assert.IsTrue(ret);
+        }
+        [TestMethod()]
+        public void ComputeChecksumDiffRegA1()
+        {
+            TSDateCalculator.TimeStepUnitCode timeStepUnit = TSDateCalculator.TimeStepUnitCode.Day;
+            short timeStepQuanitity = 2;
+            int timeStepCount = 50;
+            DateTime sDate = DateTime.Parse("1/1/1935"), eDate;
+
+            // Only use one trace
+            List<ITimeSeriesTrace> traceList1 = Get3TracesRegular
+                    (timeStepUnit, timeStepQuanitity, timeStepCount, sDate, out eDate,
+                    true, 0, 2, 0.2).Take(1).ToList(); // change one value
+            List<ITimeSeriesTrace> traceList2 = Get3TracesRegular
+                    (timeStepUnit, timeStepQuanitity, timeStepCount, sDate, out eDate).Take(1).ToList();
+
+            Boolean ret = ComputeTestChecksums(
+                    timeStepUnit, timeStepQuanitity, timeStepCount, sDate, eDate, traceList1,
+                    timeStepUnit, timeStepQuanitity, timeStepCount, sDate, eDate, traceList2);
+
+            Assert.IsFalse(ret);
+        }
+        [TestMethod()]
+        public void ComputeChecksumDiffRegParam1()
+        {
+            TSDateCalculator.TimeStepUnitCode timeStepUnit1 = TSDateCalculator.TimeStepUnitCode.Day;
+            short timeStepQuanitity1 = 2;
+            int timeStepCount1 = 50;
+            DateTime sDate1 = DateTime.Parse("1/1/1935"), eDate1;
+
+            TSDateCalculator.TimeStepUnitCode timeStepUnit2 = TSDateCalculator.TimeStepUnitCode.Hour; // different
+            short timeStepQuanitity2 = 2;
+            int timeStepCount2 = 50;
+            DateTime sDate2 = DateTime.Parse("1/1/1935"), eDate2;
+
+            List<ITimeSeriesTrace> traceList1 = Get3TracesRegular
+                    (timeStepUnit1, timeStepQuanitity1, timeStepCount1, sDate1, out eDate1);
+            List<ITimeSeriesTrace> traceList2 = Get3TracesRegular
+                    (timeStepUnit2, timeStepQuanitity2, timeStepCount2, sDate2, out eDate2);
+
+            Boolean ret = ComputeTestChecksums(
+                    timeStepUnit1, timeStepQuanitity1, timeStepCount1, sDate1, eDate1, traceList1,
+                    timeStepUnit2, timeStepQuanitity2, timeStepCount2, sDate2, eDate2, traceList2);
+
+            Assert.IsFalse(ret);
+        }
+        [TestMethod()]
+        public void ComputeChecksumDiffRegParam2()
+        {
+            TSDateCalculator.TimeStepUnitCode timeStepUnit1 = TSDateCalculator.TimeStepUnitCode.Day;
+            short timeStepQuanitity1 = 2;
+            int timeStepCount1 = 50;
+            DateTime sDate1 = DateTime.Parse("1/1/1935"), eDate1;
+
+            TSDateCalculator.TimeStepUnitCode timeStepUnit2 = TSDateCalculator.TimeStepUnitCode.Day;
+            short timeStepQuanitity2 = 1; // different
+            int timeStepCount2 = 50;
+            DateTime sDate2 = DateTime.Parse("1/1/1935"), eDate2;
+
+            List<ITimeSeriesTrace> traceList1 = Get3TracesRegular
+                    (timeStepUnit1, timeStepQuanitity1, timeStepCount1, sDate1, out eDate1);
+            List<ITimeSeriesTrace> traceList2 = Get3TracesRegular
+                    (timeStepUnit2, timeStepQuanitity2, timeStepCount2, sDate2, out eDate2);
+
+            Boolean ret = ComputeTestChecksums(
+                    timeStepUnit1, timeStepQuanitity1, timeStepCount1, sDate1, eDate1, traceList1,
+                    timeStepUnit2, timeStepQuanitity2, timeStepCount2, sDate2, eDate2, traceList2);
+
+            Assert.IsFalse(ret);
+        }
+        [TestMethod()]
+        public void ComputeChecksumDiffRegParam3()
+        {
+            TSDateCalculator.TimeStepUnitCode timeStepUnit1 = TSDateCalculator.TimeStepUnitCode.Day;
+            short timeStepQuanitity1 = 2;
+            int timeStepCount1 = 50;
+            DateTime sDate1 = DateTime.Parse("1/1/1935"), eDate1;
+
+            TSDateCalculator.TimeStepUnitCode timeStepUnit2 = TSDateCalculator.TimeStepUnitCode.Day;
+            short timeStepQuanitity2 = 2;
+            int timeStepCount2 = 50;
+            DateTime sDate2 = DateTime.Parse("1/1/1935"), eDate2;
+
+            List<ITimeSeriesTrace> traceList1 = Get3TracesRegular
+                    (timeStepUnit1, timeStepQuanitity1, timeStepCount1, sDate1, out eDate1);
+            List<ITimeSeriesTrace> traceList2 = Get3TracesRegular
+                    (timeStepUnit2, timeStepQuanitity2, timeStepCount2, sDate2, out eDate2);
+
+            // We created traces that have 50 time steps, so that the checksums of each trace will
+            // be identical.  Now we change the time step count of the second time series just to ensure
+            // that if the blob happens to be identical, the different time step count will still change
+            // the checksum.  This scenario is riduculously unlikely, but nonetheless our checksum system 
+            // should catch it.
+            timeStepCount1 = 51;
+
+            Boolean ret = ComputeTestChecksums(
+                    timeStepUnit1, timeStepQuanitity1, timeStepCount1, sDate1, eDate1, traceList1,
+                    timeStepUnit2, timeStepQuanitity2, timeStepCount2, sDate2, eDate2, traceList2);
+
+            Assert.IsFalse(ret);
+        }
+        [TestMethod()]
+        public void ComputeChecksumDiffRegParam4()
+        {
+            TSDateCalculator.TimeStepUnitCode timeStepUnit1 = TSDateCalculator.TimeStepUnitCode.Day;
+            short timeStepQuanitity1 = 2;
+            int timeStepCount1 = 50;
+            DateTime sDate1 = DateTime.Parse("1/1/1935"), eDate1;
+
+            TSDateCalculator.TimeStepUnitCode timeStepUnit2 = TSDateCalculator.TimeStepUnitCode.Day;
+            short timeStepQuanitity2 = 2;
+            int timeStepCount2 = 50;
+            DateTime sDate2 = DateTime.Parse("1/2/1935"), eDate2; // different
+
+            List<ITimeSeriesTrace> traceList1 = Get3TracesRegular
+                    (timeStepUnit1, timeStepQuanitity1, timeStepCount1, sDate1, out eDate1);
+            List<ITimeSeriesTrace> traceList2 = Get3TracesRegular
+                    (timeStepUnit2, timeStepQuanitity2, timeStepCount2, sDate2, out eDate2);
+
+            Boolean ret = ComputeTestChecksums(
+                    timeStepUnit1, timeStepQuanitity1, timeStepCount1, sDate1, eDate1, traceList1,
+                    timeStepUnit2, timeStepQuanitity2, timeStepCount2, sDate2, eDate2, traceList2);
+
+            Assert.IsFalse(ret);
+        } 
+        #endregion
+
+        #region test irregular time step
+        [TestMethod()]
+        public void ComputeChecksumIdenticalIrreg()
+        {
+            TSDateCalculator.TimeStepUnitCode timeStepUnit = TSDateCalculator.TimeStepUnitCode.Day;
+            short timeStepQuanitity = 2;
+            int timeStepCount = 50;
+            DateTime sDate = DateTime.Parse("1/1/1935"), eDate;
+
+            List<ITimeSeriesTrace> traceList1 = Get3TracesIrregular
+                    (timeStepCount, sDate, out eDate);
+            List<ITimeSeriesTrace> traceList2 = Get3TracesIrregular
+                    (timeStepCount, sDate, out eDate);
+
+            Boolean ret = ComputeTestChecksums(
+                    timeStepUnit, timeStepQuanitity, timeStepCount, sDate, eDate, traceList1,
+                    timeStepUnit, timeStepQuanitity, timeStepCount, sDate, eDate, traceList2);
+
+            Assert.IsTrue(ret);
+        }
+        [TestMethod()]
+        public void ComputeChecksumDiffIrreg1()
+        {
+            TSDateCalculator.TimeStepUnitCode timeStepUnit = TSDateCalculator.TimeStepUnitCode.Day;
+            short timeStepQuanitity = 2;
+            int timeStepCount = 50;
+            DateTime sDate = DateTime.Parse("1/1/1935"), eDate;
+
+            List<ITimeSeriesTrace> traceList1 = Get3TracesIrregular
+                    (timeStepCount, sDate, out eDate);
+            List<ITimeSeriesTrace> traceList2 = Get3TracesIrregular
+                    (timeStepCount, sDate, out eDate);
+
+            // remove one trace from list 1
+            traceList1.RemoveAt(2);
+
+            Boolean ret = ComputeTestChecksums(
+                    timeStepUnit, timeStepQuanitity, timeStepCount, sDate, eDate, traceList1,
+                    timeStepUnit, timeStepQuanitity, timeStepCount, sDate, eDate, traceList2);
+
+            Assert.IsFalse(ret);
+        }
+        [TestMethod()]
+        public void ComputeChecksumDiffIrreg2()
+        {
+            TSDateCalculator.TimeStepUnitCode timeStepUnit = TSDateCalculator.TimeStepUnitCode.Day;
+            short timeStepQuanitity = 2;
+            int timeStepCount = 50;
+            DateTime sDate = DateTime.Parse("1/1/1935"), eDate;
+
+            List<ITimeSeriesTrace> traceList1 = Get3TracesIrregular
+                    (timeStepCount, sDate, out eDate,
+                    true, 1, 20, 13.2);  // change one value
+            List<ITimeSeriesTrace> traceList2 = Get3TracesIrregular
+                    (timeStepCount, sDate, out eDate);
+
+            Boolean ret = ComputeTestChecksums(
+                    timeStepUnit, timeStepQuanitity, timeStepCount, sDate, eDate, traceList1,
+                    timeStepUnit, timeStepQuanitity, timeStepCount, sDate, eDate, traceList2);
+
+            Assert.IsFalse(ret);
+        }
+        [TestMethod()]
+        public void ComputeChecksumDiffIrreg3()
+        {
+            TSDateCalculator.TimeStepUnitCode timeStepUnit = TSDateCalculator.TimeStepUnitCode.Day;
+            short timeStepQuanitity = 2;
+            int timeStepCount = 50;
+            DateTime sDate = DateTime.Parse("1/1/1935"), eDate;
+
+            List<ITimeSeriesTrace> traceList1 = Get3TracesIrregular
+                    (timeStepCount, sDate, out eDate,
+                    true, 2, 40, 0.0001);  // change one value
+            List<ITimeSeriesTrace> traceList2 = Get3TracesIrregular
+                    (timeStepCount, sDate, out eDate);
+
+            Boolean ret = ComputeTestChecksums(
+                    timeStepUnit, timeStepQuanitity, timeStepCount, sDate, eDate, traceList1,
+                    timeStepUnit, timeStepQuanitity, timeStepCount, sDate, eDate, traceList2);
+
+            Assert.IsFalse(ret);
+        }
+        [TestMethod()]
+        public void ComputeChecksumIdenticalIrregA()
+        {
+            TSDateCalculator.TimeStepUnitCode timeStepUnit = TSDateCalculator.TimeStepUnitCode.Day;
+            short timeStepQuanitity = 2;
+            int timeStepCount = 50;
+            DateTime sDate = DateTime.Parse("1/1/1935"), eDate;
+
+            // Only use one trace
+            List<ITimeSeriesTrace> traceList1 = Get3TracesIrregular
+                    (timeStepCount, sDate, out eDate).Take(1).ToList();
+            List<ITimeSeriesTrace> traceList2 = Get3TracesIrregular
+                    (timeStepCount, sDate, out eDate).Take(1).ToList();
+
+            Boolean ret = ComputeTestChecksums(
+                    timeStepUnit, timeStepQuanitity, timeStepCount, sDate, eDate, traceList1,
+                    timeStepUnit, timeStepQuanitity, timeStepCount, sDate, eDate, traceList2);
+
+            Assert.IsTrue(ret);
+        }
+        [TestMethod()]
+        public void ComputeChecksumDiffIrregA1()
+        {
+            TSDateCalculator.TimeStepUnitCode timeStepUnit = TSDateCalculator.TimeStepUnitCode.Day;
+            short timeStepQuanitity = 2;
+            int timeStepCount = 50;
+            DateTime sDate = DateTime.Parse("1/1/1935"), eDate;
+
+            // Only use one trace
+            List<ITimeSeriesTrace> traceList1 = Get3TracesIrregular
+                    (timeStepCount, sDate, out eDate,
+                    true, 0, 2, 0.2).Take(1).ToList(); // change one value
+            List<ITimeSeriesTrace> traceList2 = Get3TracesIrregular
+                    (timeStepCount, sDate, out eDate).Take(1).ToList();
+
+            Boolean ret = ComputeTestChecksums(
+                    timeStepUnit, timeStepQuanitity, timeStepCount, sDate, eDate, traceList1,
+                    timeStepUnit, timeStepQuanitity, timeStepCount, sDate, eDate, traceList2);
+
+            Assert.IsFalse(ret);
+        }
+        [TestMethod()]
+        public void ComputeChecksumDiffIrregParam3()
+        {
+            TSDateCalculator.TimeStepUnitCode timeStepUnit1 = TSDateCalculator.TimeStepUnitCode.Day;
+            short timeStepQuanitity1 = 2;
+            int timeStepCount1 = 50;
+            DateTime sDate1 = DateTime.Parse("1/1/1935"), eDate1;
+
+            TSDateCalculator.TimeStepUnitCode timeStepUnit2 = TSDateCalculator.TimeStepUnitCode.Day;
+            short timeStepQuanitity2 = 2;
+            int timeStepCount2 = 50;
+            DateTime sDate2 = DateTime.Parse("1/1/1935"), eDate2;
+
+            List<ITimeSeriesTrace> traceList1 = Get3TracesIrregular
+                    (timeStepCount1, sDate1, out eDate1);
+            List<ITimeSeriesTrace> traceList2 = Get3TracesIrregular
+                    (timeStepCount2, sDate2, out eDate2);
+
+            // We created traces that have 50 time steps, so that the checksums of each trace will
+            // be identical.  Now we change the time step count of the second time series just to ensure
+            // that if the blob happens to be identical, the different time step count will still change
+            // the checksum.  This scenario is riduculously unlikely, but nonetheless our checksum system 
+            // should catch it.
+            timeStepCount1 = 51;
+
+            Boolean ret = ComputeTestChecksums(
+                    timeStepUnit1, timeStepQuanitity1, timeStepCount1, sDate1, eDate1, traceList1,
+                    timeStepUnit2, timeStepQuanitity2, timeStepCount2, sDate2, eDate2, traceList2);
+
+            Assert.IsFalse(ret);
+        }
+        [TestMethod()]
+        public void ComputeChecksumDiffIrregParam4()
+        {
+            TSDateCalculator.TimeStepUnitCode timeStepUnit1 = TSDateCalculator.TimeStepUnitCode.Day;
+            short timeStepQuanitity1 = 2;
+            int timeStepCount1 = 50;
+            DateTime sDate1 = DateTime.Parse("1/1/1935"), eDate1;
+
+            TSDateCalculator.TimeStepUnitCode timeStepUnit2 = TSDateCalculator.TimeStepUnitCode.Day;
+            short timeStepQuanitity2 = 2;
+            int timeStepCount2 = 50;
+            DateTime sDate2 = DateTime.Parse("1/2/1935"), eDate2; // different
+
+            List<ITimeSeriesTrace> traceList1 = Get3TracesIrregular
+                    (timeStepCount1, sDate1, out eDate1);
+            List<ITimeSeriesTrace> traceList2 = Get3TracesIrregular
+                    (timeStepCount2, sDate2, out eDate2);
+
+            Boolean ret = ComputeTestChecksums(
+                    timeStepUnit1, timeStepQuanitity1, timeStepCount1, sDate1, eDate1, traceList1,
+                    timeStepUnit2, timeStepQuanitity2, timeStepCount2, sDate2, eDate2, traceList2);
+
+            Assert.IsFalse(ret);
+        }
+        #endregion
+
+
+
+        // Method should throw an exception b/c the TimeStepQuantity must
+        // be zero when the TimeStepUnit==Irregular.
+        [TestMethod()]
+        public void ComputeChecksum_Err1()
+        {
+            TSLibrary tsLib = new TSLibrary();
+            TSTrace traceObject = new TSTrace { TraceNumber = 1 };
+
+            try
+            {
+                byte[] blobData = tsLib.ComputeChecksum(
+                        TSDateCalculator.TimeStepUnitCode.Irregular, 3,
+                        IrregList1.Count, IrregList1.First().Date, IrregList1.Last().Date,
+                        new List<ITimeSeriesTrace>());
+                Assert.Fail("Should have thrown exception");
+            }
+            catch (TSLibraryException e)
+            {
+                Assert.AreEqual(ErrCode.Enum.Checksum_Quantity_Nonzero, e.ErrCode);
             }
         }
 

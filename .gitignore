@@ -24,3 +24,4 @@ TimeSeriesLibrary.suo
 *.opensdf
 *.trx
 TimeSeriesLibrary/TestResults
+*.testsettings

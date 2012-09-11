@@ -41,7 +41,7 @@ namespace TimeSeriesLibrary
             /// </summary>
             Could_Not_Open_Table = -100,
             /// <summary>
-            /// This error code indicates that a TimeSeriesLibrary method was given the GUID Id
+            /// This error code indicates that a TimeSeriesLibrary method was given the ID
             /// number of a time series record, but the record number can not be found in the given table.
             /// </summary>
             Record_Not_Found_Table = -101,
