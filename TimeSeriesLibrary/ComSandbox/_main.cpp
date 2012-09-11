@@ -15,4 +15,6 @@ void main()
     TimeSeriesLibrary::_ComTSLibraryPtr p(__uuidof(TimeSeriesLibrary::ComTSLibrary));
     TSLib = p;
 
+
+
 }
