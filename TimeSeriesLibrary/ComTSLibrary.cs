@@ -20,6 +20,10 @@ namespace TimeSeriesLibrary
     public interface _ComTSLibrary
     {
         [ComVisible(true)]
+        bool GetHasError();
+        [ComVisible(true)]
+        String GetErrorMessage();
+        [ComVisible(true)]
         int OpenConnection(string connectionString);
         [ComVisible(true)]
         void CloseConnection(int connectionNumber);
@@ -85,6 +89,16 @@ namespace TimeSeriesLibrary
         /// </summary>
         public TSConnection ConnxObject;
 
+        private bool _hasError = false;
+        public bool GetHasError()
+        {
+            return _hasError;
+        }
+        private String _errorMessage;
+        public String GetErrorMessage()
+        {
+            return _errorMessage;
+        }
 
         #region Constructor
         /// <summary>
@@ -114,8 +128,17 @@ namespace TimeSeriesLibrary
         [ComVisible(true)]
         public int OpenConnection(String connectionString)
         {
-            // let the sibling method in the wrapped TSLibrary object contain the logic
-            return TSLib.OpenConnection(connectionString);
+            try
+            {
+                // let the sibling method in the wrapped TSLibrary object contain the logic
+                return TSLib.OpenConnection(connectionString);
+            }
+            catch (Exception e)
+            {
+                _hasError = true;
+                _errorMessage = e.Message;
+                return 0;
+            }
         }
         /// <summary>
         /// Closes the connection identified with the given serial number.  When the
@@ -127,8 +150,16 @@ namespace TimeSeriesLibrary
         [ComVisible(true)]
         public void CloseConnection(int connectionNumber)
         {
-            // let the sibling method in the wrapped TSLibrary object contain the logic
-            TSLib.CloseConnection(connectionNumber);
+            try
+            {
+                // let the sibling method in the wrapped TSLibrary object contain the logic
+                TSLib.CloseConnection(connectionNumber);
+            }
+            catch (Exception e)
+            {
+                _hasError = true;
+                _errorMessage = e.Message;
+            }
         }
         /// <summary>
         /// Returns the SqlConnection object corresponding to the given connection number.
@@ -138,8 +169,17 @@ namespace TimeSeriesLibrary
         [ComVisible(true)]
         public SqlConnection GetConnectionFromId(int connectionNumber)
         {
-            // let the sibling method in the wrapped TSLibrary object contain the logic
-            return TSLib.GetConnectionFromId(connectionNumber);
+            try
+            {
+                // let the sibling method in the wrapped TSLibrary object contain the logic
+                return TSLib.GetConnectionFromId(connectionNumber);
+            }
+            catch (Exception e)
+            {
+                _hasError = true;
+                _errorMessage = e.Message;
+                return null;
+            }
         }
         #endregion
 
@@ -172,12 +212,22 @@ namespace TimeSeriesLibrary
                 int connectionNumber, String paramTableName, String traceTableName, int id, int traceNumber,
                 int nReqValues, double[] valueArray, DateTime reqStartDate, DateTime reqEndDate)
         {
-            // Get the connection that we'll pass along.
-            SqlConnection connx = GetConnectionFromId(connectionNumber);
-            // Construct new TS object with SqlConnection object and table name
-            TS ts = new TS(connx, paramTableName, traceTableName);
+            try
+            {
+                // Get the connection that we'll pass along.
+                SqlConnection connx = GetConnectionFromId(connectionNumber);
+                // Construct new TS object with SqlConnection object and table name
+                TS ts = new TS(connx, paramTableName, traceTableName);
 
-            return ts.ReadValuesRegular(id, traceNumber, nReqValues, valueArray, reqStartDate, reqEndDate);
+                return ts.ReadValuesRegular(id, traceNumber, nReqValues, valueArray, reqStartDate, reqEndDate);
+            }
+            catch (Exception e)
+            {
+                _hasError = true;
+                _errorMessage = e.Message;
+                return 0;
+            }
+
         }
         /// <summary>
         /// This method reads the time series matching the given ID, using the given
@@ -204,54 +254,63 @@ namespace TimeSeriesLibrary
                 int connectionNumber, String paramTableName, String traceTableName, int id, int traceNumber,
                 int nReqValues, ref TSDateValueStruct[] dateValueArray, DateTime reqStartDate, DateTime reqEndDate)
         {
-            // Get the connection that we'll pass along.
-            SqlConnection connx = GetConnectionFromId(connectionNumber);
-            // Construct new TS object with SqlConnection object and table name
-            TS ts = new TS(connx, paramTableName, traceTableName);
-
-            int nValuesRead = 0;
-            // Read the parameters of the time series so that we'll know if it's regular or irregular
-            if (!ts.IsInitialized) ts.Initialize(id);
-
-            // The operations will differ for regular and irregular time series
-            if (ts.TimeStepUnit == TSDateCalculator.TimeStepUnitCode.Irregular)
+            try
             {
-                // IRREGULAR TIME SERIES
+                // Get the connection that we'll pass along.
+                SqlConnection connx = GetConnectionFromId(connectionNumber);
+                // Construct new TS object with SqlConnection object and table name
+                TS ts = new TS(connx, paramTableName, traceTableName);
 
-                // Read the date/value array from the database
-                nValuesRead = ts.ReadValuesIrregular(id, traceNumber, nReqValues, dateValueArray, reqStartDate, reqEndDate);
-            }
-            else
-            {
-                // REGULAR TIME SERIES
+                int nValuesRead = 0;
+                // Read the parameters of the time series so that we'll know if it's regular or irregular
+                if (!ts.IsInitialized) ts.Initialize(id);
 
-                // Allocate an array to hold the time series' data values
-                double[] valueArray = new double[nReqValues];
-                // Read the data values from the database
-                nValuesRead = ts.ReadValuesRegular(id, traceNumber, nReqValues, valueArray, reqStartDate, reqEndDate);
-                // Allocate an array to hold the time series' date values
-                DateTime[] dateArray = new DateTime[nValuesRead];
-                // Fill the array with the date values corresponding to the time steps defined
-                // for this time series in the database.
-                ts.FillDateArray(id, nValuesRead, dateArray, reqStartDate);
-                // Loop through all values, filling the array of date/value pairs from the
-                // primitive array of dates and primitive array of values.
-                int i;
-                for (i = 0; i < nValuesRead; i++)
+                // The operations will differ for regular and irregular time series
+                if (ts.TimeStepUnit == TSDateCalculator.TimeStepUnitCode.Irregular)
                 {
-                    dateValueArray[i].Date = dateArray[i];
-                    dateValueArray[i].Value = valueArray[i];
-                    // So far we have ignored the requested end date.  However, at this
-                    // stage we won't make the list any longer than was requested by the caller.
-                    if (dateValueArray[i].Date >= reqEndDate)
-                    {
-                        i++;
-                        break;
-                    }
+                    // IRREGULAR TIME SERIES
+
+                    // Read the date/value array from the database
+                    nValuesRead = ts.ReadValuesIrregular(id, traceNumber, nReqValues, dateValueArray, reqStartDate, reqEndDate);
                 }
-                nValuesRead = i;
+                else
+                {
+                    // REGULAR TIME SERIES
+
+                    // Allocate an array to hold the time series' data values
+                    double[] valueArray = new double[nReqValues];
+                    // Read the data values from the database
+                    nValuesRead = ts.ReadValuesRegular(id, traceNumber, nReqValues, valueArray, reqStartDate, reqEndDate);
+                    // Allocate an array to hold the time series' date values
+                    DateTime[] dateArray = new DateTime[nValuesRead];
+                    // Fill the array with the date values corresponding to the time steps defined
+                    // for this time series in the database.
+                    ts.FillDateArray(id, nValuesRead, dateArray, reqStartDate);
+                    // Loop through all values, filling the array of date/value pairs from the
+                    // primitive array of dates and primitive array of values.
+                    int i;
+                    for (i = 0; i < nValuesRead; i++)
+                    {
+                        dateValueArray[i].Date = dateArray[i];
+                        dateValueArray[i].Value = valueArray[i];
+                        // So far we have ignored the requested end date.  However, at this
+                        // stage we won't make the list any longer than was requested by the caller.
+                        if (dateValueArray[i].Date >= reqEndDate)
+                        {
+                            i++;
+                            break;
+                        }
+                    }
+                    nValuesRead = i;
+                }
+                return nValuesRead;
             }
-            return nValuesRead;
+            catch (Exception e)
+            {
+                _hasError = true;
+                _errorMessage = e.Message;
+                return 0;
+            }
         }
         #endregion
 
@@ -286,14 +345,23 @@ namespace TimeSeriesLibrary
                     int nOutValues, DateTime outStartDate,
                     String[] extraParamNames, String[] extraParamValues)
         {
-            // Get the connection that we'll pass along.
-            SqlConnection connx = GetConnectionFromId(connectionNumber);
-            // Construct new TS object with SqlConnection object and table name
-            TS ts = new TS(connx, paramTableName, traceTableName);
+            try
+            {
+                // Get the connection that we'll pass along.
+                SqlConnection connx = GetConnectionFromId(connectionNumber);
+                // Construct new TS object with SqlConnection object and table name
+                TS ts = new TS(connx, paramTableName, traceTableName);
 
-            return ts.WriteParametersRegular(true, null, timeStepUnit, timeStepQuantity,
-                            nOutValues, outStartDate,
-                            extraParamNames, extraParamValues);
+                return ts.WriteParametersRegular(true, null, timeStepUnit, timeStepQuantity,
+                                nOutValues, outStartDate,
+                                extraParamNames, extraParamValues);
+            }
+            catch (Exception e)
+            {
+                _hasError = true;
+                _errorMessage = e.Message;
+                return 0;
+            }
         }
         /// <summary>
         /// This method saves the given time series array to a new database record, using the given
@@ -316,12 +384,20 @@ namespace TimeSeriesLibrary
                     int connectionNumber, String paramTableName, String traceTableName, 
                     int id, int traceNumber, double[] valueArray)
         {
-            // Get the connection that we'll pass along.
-            SqlConnection connx = GetConnectionFromId(connectionNumber);
-            // Construct new TS object with SqlConnection object and table name
-            TS ts = new TS(connx, paramTableName, traceTableName);
+            try
+            {
+                // Get the connection that we'll pass along.
+                SqlConnection connx = GetConnectionFromId(connectionNumber);
+                // Construct new TS object with SqlConnection object and table name
+                TS ts = new TS(connx, paramTableName, traceTableName);
 
-            ts.WriteTraceRegular(id, true, null, traceNumber, valueArray);
+                ts.WriteTraceRegular(id, true, null, traceNumber, valueArray);
+            }
+            catch (Exception e)
+            {
+                _hasError = true;
+                _errorMessage = e.Message;
+            }
         }
         /// <summary>
         /// This method saves the given time series parameters to a new database record, using the given
@@ -349,13 +425,22 @@ namespace TimeSeriesLibrary
                     int nOutValues, DateTime outStartDate, DateTime outEndDate,
                     String[] extraParamNames, String[] extraParamValues)
         {
-            // Get the connection that we'll pass along.
-            SqlConnection connx = GetConnectionFromId(connectionNumber);
-            // Construct new TS object with SqlConnection object and table name
-            TS ts = new TS(connx, paramTableName, traceTableName);
+            try
+            {
+                // Get the connection that we'll pass along.
+                SqlConnection connx = GetConnectionFromId(connectionNumber);
+                // Construct new TS object with SqlConnection object and table name
+                TS ts = new TS(connx, paramTableName, traceTableName);
 
-            return ts.WriteParametersIrregular(true, null, nOutValues, outStartDate, outEndDate, 
-                            extraParamNames, extraParamValues);
+                return ts.WriteParametersIrregular(true, null, nOutValues, outStartDate, outEndDate,
+                                extraParamNames, extraParamValues);
+            }
+            catch (Exception e)
+            {
+                _hasError = true;
+                _errorMessage = e.Message;
+                return 0;
+            }
         }
         /// <summary>
         /// This method saves the given time series array to a new database record, using the given
@@ -378,12 +463,20 @@ namespace TimeSeriesLibrary
                     int connectionNumber, String paramTableName, String traceTableName,
                     int id, int traceNumber, TSDateValueStruct[] dateValueArray)
         {
-            // Get the connection that we'll pass along.
-            SqlConnection connx = GetConnectionFromId(connectionNumber);
-            // Construct new TS object with SqlConnection object and table name
-            TS ts = new TS(connx, paramTableName, traceTableName);
+            try
+            {
+                // Get the connection that we'll pass along.
+                SqlConnection connx = GetConnectionFromId(connectionNumber);
+                // Construct new TS object with SqlConnection object and table name
+                TS ts = new TS(connx, paramTableName, traceTableName);
 
-            ts.WriteTraceIrregular(id, true, null, traceNumber, dateValueArray);
+                ts.WriteTraceIrregular(id, true, null, traceNumber, dateValueArray);
+            }
+            catch (Exception e)
+            {
+                _hasError = true;
+                _errorMessage = e.Message;
+            }
         }
         #endregion
 
@@ -402,12 +495,21 @@ namespace TimeSeriesLibrary
         public bool DeleteSeries(
                 int connectionNumber, String paramTableName, String traceTableName, int id)
         {
-            // Get the connection that we'll pass along.
-            SqlConnection connx = GetConnectionFromId(connectionNumber);
-            // Construct new TS object with SqlConnection object and table name
-            TS ts = new TS(connx, paramTableName, traceTableName);
+            try
+            {
+                // Get the connection that we'll pass along.
+                SqlConnection connx = GetConnectionFromId(connectionNumber);
+                // Construct new TS object with SqlConnection object and table name
+                TS ts = new TS(connx, paramTableName, traceTableName);
 
-            return ts.DeleteSeries(id);
+                return ts.DeleteSeries(id);
+            }
+            catch (Exception e)
+            {
+                _hasError = true;
+                _errorMessage = e.Message;
+                return false;
+            }
         }
         /// <summary>
         /// This method deletes any records from the table which match the given WHERE
@@ -424,12 +526,21 @@ namespace TimeSeriesLibrary
         public bool DeleteMatchingSeries(
                 int connectionNumber, String paramTableName, String traceTableName, String whereClause)
         {
-            // Get the connection that we'll pass along.
-            SqlConnection connx = GetConnectionFromId(connectionNumber);
-            // Construct new TS object with SqlConnection object and table name
-            TS ts = new TS(connx, paramTableName, traceTableName);
+            try
+            {
+                // Get the connection that we'll pass along.
+                SqlConnection connx = GetConnectionFromId(connectionNumber);
+                // Construct new TS object with SqlConnection object and table name
+                TS ts = new TS(connx, paramTableName, traceTableName);
 
-            return ts.DeleteMatchingSeries(whereClause);
+                return ts.DeleteMatchingSeries(whereClause);
+            }
+            catch (Exception e)
+            {
+                _hasError = true;
+                _errorMessage = e.Message;
+                return false;
+            }
         }
         #endregion
 
