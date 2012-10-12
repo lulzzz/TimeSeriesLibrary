@@ -718,20 +718,10 @@ namespace TimeSeriesLibrary
         /// <returns>true if a record was deleted, false if no records were deleted</returns>
         public Boolean DeleteSeries(int id)
         {
-            Id = id;
-            //
-            // First delete from the Parameters Table
-
-            // Simple SQL statement to delete the selected record
-            String comm = String.Format("delete from {0} where Id='{1}' ",
-                                    ParametersTableName, Id);
-            // SqlCommand object allows us to execute the command
-            SqlCommand sqlCommand = new SqlCommand(comm, Connx);
-            // This method executes the SQL command and returns the number of rows that were affected
-            int numRowsAffected = sqlCommand.ExecuteNonQuery();
+            Id = id; String comm; SqlCommand sqlCommand;
 
             //
-            // Next delete from the Trace Table
+            // First delete from the Trace Table
 
             // Simple SQL statement to delete the selected record
             comm = String.Format("delete from {0} where TimeSeries_Id='{1}' ",
@@ -741,6 +731,16 @@ namespace TimeSeriesLibrary
             // This method executes the SQL command and returns the number of rows that were affected
             sqlCommand.ExecuteNonQuery();
 
+            //
+            // Second delete from the Parameters Table
+
+            // Simple SQL statement to delete the selected record
+            comm = String.Format("delete from {0} where Id='{1}' ",
+                                    ParametersTableName, Id);
+            // SqlCommand object allows us to execute the command
+            sqlCommand = new SqlCommand(comm, Connx);
+            // This method executes the SQL command and returns the number of rows that were affected
+            int numRowsAffected = sqlCommand.ExecuteNonQuery();
 
             // Return value reflects whether anything was actually deleted
             if (numRowsAffected > 0)
@@ -760,29 +760,35 @@ namespace TimeSeriesLibrary
         /// <returns>true if one or more records were deleted, false if no records were deleted</returns>
         public Boolean DeleteMatchingSeries(String whereClause)
         {
-            throw new NotImplementedException();
+            String comm; SqlCommand sqlCommand;
 
-            //// Simple SQL statement to delete the selected record
-            //String comm = String.Format("delete from {0} where {1}",
-            //                        ParametersTableName, whereClause);
-            //// SqlCommand object allows us to execute the command
-            //SqlCommand sqlCommand = new SqlCommand(comm, Connx);
-            //int numRowsAffected;
-            //try
-            //{   // This method executes the SQL command and returns the number of rows that were affected
-            //    numRowsAffected = sqlCommand.ExecuteNonQuery();
-            //}
-            //catch (SqlException e)
-            //{   // execution of the SQL command failed because it is invalid
-            //    throw new TSLibraryException(ErrCode.Enum.Sql_Syntax_Error,
-            //                    "SQL Command\n\n\"" + comm + "\"\n\n contains a syntax error.", e);
-            //}
+            //
+            // First delete from the Trace Table
 
-            //// Return value reflects whether anything was actually deleted
-            //if (numRowsAffected > 0)
-            //    return true;
+            // Simple SQL statement to delete the selected record
+            comm = String.Format("delete t from {0} t inner join {1} p on p.Id = t.TimeSeries_Id and {2} ",
+                                    TraceTableName, ParametersTableName, whereClause);
+            // SqlCommand object allows us to execute the command
+            sqlCommand = new SqlCommand(comm, Connx);
+            // This method executes the SQL command and returns the number of rows that were affected
+            sqlCommand.ExecuteNonQuery();
 
-            //return false;
+            //
+            // Second delete from the Parameters Table
+
+            // Simple SQL statement to delete the selected record
+            comm = String.Format("delete from {0} where {1}",
+                                    ParametersTableName, whereClause);
+            // SqlCommand object allows us to execute the command
+            sqlCommand = new SqlCommand(comm, Connx);
+            // This method executes the SQL command and returns the number of rows that were affected
+            int numRowsAffected = sqlCommand.ExecuteNonQuery();
+
+            // Return value reflects whether anything was actually deleted
+            if (numRowsAffected > 0)
+                return true;
+
+            return false;
         }
         #endregion
 

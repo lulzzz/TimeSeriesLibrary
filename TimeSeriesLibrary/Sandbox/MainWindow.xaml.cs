@@ -29,10 +29,11 @@ namespace Sandbox
     /// </summary>
     public partial class MainWindow : Window
     {
-        const int nVals = 30000, nIter = 500;
+        const int nVals = 3000, nIter = 2;
 
         int connNumber;
-        TSLibrary tsLib = new TSLibrary();
+        //TSLibrary tsLib = new TSLibrary();
+        ComTSLibrary ctsLib = new ComTSLibrary();
         int testId1;
         int testId2;
         DateTime StartDate = new DateTime(1928, 1, 1, 23, 59, 0);
@@ -41,12 +42,19 @@ namespace Sandbox
         {
             InitializeComponent();
 
-            connNumber = tsLib.OpenConnection(
-                "Data Source=.; Database=OasisOutput; Trusted_Connection=yes;");
+            //connNumber = tsLib.OpenConnection(
+            //    "Data Source=.; Database=OasisOutput; Trusted_Connection=yes;");
 
+            connNumber = ctsLib.OpenConnection(
+                "Data Source=.; Database=ObjectModel; Trusted_Connection=yes;");
+
+            ctsLib.DeleteMatchingSeries(connNumber, "RunOutputTimeSeries", "OutputTimeSeriesTraces",
+                    "VariableType='A'");
+
+            //WriteArrayTest();
             //ImportTest();
             //HashTest();
-            WriteOneSeriesIrreg();
+            //WriteOneSeriesIrreg();
             //WriteOneSeriesArray();
             //ReadOneSeriesModel();
             //WriteOneSeriesList();
@@ -54,7 +62,7 @@ namespace Sandbox
         }
         private void MainWindowClosed(object sender, EventArgs e)
         {
-            tsLib.CloseConnection(connNumber);
+            ctsLib.CloseConnection(connNumber);
         }
         
 
@@ -62,7 +70,7 @@ namespace Sandbox
         {
             //ImportTest();
             //ReadArrayTest();
-            ReadListTest();
+            //ReadListTest();
             //WriteArrayTest();
             //WriteListTest();
             //DeleteTest();
@@ -70,6 +78,30 @@ namespace Sandbox
 
         }
 
+        void WriteArrayTest()
+        {
+            int i;
+
+            double[] valArray = new double[nVals];
+
+            for (i = 0; i < nVals; i++)
+                valArray[i] = i * 3;
+
+            for (i = 0; i < nIter; i++)
+            {
+                int id = ctsLib.WriteParametersRegularUnsafe(connNumber, "RunOutputTimeSeries", "OutputTimeSeriesTraces",
+                           3, 1, nVals, StartDate,
+                           new String[6] { "RunGUID", "VariableType", "VariableName", "TimeSeriesType", "RunElementGUID", "Unit_Id" },
+                           new String[6] { "'EF8A01FE-C250-429C-A3AF-160076DE142B'", "'E'", "'D'", "1", "'EF8A01FE-C250-429C-A3AF-160076DE142B'", "1" });
+
+                for (int t = 1; t <= 3; t++)
+                    ctsLib.WriteTraceRegularUnsafe(connNumber, "RunOutputTimeSeries", "OutputTimeSeriesTraces",
+                                id, t, valArray);
+            }
+        }
+
+
+        /*
         void HashTest()
         {
             byte[] inArray1 = new ASCIIEncoding().GetBytes("PartA");
@@ -344,7 +376,7 @@ namespace Sandbox
             TimeLabelBlob.Content = String.Format("BLOBWRI --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
         }
 
-        
+*/        
         
     }
 }
