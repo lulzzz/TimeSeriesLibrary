@@ -17,56 +17,56 @@ namespace TimeSeriesLibrary
     [Guid("752F96CB-377C-41fe-8FB0-2045C69DA0D3")]
     [InterfaceType(ComInterfaceType.InterfaceIsDual)]
     [ComVisible(true)]
-    public interface _ComTSLibrary
+    public unsafe interface _ComTSLibrary
     {
         [ComVisible(true)]
         bool GetHasError();
         [ComVisible(true)]
-        String GetErrorMessage();
+        sbyte *GetErrorMessage();
         [ComVisible(true)]
-        int OpenConnection(string connectionString);
+        int OpenConnection(sbyte *pConnectionString);
         [ComVisible(true)]
         void CloseConnection(int connectionNumber);
         [ComVisible(true)]
         System.Data.SqlClient.SqlConnection GetConnectionFromId(int connectionNumber);
 
         [ComVisible(true)]
-        int ReadDatesValuesUnsafe(int connectionNumber, string paramTableName, String traceTableName, int id, int traceNumber, int nReqValues, ref TSDateValueStruct[] dateValueArray, DateTime reqStartDate, DateTime reqEndDate);
+        int ReadDatesValues(int connectionNumber, sbyte *pParamTableName, sbyte *pTraceTableName, int id, int traceNumber, int nReqValues, ref TSDateValueStruct[] dateValueArray, DateTime reqStartDate, DateTime reqEndDate);
         [ComVisible(true)]
-        int ReadValuesRegularUnsafe(int connectionNumber, string paramTableName, String traceTableName, int id, int traceNumber, int nReqValues, double[] valueArray, DateTime reqStartDate, DateTime reqEndDate);
+        int ReadValuesRegular(int connectionNumber, sbyte* pParamTableName, sbyte* pTraceTableName, int id, int traceNumber, int nReqValues, double[] valueArray, DateTime reqStartDate, DateTime reqEndDate);
 
         [ComVisible(true)]
-        int WriteParametersIrregularUnsafe(int connectionNumber, string paramTableName, String traceTableName,
+        int WriteParametersIrregular(int connectionNumber, sbyte* pParamTableName, sbyte* pTraceTableName,
                         int nOutValues, DateTime outStartDate, DateTime outEndDate,
-                        String[] extraParamNames, String[] extraParamValues);
+                        short extraParamCount, sbyte*[] pExtraParamNames, sbyte*[] pExtraParamValues);
         [ComVisible(true)]
-        int WriteParametersRegularUnsafe(int connectionNumber, string paramTableName, String traceTableName,
+        int WriteParametersRegular(int connectionNumber, sbyte* pParamTableName, sbyte* pTraceTableName,
                         short timeStepUnit, short timeStepQuantity, int nOutValues, DateTime outStartDate,
-                        String[] extraParamNames, String[] extraParamValues);
+                        short extraParamCount, sbyte*[] pExtraParamNames, sbyte*[] pExtraParamValues);
         [ComVisible(true)]
-        void WriteTraceIrregularUnsafe(int connectionNumber, string paramTableName, String traceTableName,
+        void WriteTraceIrregular(int connectionNumber, sbyte* pParamTableName, sbyte *pTraceTableName,
                         int id, int traceNumber, TSDateValueStruct[] dateValueArray);
         [ComVisible(true)]
-        void WriteTraceRegularUnsafe(int connectionNumber, string paramTableName, String traceTableName, int id, int traceNumber, double[] valueArray);
+        void WriteTraceRegular(int connectionNumber, sbyte* pParamTableName, sbyte *pTraceTableName, int id, int traceNumber, double[] valueArray);
 
         [ComVisible(true)]
-        bool DeleteMatchingSeries(int connectionNumber, string paramTableName, String traceTableName, string whereClause);
+        bool DeleteMatchingSeries(int connectionNumber, sbyte* pParamTableName, sbyte* pTraceTableName, sbyte* pWhereClause);
         [ComVisible(true)]
-        bool DeleteSeries(int connectionNumber, string paramTableName, String traceTableName, int id);
+        bool DeleteSeries(int connectionNumber, sbyte* pParamTableName, sbyte* pTraceTableName, int id);
 
-        [ComVisible(true)]
-        int XmlImport(int connectionNumber, string paramTableName, String traceTableName, string xmlFileName);
         //[ComVisible(true)]
-        //int XmlImportWithList(int connectionNumber, string paramTableName, string xmlFileName, System.Collections.Generic.List<TSImport> tsImportList);
+        //int XmlImport(int connectionNumber, string paramTableName, String traceTableName, string xmlFileName);
+        ////[ComVisible(true)]
+        ////int XmlImportWithList(int connectionNumber, string paramTableName, string xmlFileName, System.Collections.Generic.List<TSImport> tsImportList);
 
-        [ComVisible(true)]
-        DateTime IncrementDate(DateTime startDate, short unit, short stepSize, int numSteps);
-        [ComVisible(true)]
-        void FillDateArray(short timeStepUnit, short timeStepQuantity, int nReqValues, DateTime[] dateArray, DateTime reqStartDate);
-        [ComVisible(true)]
-        void FillSeriesDateArray(int connectionNumber, string paramTableName, String traceTableName, int id, int nReqValues, DateTime[] dateArray, DateTime reqStartDate);
-        [ComVisible(true)]
-        int CountTimeSteps(DateTime startDate, DateTime endDate, short unit, short stepSize);
+        //[ComVisible(true)]
+        //DateTime IncrementDate(DateTime startDate, short unit, short stepSize, int numSteps);
+        //[ComVisible(true)]
+        //void FillDateArray(short timeStepUnit, short timeStepQuantity, int nReqValues, DateTime[] dateArray, DateTime reqStartDate);
+        //[ComVisible(true)]
+        //void FillSeriesDateArray(int connectionNumber, string paramTableName, String traceTableName, int id, int nReqValues, DateTime[] dateArray, DateTime reqStartDate);
+        //[ComVisible(true)]
+        //int CountTimeSteps(DateTime startDate, DateTime endDate, short unit, short stepSize);
     } 
     
     /// <summary>
@@ -78,7 +78,7 @@ namespace TimeSeriesLibrary
     [Guid("6AC55A17-C27E-4a53-9D2A-8A9F9369070D")]
     [ClassInterface(ClassInterfaceType.None)]
     [ComVisible(true)]
-    public class ComTSLibrary : _ComTSLibrary
+    public unsafe class ComTSLibrary : _ComTSLibrary
     {
         /// <summary>
         /// The ComTSLibrary class wraps an instance of the TSLibrary class.
@@ -89,16 +89,32 @@ namespace TimeSeriesLibrary
         /// </summary>
         public TSConnection ConnxObject;
 
+        #region Error Handling
         private bool _hasError = false;
         public bool GetHasError()
         {
             return _hasError;
         }
+        private byte[] _errorMessageSbyte;
         private String _errorMessage;
-        public String GetErrorMessage()
+        private String ErrorMessage
         {
-            return _errorMessage;
+            get { return _errorMessage; }
+            set
+            {
+                _errorMessage = value;
+                _hasError = true;
+                _errorMessageSbyte = System.Text.Encoding.ASCII.GetBytes(_errorMessage);
+            }
         }
+        public sbyte* GetErrorMessage()
+        {
+            fixed (byte* pErrorMessage = _errorMessageSbyte)
+            {
+                return (sbyte*)pErrorMessage;
+            }
+        } 
+        #endregion
 
         #region Constructor
         /// <summary>
@@ -126,8 +142,11 @@ namespace TimeSeriesLibrary
         /// <param name="connectionString">The connection string used to open the connection.</param>
         /// <returns>The serial number that was automatically assigned to the new connection.</returns>
         [ComVisible(true)]
-        public int OpenConnection(String connectionString)
+        public int OpenConnection(sbyte *pConnectionString)
         {
+            // Convert from simple character byte array to .Net String object
+            String connectionString = new String(pConnectionString);
+
             try
             {
                 // let the sibling method in the wrapped TSLibrary object contain the logic
@@ -208,10 +227,14 @@ namespace TimeSeriesLibrary
         /// <returns>The number of values that the method added to the array</returns>
         // usage: for onevar to read model output, b/c it does not need dates for each timeseries
         [ComVisible(true)]
-        public unsafe int ReadValuesRegularUnsafe(
-                int connectionNumber, String paramTableName, String traceTableName, int id, int traceNumber,
+        public int ReadValuesRegular(
+                int connectionNumber, sbyte *pParamTableName, sbyte* pTraceTableName, int id, int traceNumber,
                 int nReqValues, double[] valueArray, DateTime reqStartDate, DateTime reqEndDate)
         {
+            // Convert from simple character byte array to .Net String object
+            String paramTableName = new String(pParamTableName);
+            String traceTableName = new String(pTraceTableName);
+
             try
             {
                 // Get the connection that we'll pass along.
@@ -250,10 +273,14 @@ namespace TimeSeriesLibrary
         /// <returns>The number of values that the method added to the array</returns>
         // usage: general model/onevar input
         [ComVisible(true)]
-        public unsafe int ReadDatesValuesUnsafe(
-                int connectionNumber, String paramTableName, String traceTableName, int id, int traceNumber,
+        public int ReadDatesValues(
+                int connectionNumber, sbyte *pParamTableName, sbyte *pTraceTableName, int id, int traceNumber,
                 int nReqValues, ref TSDateValueStruct[] dateValueArray, DateTime reqStartDate, DateTime reqEndDate)
         {
+            // Convert from simple character byte array to .Net String object
+            String paramTableName = new String(pParamTableName);
+            String traceTableName = new String(pTraceTableName);
+
             try
             {
                 // Get the connection that we'll pass along.
@@ -339,12 +366,27 @@ namespace TimeSeriesLibrary
         /// be matched to an item in extraParamNames.</param>
         /// <returns>ID value identifying the database record that was created</returns>
         [ComVisible(true)]
-        public unsafe int WriteParametersRegularUnsafe(
-                    int connectionNumber, String paramTableName, String traceTableName,
+        public int WriteParametersRegular(
+                    int connectionNumber, sbyte* pParamTableName, sbyte* pTraceTableName,
                     short timeStepUnit, short timeStepQuantity,
                     int nOutValues, DateTime outStartDate,
-                    String[] extraParamNames, String[] extraParamValues)
+                    short extraParamCount, sbyte *[] pExtraParamNames, sbyte *[] pExtraParamValues)
         {
+            // Convert from simple character byte array to .Net String object
+            String paramTableName = new String(pParamTableName);
+            String traceTableName = new String(pTraceTableName);
+            String s;
+            List<String> extraParamNames = new List<string>();
+            List<String> extraParamValues = new List<string>();
+            for (short i = 0; i < extraParamCount; i++)
+            {
+                s = new String(pExtraParamNames[i]);
+                extraParamNames.Add(s);
+                s = new String(pExtraParamValues[i]);
+                extraParamValues.Add(s);
+            }
+
+
             try
             {
                 // Get the connection that we'll pass along.
@@ -380,10 +422,14 @@ namespace TimeSeriesLibrary
         /// <param name="valueArray">array of time series values to be written to database</param>
         /// <returns>ID value identifying the database record that was created</returns>
         [ComVisible(true)]
-        public unsafe void WriteTraceRegularUnsafe(
-                    int connectionNumber, String paramTableName, String traceTableName, 
+        public void WriteTraceRegular(
+                    int connectionNumber, sbyte* pParamTableName, sbyte* pTraceTableName, 
                     int id, int traceNumber, double[] valueArray)
         {
+            // Convert from simple character byte array to .Net String object
+            String paramTableName = new String(pParamTableName);
+            String traceTableName = new String(pTraceTableName);
+
             try
             {
                 // Get the connection that we'll pass along.
@@ -420,11 +466,25 @@ namespace TimeSeriesLibrary
         /// be matched to an item in extraParamNames.</param>
         /// <returns>ID value identifying the database record that was created</returns>
         [ComVisible(true)]
-        public unsafe int WriteParametersIrregularUnsafe(
-                    int connectionNumber, String paramTableName, String traceTableName, 
+        public int WriteParametersIrregular(
+                    int connectionNumber, sbyte* pParamTableName, sbyte* pTraceTableName, 
                     int nOutValues, DateTime outStartDate, DateTime outEndDate,
-                    String[] extraParamNames, String[] extraParamValues)
+                    short extraParamCount, sbyte*[] pExtraParamNames, sbyte*[] pExtraParamValues)
         {
+            // Convert from simple character byte array to .Net String object
+            String paramTableName = new String(pParamTableName);
+            String traceTableName = new String(pTraceTableName);
+            String s;
+            List<String> extraParamNames = new List<string>();
+            List<String> extraParamValues = new List<string>();
+            for (short i = 0; i < extraParamCount; i++)
+            {
+                s = new String(pExtraParamNames[i]);
+                extraParamNames.Add(s);
+                s = new String(pExtraParamValues[i]);
+                extraParamValues.Add(s);
+            }
+
             try
             {
                 // Get the connection that we'll pass along.
@@ -459,10 +519,14 @@ namespace TimeSeriesLibrary
         /// <param name="dateValueArray">the array of time series date/value pairs to be written to database</param>
         /// <returns>ID value identifying the database record that was created</returns>
         [ComVisible(true)]
-        public unsafe void WriteTraceIrregularUnsafe(
-                    int connectionNumber, String paramTableName, String traceTableName,
+        public void WriteTraceIrregular(
+                    int connectionNumber, sbyte* pParamTableName, sbyte* pTraceTableName, 
                     int id, int traceNumber, TSDateValueStruct[] dateValueArray)
         {
+            // Convert from simple character byte array to .Net String object
+            String paramTableName = new String(pParamTableName);
+            String traceTableName = new String(pTraceTableName);
+
             try
             {
                 // Get the connection that we'll pass along.
@@ -493,8 +557,12 @@ namespace TimeSeriesLibrary
         /// <returns>true if a record was deleted, false if no records were deleted</returns>
         [ComVisible(true)]
         public bool DeleteSeries(
-                int connectionNumber, String paramTableName, String traceTableName, int id)
+                int connectionNumber, sbyte* pParamTableName, sbyte* pTraceTableName, int id)
         {
+            // Convert from simple character byte array to .Net String object
+            String paramTableName = new String(pParamTableName);
+            String traceTableName = new String(pTraceTableName);
+
             try
             {
                 // Get the connection that we'll pass along.
@@ -524,8 +592,13 @@ namespace TimeSeriesLibrary
         /// <returns>true if one or more records were deleted, false if no records were deleted</returns>
         [ComVisible(true)]
         public bool DeleteMatchingSeries(
-                int connectionNumber, String paramTableName, String traceTableName, String whereClause)
+                int connectionNumber, sbyte* pParamTableName, sbyte* pTraceTableName, sbyte* pWhereClause)
         {
+            // Convert from simple character byte array to .Net String object
+            String paramTableName = new String(pParamTableName);
+            String traceTableName = new String(pTraceTableName);
+            String whereClause = new String(pWhereClause);
+
             try
             {
                 // Get the connection that we'll pass along.

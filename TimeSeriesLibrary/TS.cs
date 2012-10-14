@@ -379,7 +379,7 @@ namespace TimeSeriesLibrary
                     bool doWriteToDB, TSImport tsImport,
                     short timeStepUnit, short timeStepQuantity,
                     int timeStepCount, DateTime outStartDate,
-                    String[] extraParamNames, String[] extraParamValues)
+                    List<String> extraParamNames, List<String> extraParamValues)
         {
             ErrorCheckWriteValues(doWriteToDB, tsImport);
             // The method's parameters are used to compute the meta-parameters of this time series
@@ -420,7 +420,7 @@ namespace TimeSeriesLibrary
         public unsafe int WriteParametersIrregular(
                     bool doWriteToDB, TSImport tsImport,
                     int timeStepCount, DateTime outStartDate, DateTime outEndDate,
-                    String[] extraParamNames, String[] extraParamValues)
+                    List<String> extraParamNames, List<String> extraParamValues)
         {
             ErrorCheckWriteValues(doWriteToDB, tsImport);
             // The method's parameters are used to compute the meta-parameters of this time series
@@ -451,7 +451,7 @@ namespace TimeSeriesLibrary
         /// to the fields that the TimeSeriesLibrary is designed to maintain.  Every item in this list must
         /// be matched to an item in extraParamNames.</param>
         /// <returns>the primary key Id value of the new record that was created</returns>
-        private unsafe int WriteParameters(String[] extraParamNames, String[] extraParamValues)
+        private unsafe int WriteParameters(List<String> extraParamNames, List<String> extraParamValues)
         {
             // Initialize the string of column names and column values with the first pair.
             String colString = "TimeStepUnit";
