@@ -379,7 +379,7 @@ namespace TimeSeriesLibrary
                     bool doWriteToDB, TSImport tsImport,
                     short timeStepUnit, short timeStepQuantity,
                     int timeStepCount, DateTime outStartDate,
-                    List<String> extraParamNames, List<String> extraParamValues)
+                    String extraParamNames, String extraParamValues)
         {
             ErrorCheckWriteValues(doWriteToDB, tsImport);
             // The method's parameters are used to compute the meta-parameters of this time series
@@ -420,7 +420,7 @@ namespace TimeSeriesLibrary
         public unsafe int WriteParametersIrregular(
                     bool doWriteToDB, TSImport tsImport,
                     int timeStepCount, DateTime outStartDate, DateTime outEndDate,
-                    List<String> extraParamNames, List<String> extraParamValues)
+                    String extraParamNames, String extraParamValues)
         {
             ErrorCheckWriteValues(doWriteToDB, tsImport);
             // The method's parameters are used to compute the meta-parameters of this time series
@@ -451,7 +451,7 @@ namespace TimeSeriesLibrary
         /// to the fields that the TimeSeriesLibrary is designed to maintain.  Every item in this list must
         /// be matched to an item in extraParamNames.</param>
         /// <returns>the primary key Id value of the new record that was created</returns>
-        private unsafe int WriteParameters(List<String> extraParamNames, List<String> extraParamValues)
+        private unsafe int WriteParameters(String extraParamNames, String extraParamValues)
         {
             // Initialize the string of column names and column values with the first pair.
             String colString = "TimeStepUnit";
@@ -465,12 +465,7 @@ namespace TimeSeriesLibrary
             // Now our strings contain all of the columns that TimeSeriesLibrary is responsible for
             // handling.  The caller may pass in additional column names and values that we now add
             // to our strings.
-            if (extraParamNames != null)
-            {
-                int extraCount = extraParamNames.Count();
-                for (int i = 0; i < extraCount; i++)
-                    AppendStringPair(ref colString, ref valString, extraParamNames[i], extraParamValues[i]);
-            }
+            AppendStringPair(ref colString, ref valString, extraParamNames, extraParamValues);
             // Create a SQL INSERT command.  The "select SCOPE_IDENTITY" at the end of the command
             // ensures that the command will return the ID of the new record.
             String comm = String.Format("insert into {0} ({1}) values ({2}); select SCOPE_IDENTITY()",

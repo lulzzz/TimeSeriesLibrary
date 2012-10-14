@@ -38,11 +38,11 @@ namespace TimeSeriesLibrary
         [ComVisible(true)]
         int WriteParametersIrregular(int connectionNumber, sbyte* pParamTableName, sbyte* pTraceTableName,
                         int nOutValues, DateTime outStartDate, DateTime outEndDate,
-                        short extraParamCount, sbyte*[] pExtraParamNames, sbyte*[] pExtraParamValues);
+                        sbyte *pExtraParamNames, sbyte *pExtraParamValues);
         [ComVisible(true)]
         int WriteParametersRegular(int connectionNumber, sbyte* pParamTableName, sbyte* pTraceTableName,
                         short timeStepUnit, short timeStepQuantity, int nOutValues, DateTime outStartDate,
-                        short extraParamCount, sbyte*[] pExtraParamNames, sbyte*[] pExtraParamValues);
+                        sbyte *pExtraParamNames, sbyte *pExtraParamValues);
         [ComVisible(true)]
         void WriteTraceIrregular(int connectionNumber, sbyte* pParamTableName, sbyte *pTraceTableName,
                         int id, int traceNumber, TSDateValueStruct[] dateValueArray);
@@ -93,6 +93,7 @@ namespace TimeSeriesLibrary
         private bool _hasError = false;
         public bool GetHasError()
         {
+            //GC.Collect();
             return _hasError;
         }
         private byte[] _errorMessageSbyte;
@@ -154,8 +155,7 @@ namespace TimeSeriesLibrary
             }
             catch (Exception e)
             {
-                _hasError = true;
-                _errorMessage = e.Message;
+                ErrorMessage = e.Message;
                 return 0;
             }
         }
@@ -176,8 +176,7 @@ namespace TimeSeriesLibrary
             }
             catch (Exception e)
             {
-                _hasError = true;
-                _errorMessage = e.Message;
+                ErrorMessage = e.Message;
             }
         }
         /// <summary>
@@ -195,8 +194,7 @@ namespace TimeSeriesLibrary
             }
             catch (Exception e)
             {
-                _hasError = true;
-                _errorMessage = e.Message;
+                ErrorMessage = e.Message;
                 return null;
             }
         }
@@ -231,12 +229,11 @@ namespace TimeSeriesLibrary
                 int connectionNumber, sbyte *pParamTableName, sbyte* pTraceTableName, int id, int traceNumber,
                 int nReqValues, double[] valueArray, DateTime reqStartDate, DateTime reqEndDate)
         {
-            // Convert from simple character byte array to .Net String object
-            String paramTableName = new String(pParamTableName);
-            String traceTableName = new String(pTraceTableName);
-
             try
             {
+                // Convert from simple character byte array to .Net String object
+                String paramTableName = new String(pParamTableName);
+                String traceTableName = new String(pTraceTableName);
                 // Get the connection that we'll pass along.
                 SqlConnection connx = GetConnectionFromId(connectionNumber);
                 // Construct new TS object with SqlConnection object and table name
@@ -246,8 +243,7 @@ namespace TimeSeriesLibrary
             }
             catch (Exception e)
             {
-                _hasError = true;
-                _errorMessage = e.Message;
+                ErrorMessage = e.Message;
                 return 0;
             }
 
@@ -277,12 +273,11 @@ namespace TimeSeriesLibrary
                 int connectionNumber, sbyte *pParamTableName, sbyte *pTraceTableName, int id, int traceNumber,
                 int nReqValues, ref TSDateValueStruct[] dateValueArray, DateTime reqStartDate, DateTime reqEndDate)
         {
-            // Convert from simple character byte array to .Net String object
-            String paramTableName = new String(pParamTableName);
-            String traceTableName = new String(pTraceTableName);
-
             try
             {
+                // Convert from simple character byte array to .Net String object
+                String paramTableName = new String(pParamTableName);
+                String traceTableName = new String(pTraceTableName);
                 // Get the connection that we'll pass along.
                 SqlConnection connx = GetConnectionFromId(connectionNumber);
                 // Construct new TS object with SqlConnection object and table name
@@ -334,8 +329,7 @@ namespace TimeSeriesLibrary
             }
             catch (Exception e)
             {
-                _hasError = true;
-                _errorMessage = e.Message;
+                ErrorMessage = e.Message;
                 return 0;
             }
         }
@@ -370,25 +364,15 @@ namespace TimeSeriesLibrary
                     int connectionNumber, sbyte* pParamTableName, sbyte* pTraceTableName,
                     short timeStepUnit, short timeStepQuantity,
                     int nOutValues, DateTime outStartDate,
-                    short extraParamCount, sbyte *[] pExtraParamNames, sbyte *[] pExtraParamValues)
+                    sbyte *pExtraParamNames, sbyte *pExtraParamValues)
         {
-            // Convert from simple character byte array to .Net String object
-            String paramTableName = new String(pParamTableName);
-            String traceTableName = new String(pTraceTableName);
-            String s;
-            List<String> extraParamNames = new List<string>();
-            List<String> extraParamValues = new List<string>();
-            for (short i = 0; i < extraParamCount; i++)
-            {
-                s = new String(pExtraParamNames[i]);
-                extraParamNames.Add(s);
-                s = new String(pExtraParamValues[i]);
-                extraParamValues.Add(s);
-            }
-
-
             try
             {
+                // Convert from simple character byte array to .Net String object
+                String paramTableName = new String(pParamTableName);
+                String traceTableName = new String(pTraceTableName);
+                String extraParamNames = new String(pExtraParamNames);
+                String extraParamValues = new String(pExtraParamValues);
                 // Get the connection that we'll pass along.
                 SqlConnection connx = GetConnectionFromId(connectionNumber);
                 // Construct new TS object with SqlConnection object and table name
@@ -400,8 +384,7 @@ namespace TimeSeriesLibrary
             }
             catch (Exception e)
             {
-                _hasError = true;
-                _errorMessage = e.Message;
+                ErrorMessage = e.Message;
                 return 0;
             }
         }
@@ -426,12 +409,11 @@ namespace TimeSeriesLibrary
                     int connectionNumber, sbyte* pParamTableName, sbyte* pTraceTableName, 
                     int id, int traceNumber, double[] valueArray)
         {
-            // Convert from simple character byte array to .Net String object
-            String paramTableName = new String(pParamTableName);
-            String traceTableName = new String(pTraceTableName);
-
             try
             {
+                // Convert from simple character byte array to .Net String object
+                String paramTableName = new String(pParamTableName);
+                String traceTableName = new String(pTraceTableName);
                 // Get the connection that we'll pass along.
                 SqlConnection connx = GetConnectionFromId(connectionNumber);
                 // Construct new TS object with SqlConnection object and table name
@@ -441,8 +423,7 @@ namespace TimeSeriesLibrary
             }
             catch (Exception e)
             {
-                _hasError = true;
-                _errorMessage = e.Message;
+                ErrorMessage = e.Message;
             }
         }
         /// <summary>
@@ -469,24 +450,15 @@ namespace TimeSeriesLibrary
         public int WriteParametersIrregular(
                     int connectionNumber, sbyte* pParamTableName, sbyte* pTraceTableName, 
                     int nOutValues, DateTime outStartDate, DateTime outEndDate,
-                    short extraParamCount, sbyte*[] pExtraParamNames, sbyte*[] pExtraParamValues)
+                    sbyte *pExtraParamNames, sbyte *pExtraParamValues)
         {
-            // Convert from simple character byte array to .Net String object
-            String paramTableName = new String(pParamTableName);
-            String traceTableName = new String(pTraceTableName);
-            String s;
-            List<String> extraParamNames = new List<string>();
-            List<String> extraParamValues = new List<string>();
-            for (short i = 0; i < extraParamCount; i++)
-            {
-                s = new String(pExtraParamNames[i]);
-                extraParamNames.Add(s);
-                s = new String(pExtraParamValues[i]);
-                extraParamValues.Add(s);
-            }
-
             try
             {
+                // Convert from simple character byte array to .Net String object
+                String paramTableName = new String(pParamTableName);
+                String traceTableName = new String(pTraceTableName);
+                String extraParamNames = new String(pExtraParamNames);
+                String extraParamValues = new String(pExtraParamValues);
                 // Get the connection that we'll pass along.
                 SqlConnection connx = GetConnectionFromId(connectionNumber);
                 // Construct new TS object with SqlConnection object and table name
@@ -497,8 +469,7 @@ namespace TimeSeriesLibrary
             }
             catch (Exception e)
             {
-                _hasError = true;
-                _errorMessage = e.Message;
+                ErrorMessage = e.Message;
                 return 0;
             }
         }
@@ -523,12 +494,11 @@ namespace TimeSeriesLibrary
                     int connectionNumber, sbyte* pParamTableName, sbyte* pTraceTableName, 
                     int id, int traceNumber, TSDateValueStruct[] dateValueArray)
         {
-            // Convert from simple character byte array to .Net String object
-            String paramTableName = new String(pParamTableName);
-            String traceTableName = new String(pTraceTableName);
-
             try
             {
+                // Convert from simple character byte array to .Net String object
+                String paramTableName = new String(pParamTableName);
+                String traceTableName = new String(pTraceTableName);
                 // Get the connection that we'll pass along.
                 SqlConnection connx = GetConnectionFromId(connectionNumber);
                 // Construct new TS object with SqlConnection object and table name
@@ -538,8 +508,7 @@ namespace TimeSeriesLibrary
             }
             catch (Exception e)
             {
-                _hasError = true;
-                _errorMessage = e.Message;
+                ErrorMessage = e.Message;
             }
         }
         #endregion
@@ -559,12 +528,11 @@ namespace TimeSeriesLibrary
         public bool DeleteSeries(
                 int connectionNumber, sbyte* pParamTableName, sbyte* pTraceTableName, int id)
         {
-            // Convert from simple character byte array to .Net String object
-            String paramTableName = new String(pParamTableName);
-            String traceTableName = new String(pTraceTableName);
-
             try
             {
+                // Convert from simple character byte array to .Net String object
+                String paramTableName = new String(pParamTableName);
+                String traceTableName = new String(pTraceTableName);
                 // Get the connection that we'll pass along.
                 SqlConnection connx = GetConnectionFromId(connectionNumber);
                 // Construct new TS object with SqlConnection object and table name
@@ -574,8 +542,7 @@ namespace TimeSeriesLibrary
             }
             catch (Exception e)
             {
-                _hasError = true;
-                _errorMessage = e.Message;
+                ErrorMessage = e.Message;
                 return false;
             }
         }
@@ -594,13 +561,12 @@ namespace TimeSeriesLibrary
         public bool DeleteMatchingSeries(
                 int connectionNumber, sbyte* pParamTableName, sbyte* pTraceTableName, sbyte* pWhereClause)
         {
-            // Convert from simple character byte array to .Net String object
-            String paramTableName = new String(pParamTableName);
-            String traceTableName = new String(pTraceTableName);
-            String whereClause = new String(pWhereClause);
-
             try
             {
+                // Convert from simple character byte array to .Net String object
+                String paramTableName = new String(pParamTableName);
+                String traceTableName = new String(pTraceTableName);
+                String whereClause = new String(pWhereClause);
                 // Get the connection that we'll pass along.
                 SqlConnection connx = GetConnectionFromId(connectionNumber);
                 // Construct new TS object with SqlConnection object and table name
@@ -610,8 +576,7 @@ namespace TimeSeriesLibrary
             }
             catch (Exception e)
             {
-                _hasError = true;
-                _errorMessage = e.Message;
+                ErrorMessage = e.Message;
                 return false;
             }
         }
