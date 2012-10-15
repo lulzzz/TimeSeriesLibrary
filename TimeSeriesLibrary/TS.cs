@@ -185,6 +185,7 @@ namespace TimeSeriesLibrary
                 TimeStepCount = dTable.Rows[0].Field<int>("RecordCount");
                 BlobStartDate = dTable.Rows[0].Field<DateTime>("StartDate");
                 BlobEndDate = dTable.Rows[0].Field<DateTime>("EndDate");
+                dTable.Dispose();
             }
             IsInitialized = true;
             return true;
@@ -346,6 +347,7 @@ namespace TimeSeriesLibrary
                 DataRow currentRow = dTable.Rows[0];
                 // Cast the BLOB as an array of bytes
                 blobData = (Byte[])currentRow["ValueBlob"];
+                dTable.Dispose();
             }
         }
         #endregion
@@ -377,7 +379,7 @@ namespace TimeSeriesLibrary
                     bool doWriteToDB, TSImport tsImport,
                     short timeStepUnit, short timeStepQuantity,
                     int timeStepCount, DateTime outStartDate,
-                    String[] extraParamNames, String[] extraParamValues)
+                    String extraParamNames, String extraParamValues)
         {
             ErrorCheckWriteValues(doWriteToDB, tsImport);
             // The method's parameters are used to compute the meta-parameters of this time series
@@ -418,7 +420,7 @@ namespace TimeSeriesLibrary
         public unsafe int WriteParametersIrregular(
                     bool doWriteToDB, TSImport tsImport,
                     int timeStepCount, DateTime outStartDate, DateTime outEndDate,
-                    String[] extraParamNames, String[] extraParamValues)
+                    String extraParamNames, String extraParamValues)
         {
             ErrorCheckWriteValues(doWriteToDB, tsImport);
             // The method's parameters are used to compute the meta-parameters of this time series
@@ -449,7 +451,7 @@ namespace TimeSeriesLibrary
         /// to the fields that the TimeSeriesLibrary is designed to maintain.  Every item in this list must
         /// be matched to an item in extraParamNames.</param>
         /// <returns>the primary key Id value of the new record that was created</returns>
-        private unsafe int WriteParameters(String[] extraParamNames, String[] extraParamValues)
+        private unsafe int WriteParameters(String extraParamNames, String extraParamValues)
         {
             // Initialize the string of column names and column values with the first pair.
             String colString = "TimeStepUnit";
@@ -463,26 +465,23 @@ namespace TimeSeriesLibrary
             // Now our strings contain all of the columns that TimeSeriesLibrary is responsible for
             // handling.  The caller may pass in additional column names and values that we now add
             // to our strings.
-            if (extraParamNames != null)
-            {
-                int extraCount = extraParamNames.Count();
-                for (int i = 0; i < extraCount; i++)
-                    AppendStringPair(ref colString, ref valString, extraParamNames[i], extraParamValues[i]);
-            }
+            AppendStringPair(ref colString, ref valString, extraParamNames, extraParamValues);
             // Create a SQL INSERT command.  The "select SCOPE_IDENTITY" at the end of the command
             // ensures that the command will return the ID of the new record.
             String comm = String.Format("insert into {0} ({1}) values ({2}); select SCOPE_IDENTITY()",
                             ParametersTableName, colString, valString);
             // SqlCommand object can execute the query for us
-            SqlCommand sqlCommand = new SqlCommand(comm, Connx);
-            try
+            using (SqlCommand sqlCommand = new SqlCommand(comm, Connx))
             {
-                Id = (int)(decimal)sqlCommand.ExecuteScalar();
-            }
-            catch (Exception e)
-            {   // The query failed
-                throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
-                                "Could not execute query:\n\n." + comm, e);
+                try
+                {
+                    Id = (int)(decimal)sqlCommand.ExecuteScalar();
+                }
+                catch (Exception e)
+                {   // The query failed
+                    throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
+                                    "Could not execute query:\n\n." + comm, e);
+                }
             }
             return Id;
         }
@@ -637,6 +636,7 @@ namespace TimeSeriesLibrary
                     dTable.Rows.Add(currentRow);
                     // Save the DataRow object to the database
                     adp.Update(dTable);
+                    dTable.Dispose();
                 }
             }
         }
@@ -693,6 +693,7 @@ namespace TimeSeriesLibrary
                             traceObject.Checksum = (byte[])row["Checksum"];
                             traceObjects.Add(traceObject);
                         }
+                        dTable.Dispose();
                     }
                 }
             }
@@ -704,8 +705,10 @@ namespace TimeSeriesLibrary
                 // write the new checksum to the parameters table
                 comm = String.Format("update {0} set Checksum={1} where Id={2}",
                                 ParametersTableName, ByteArrayToString(Checksum), Id);
-                SqlCommand sqlCommand = new SqlCommand(comm, Connx);
-                sqlCommand.ExecuteNonQuery();
+                using (SqlCommand sqlCommand = new SqlCommand(comm, Connx))
+                {
+                    sqlCommand.ExecuteNonQuery();
+                }
             }
         }
         #endregion
@@ -727,9 +730,11 @@ namespace TimeSeriesLibrary
             comm = String.Format("delete from {0} where TimeSeries_Id='{1}' ",
                                     TraceTableName, Id);
             // SqlCommand object allows us to execute the command
-            sqlCommand = new SqlCommand(comm, Connx);
-            // This method executes the SQL command and returns the number of rows that were affected
-            sqlCommand.ExecuteNonQuery();
+            using (sqlCommand = new SqlCommand(comm, Connx))
+            {
+                // This method executes the SQL command and returns the number of rows that were affected
+                sqlCommand.ExecuteNonQuery();
+            }
 
             //
             // Second delete from the Parameters Table
@@ -738,13 +743,14 @@ namespace TimeSeriesLibrary
             comm = String.Format("delete from {0} where Id='{1}' ",
                                     ParametersTableName, Id);
             // SqlCommand object allows us to execute the command
-            sqlCommand = new SqlCommand(comm, Connx);
-            // This method executes the SQL command and returns the number of rows that were affected
-            int numRowsAffected = sqlCommand.ExecuteNonQuery();
-
-            // Return value reflects whether anything was actually deleted
-            if (numRowsAffected > 0)
-                return true;
+            using (sqlCommand = new SqlCommand(comm, Connx))
+            {
+                // This method executes the SQL command and returns the number of rows that were affected
+                int numRowsAffected = sqlCommand.ExecuteNonQuery();
+                // Return value reflects whether anything was actually deleted
+                if (numRowsAffected > 0)
+                    return true;
+            }
 
             return false;
         } 
@@ -769,9 +775,11 @@ namespace TimeSeriesLibrary
             comm = String.Format("delete t from {0} t inner join {1} p on p.Id = t.TimeSeries_Id and {2} ",
                                     TraceTableName, ParametersTableName, whereClause);
             // SqlCommand object allows us to execute the command
-            sqlCommand = new SqlCommand(comm, Connx);
-            // This method executes the SQL command and returns the number of rows that were affected
-            sqlCommand.ExecuteNonQuery();
+            using (sqlCommand = new SqlCommand(comm, Connx))
+            {
+                // This method executes the SQL command and returns the number of rows that were affected
+                sqlCommand.ExecuteNonQuery();
+            }
 
             //
             // Second delete from the Parameters Table
@@ -780,14 +788,14 @@ namespace TimeSeriesLibrary
             comm = String.Format("delete from {0} where {1}",
                                     ParametersTableName, whereClause);
             // SqlCommand object allows us to execute the command
-            sqlCommand = new SqlCommand(comm, Connx);
-            // This method executes the SQL command and returns the number of rows that were affected
-            int numRowsAffected = sqlCommand.ExecuteNonQuery();
-
-            // Return value reflects whether anything was actually deleted
-            if (numRowsAffected > 0)
-                return true;
-
+            using (sqlCommand = new SqlCommand(comm, Connx))
+            {
+                // This method executes the SQL command and returns the number of rows that were affected
+                int numRowsAffected = sqlCommand.ExecuteNonQuery();
+                // Return value reflects whether anything was actually deleted
+                if (numRowsAffected > 0)
+                    return true;
+            }
             return false;
         }
         #endregion

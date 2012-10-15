@@ -48,46 +48,50 @@ namespace TimeSeriesLibrary
             Byte[] blobData, double[] valueArray)
         {
             // MemoryStream and BinaryReader objects enable bulk copying of data from the BLOB
-            MemoryStream blobStream = new MemoryStream(blobData);
-            BinaryReader blobReader = new BinaryReader(blobStream);
-            // How many elements of size 'double' are in the BLOB?
-            int numBlobBin = (int)blobStream.Length;
-            int numBlobValues = numBlobBin / sizeof(double);
-
-            int numReadValues = numBlobValues;
-            int numSkipValues = 0;
-            int numTruncValues = 0;
-
-            // Values might be skipped from the front or truncated from the end of the array,
-            // but only if this flag is 'true'.
-            if (applyLimits)
+            using (MemoryStream blobStream = new MemoryStream(blobData))
+            using (BinaryReader blobReader = new BinaryReader(blobStream))
             {
-                // Do we skip any values at the front of the BLOB in order to fullfil the requested start date?
-                if (reqStartDate > blobStartDate)
-                    numSkipValues = TSDateCalculator.CountSteps(blobStartDate, reqStartDate, timeStepUnit, timeStepQuantity);
-                // compute the last date in the BLOB
-                DateTime blobEndDate = TSDateCalculator.IncrementDate
-                                (blobStartDate, timeStepUnit, timeStepQuantity, numBlobValues-1);
-                // Do we truncate any values at the end of the BLOB in order to fulfill the requested end date?
-                if (reqEndDate < blobEndDate)
-                    numTruncValues = TSDateCalculator.CountSteps(reqEndDate, blobEndDate, timeStepUnit, timeStepQuantity);
-                // the number of values that can actually be read from the BLOB
-                numReadValues = Math.Min(numBlobValues - numSkipValues - numTruncValues, nReqValues);
+                // How many elements of size 'double' are in the BLOB?
+                int numBlobBin = (int)blobStream.Length;
+                int numBlobValues = numBlobBin / sizeof(double);
+
+                int numReadValues = numBlobValues;
+                int numSkipValues = 0;
+                int numTruncValues = 0;
+
+                // Values might be skipped from the front or truncated from the end of the array,
+                // but only if this flag is 'true'.
+                if (applyLimits)
+                {
+                    // Do we skip any values at the front of the BLOB in order to fullfil the requested start date?
+                    if (reqStartDate > blobStartDate)
+                        numSkipValues = TSDateCalculator.CountSteps(blobStartDate, reqStartDate,
+                                                                timeStepUnit, timeStepQuantity);
+                    // compute the last date in the BLOB
+                    DateTime blobEndDate = TSDateCalculator.IncrementDate
+                                    (blobStartDate, timeStepUnit, timeStepQuantity, numBlobValues - 1);
+                    // Do we truncate any values at the end of the BLOB in order to fulfill the requested end date?
+                    if (reqEndDate < blobEndDate)
+                        numTruncValues = TSDateCalculator.CountSteps(reqEndDate, blobEndDate,
+                                                                timeStepUnit, timeStepQuantity);
+                    // the number of values that can actually be read from the BLOB
+                    numReadValues = Math.Min(numBlobValues - numSkipValues - numTruncValues, nReqValues);
+                }
+
+                // the number of bytes that will actually be read
+                int numReadBin = numReadValues * sizeof(double);
+                // the number of bytes that will be skipped
+                int numSkipBin = numSkipValues * sizeof(double);
+
+                // If we've got zero values to read, then we're done early!
+                if (numReadValues <= 0)
+                    return 0;
+
+                // Transfer the entire array of data as a block
+                Buffer.BlockCopy(blobReader.ReadBytes(numBlobBin), numSkipBin, valueArray, 0, numReadBin);
+
+                return numReadValues;
             }
-
-            // the number of bytes that will actually be read
-            int numReadBin = numReadValues * sizeof(double);
-            // the number of bytes that will be skipped
-            int numSkipBin = numSkipValues * sizeof(double);
-
-            // If we've got zero values to read, then we're done early!
-            if (numReadValues <= 0)
-                return 0;
-
-            // Transfer the entire array of data as a block
-            Buffer.BlockCopy(blobReader.ReadBytes(numBlobBin), numSkipBin, valueArray, 0, numReadBin);
-
-            return numReadValues;
         } 
         #endregion
 
@@ -121,40 +125,42 @@ namespace TimeSeriesLibrary
             int numReadValues = 0;
 
             // MemoryStream and BinaryReader objects enable bulk copying of data from the BLOB
-            MemoryStream blobStream = new MemoryStream(blobData);
-            BinaryReader blobReader = new BinaryReader(blobStream);
-            // How many elements of 'TSDateValueStruct' are in the BLOB?
-            int numBlobBin = (int)blobStream.Length;
-            int numBlobValues = numBlobBin / sizeof(TSDateValueStruct);
-            DateTime currDate;
-            int j = 0;
-            // Loop through all time steps in the BLOB
-            for (int i = 0; i < numBlobValues; i++)
+            using (MemoryStream blobStream = new MemoryStream(blobData))
+            using (BinaryReader blobReader = new BinaryReader(blobStream))
             {
-                // First check the date of this time step
-                currDate = DateTime.FromBinary(blobReader.ReadInt64());
-                // If date is before or after the dates requested by the caller, then
-                // we won't record the date/value info to the output array.
-                if (applyLimits)
+                // How many elements of 'TSDateValueStruct' are in the BLOB?
+                int numBlobBin = (int)blobStream.Length;
+                int numBlobValues = numBlobBin / sizeof(TSDateValueStruct);
+                DateTime currDate;
+                int j = 0;
+                // Loop through all time steps in the BLOB
+                for (int i = 0; i < numBlobValues; i++)
                 {
-                    if (currDate < reqStartDate)
+                    // First check the date of this time step
+                    currDate = DateTime.FromBinary(blobReader.ReadInt64());
+                    // If date is before or after the dates requested by the caller, then
+                    // we won't record the date/value info to the output array.
+                    if (applyLimits)
                     {
-                        blobReader.ReadDouble();
-                        continue;
+                        if (currDate < reqStartDate)
+                        {
+                            blobReader.ReadDouble();
+                            continue;
+                        }
+                        if (currDate > reqEndDate) break;
                     }
-                    if (currDate > reqEndDate) break;
+                    // Record the date and value to the output array.
+                    dateValueArray[j].Date = currDate;
+                    dateValueArray[j].Value = blobReader.ReadDouble();
+                    j++;
+                    // Don't overrun the array length specified by the caller
+                    if (applyLimits) if (j >= nReqValues) break;
                 }
-                // Record the date and value to the output array.
-                dateValueArray[j].Date = currDate;
-                dateValueArray[j].Value = blobReader.ReadDouble();
-                j++;
-                // Don't overrun the array length specified by the caller
-                if(applyLimits) if (j >= nReqValues) break;
+
+                numReadValues = j;
+
+                return numReadValues;
             }
-
-            numReadValues = j;
-
-            return numReadValues;
         } 
         #endregion
 
@@ -201,16 +207,18 @@ namespace TimeSeriesLibrary
             Byte[] blobData = new Byte[nBin];
 
             // MemoryStream and BinaryWriter objects enable copying of data to the BLOB
-            MemoryStream blobStream = new MemoryStream(blobData);
-            BinaryWriter blobWriter = new BinaryWriter(blobStream);
-            // Loop through the entire array
-            for (int i = 0; i < TimeStepCount; i++)
+            using (MemoryStream blobStream = new MemoryStream(blobData))
+            using (BinaryWriter blobWriter = new BinaryWriter(blobStream))
             {
-                // write the value to the BLOB as DATE followed by VALUE
-                blobWriter.Write(dateValueArray[i].Date.ToBinary());
-                blobWriter.Write(dateValueArray[i].Value);
+                // Loop through the entire array
+                for (int i = 0; i < TimeStepCount; i++)
+                {
+                    // write the value to the BLOB as DATE followed by VALUE
+                    blobWriter.Write(dateValueArray[i].Date.ToBinary());
+                    blobWriter.Write(dateValueArray[i].Value);
+                }
+                return blobData;
             }
-            return blobData;
         } 
         #endregion
 
@@ -280,33 +288,36 @@ namespace TimeSeriesLibrary
             // Byte array for the series of parameters that are fed into the MD5 algorithm
             byte[] binArray = new byte[LengthOfParamInputForChecksum];
             // MemoryStream and BinaryWriter objects allow us to write data into the byte array
-            MemoryStream binStream = new MemoryStream(binArray);
-            BinaryWriter binWriter = new BinaryWriter(binStream);
+            using (MemoryStream binStream = new MemoryStream(binArray))
+            using (BinaryWriter binWriter = new BinaryWriter(binStream))
+            {
+                // Write relevant parameters (not including the BLOB itself) into a short byte array
 
-            // Write relevant parameters (not including the BLOB itself) into a short byte array
+                // TimeStepUnit
+                binWriter.Write((short)timeStepUnit);
+                // TimeStepQuantity
+                binWriter.Write(timeStepQuantity);
+                // TimeStepCount
+                binWriter.Write(timeStepCount);
+                // StartDate and EndDate
+                binWriter.Write(blobStartDate.ToBinary());
+                binWriter.Write(blobEndDate.ToBinary());
 
-            // TimeStepUnit
-            binWriter.Write((short)timeStepUnit);
-            // TimeStepQuantity
-            binWriter.Write(timeStepQuantity);
-            // TimeStepCount
-            binWriter.Write(timeStepCount);
-            // StartDate and EndDate
-            binWriter.Write(blobStartDate.ToBinary());
-            binWriter.Write(blobEndDate.ToBinary());
-
-            // MD5CryptoServiceProvider object has methods to compute the Checksum
-            MD5CryptoServiceProvider md5Hasher = new MD5CryptoServiceProvider();
-            // make sure that we have a list of traces that is ordered by trace number
-            List<ITimeSeriesTrace> orderedTraceList = traceList.OrderBy(t => t.TraceNumber).ToList();
-            // loop through all traces
-            foreach(ITimeSeriesTrace traceObject in orderedTraceList)
-                // feed the checksum of the trace into the MD5 hash computer
-                md5Hasher.TransformBlock(traceObject.Checksum, 0, 16, null, 0);
-            // feed the short byte array of parameters into the MD5 hash computer
-            md5Hasher.TransformFinalBlock(binArray, 0, LengthOfParamInputForChecksum);
-            // return the hash (Checksum) value
-            return md5Hasher.Hash;
+                // MD5CryptoServiceProvider object has methods to compute the Checksum
+                using (MD5CryptoServiceProvider md5Hasher = new MD5CryptoServiceProvider())
+                {
+                    // make sure that we have a list of traces that is ordered by trace number
+                    List<ITimeSeriesTrace> orderedTraceList = traceList.OrderBy(t => t.TraceNumber).ToList();
+                    // loop through all traces
+                    foreach (ITimeSeriesTrace traceObject in orderedTraceList)
+                        // feed the checksum of the trace into the MD5 hash computer
+                        md5Hasher.TransformBlock(traceObject.Checksum, 0, 16, null, 0);
+                    // feed the short byte array of parameters into the MD5 hash computer
+                    md5Hasher.TransformFinalBlock(binArray, 0, LengthOfParamInputForChecksum);
+                    // return the hash (Checksum) value
+                    return md5Hasher.Hash;
+                }
+            }
         }
         /// <summary>
         /// This method computes the checksum for an individual trace of a time series, where the time
@@ -326,22 +337,25 @@ namespace TimeSeriesLibrary
             // Byte array for the series of parameters that are fed into the MD5 algorithm first.
             byte[] binArray = new byte[sizeof(Int32)];
             // MemoryStream and BinaryWriter objects allow us to write data into the byte array
-            MemoryStream binStream = new MemoryStream(binArray);
-            BinaryWriter binWriter = new BinaryWriter(binStream);
+            using (MemoryStream binStream = new MemoryStream(binArray))
+            using (BinaryWriter binWriter = new BinaryWriter(binStream))
+            {
+                // Write relevant parameters (not including the BLOB itself) into a short byte array
 
-            // Write relevant parameters (not including the BLOB itself) into a short byte array
+                // Trace Number
+                binWriter.Write(traceObject.TraceNumber);
 
-            // Trace Number
-            binWriter.Write(traceObject.TraceNumber);
-
-            // MD5CryptoServiceProvider object has methods to compute the Checksum
-            MD5CryptoServiceProvider md5Hasher = new MD5CryptoServiceProvider();
-            // feed the short byte array into the MD5 hash computer
-            md5Hasher.TransformBlock(binArray, 0, sizeof(Int32), binArray, 0);
-            // feed the BLOB of timeseries values into the MD5 hash computer
-            md5Hasher.TransformFinalBlock(traceObject.ValueBlob, 0, traceObject.ValueBlob.Length);
-            // return the hash (Checksum) value
-            return md5Hasher.Hash;
+                // MD5CryptoServiceProvider object has methods to compute the Checksum
+                using (MD5CryptoServiceProvider md5Hasher = new MD5CryptoServiceProvider())
+                {
+                    // feed the short byte array into the MD5 hash computer
+                    md5Hasher.TransformBlock(binArray, 0, sizeof(Int32), binArray, 0);
+                    // feed the BLOB of timeseries values into the MD5 hash computer
+                    md5Hasher.TransformFinalBlock(traceObject.ValueBlob, 0, traceObject.ValueBlob.Length);
+                    // return the hash (Checksum) value
+                    return md5Hasher.Hash;
+                }
+            }
         }
         #endregion
 
