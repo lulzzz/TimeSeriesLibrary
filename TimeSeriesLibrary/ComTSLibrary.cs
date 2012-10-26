@@ -22,7 +22,7 @@ namespace TimeSeriesLibrary
         [ComVisible(true)]
         bool GetHasError();
         [ComVisible(true)]
-        sbyte *GetErrorMessage();
+        void GetErrorMessage(sbyte* pErrorMessage);
         [ComVisible(true)]
         int OpenConnection(sbyte *pConnectionString);
         [ComVisible(true)]
@@ -108,12 +108,15 @@ namespace TimeSeriesLibrary
                 _errorMessageSbyte = System.Text.Encoding.ASCII.GetBytes(_errorMessage);
             }
         }
-        public sbyte* GetErrorMessage()
+        public void GetErrorMessage(sbyte* pErrorMessage)
         {
-            fixed (byte* pErrorMessage = _errorMessageSbyte)
+            sbyte* pNext = pErrorMessage;
+            foreach(byte b in _errorMessageSbyte)
             {
-                return (sbyte*)pErrorMessage;
+                *pNext = (sbyte)b;
+                pNext++;
             }
+            *pNext = 0;
         } 
         #endregion
 

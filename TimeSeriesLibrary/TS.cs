@@ -171,7 +171,7 @@ namespace TimeSeriesLibrary
                 catch(Exception e)
                 {   // The query failed.
                     throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
-                                    "Table '" + ParametersTableName + "' could not be opened using query:\n\n." + comm, e);
+                                    "Table '" + ParametersTableName + "' could not be opened using query:\n\n" + comm, e);
                 }
                 // There should be at least 1 row in the DataTable object
                 if (dTable.Rows.Count < 1)
@@ -334,7 +334,7 @@ namespace TimeSeriesLibrary
                 catch(Exception e)
                 {   // The query failed
                     throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
-                                    "Table '" + TraceTableName + "' could not be opened using query:\n\n." + comm, e);
+                                    "Table '" + TraceTableName + "' could not be opened using query:\n\n" + comm, e);
                 }
                 // There should be at least 1 row in the table
                 if (dTable.Rows.Count < 1)
@@ -622,7 +622,7 @@ namespace TimeSeriesLibrary
                     catch (Exception e)
                     {   // The query failed
                         throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
-                                        "Table '" + ParametersTableName + "' could not be opened using query:\n\n." + comm, e);
+                                        "Table '" + ParametersTableName + "' could not be opened using query:\n\n" + comm, e);
                     }
                     // DataRow object represents the current row of the DataTable object, which in turn
                     // represents a record that we will add to the database table.
@@ -681,7 +681,7 @@ namespace TimeSeriesLibrary
                         catch (Exception e)
                         {   // The query failed
                             throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
-                                            "Table '" + ParametersTableName + "' could not be opened using query:\n\n." + comm, e);
+                                            "Table '" + ParametersTableName + "' could not be opened using query:\n\n" + comm, e);
                         }
                         // Loop through all traces, and record the values that will be needed to compute the
                         // checksum of the ensemble time series.  Note that this does not include the BLOB 
