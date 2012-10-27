@@ -128,7 +128,12 @@ namespace TimeSeriesLibrary
             /// This error indicates that the TimeSeriesLibrary method does not recognize the value of
             /// a TimeStepQuantity field from an XML file.
             /// </summary>
-            Xml_Quantity_Unrecognized = -406
+            Xml_Quantity_Unrecognized = -406,
+            /// <summary>
+            /// This error indicates that the TimeSeriesLibrary method can not reconcile conflicting
+            /// information about a time series.
+            /// </summary>
+            Xml_File_Inconsistent = -407
         }
     }
 }

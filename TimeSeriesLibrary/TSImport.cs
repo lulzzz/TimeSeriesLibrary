@@ -89,10 +89,6 @@ namespace TimeSeriesLibrary
         public TSImport(Boolean isDetailed)
         {
             IsDetailed = isDetailed;
-
-            // Add a single trace to TraceList.  Currently, the library is not designed to
-            // build a list of more than one trace.
-            TraceList.Add(new TSTrace());
         }
         #endregion
 
@@ -107,20 +103,18 @@ namespace TimeSeriesLibrary
         public void SetUnits(XmlReader xmlReader) { SetDetailFieldString(ref Units, xmlReader); }
         public void SetTimeSeriesType(XmlReader xmlReader) { SetDetailFieldString(ref TimeSeriesType, xmlReader); }
 
-        public void SetTraceNumber(XmlReader xmlReader) 
+        public int GetTraceNumber(XmlReader xmlReader) 
         {
             String tagName = xmlReader.Name;
             String s = xmlReader.ReadElementContentAsString();
+            int traceNumber;
+            if (int.TryParse(s, out traceNumber) == false)
+                traceNumber = 1;
 
-            if (IsDetailed)
-            {
-                if (s == String.Empty)
-                    TraceList[0].TraceNumber = 1;
-                else
-                    TraceList[0].TraceNumber = int.Parse(s);
-            }
-            else
+            if (IsDetailed == false)
                 AddUnprocessedElement(xmlReader.ReadOuterXml());
+
+            return traceNumber;
         }
 
         // The field that is passed as a parameter will be assigned from the current XML 

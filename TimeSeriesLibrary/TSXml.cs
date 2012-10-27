@@ -86,7 +86,6 @@ namespace TimeSeriesLibrary
                         Boolean shouldStoreToDatabase, Boolean shouldRecordDetails)
         {
             String s;       // ephemeral String object
-            String DataString="";  // String that holds the unparsed DataSeries
             int numTs = 0;  // The # of time series successfuly processed by this method
             
             TSDateCalculator.TimeStepUnitCode TimeStepUnit = TSDateCalculator.TimeStepUnitCode.Day; // to be read from XML
@@ -160,6 +159,12 @@ namespace TimeSeriesLibrary
                         TSImport tsImport = new TSImport(shouldRecordDetails);
                         // Flags will indicate if the XML is missing any data
                         foundTimeStepUnit = foundTimeStepQuantity = foundStartDate = foundValueArray = false;
+                        // This default trace number will be used if the "Trace" attribute is not used on a <Data>
+                        // element. The default trace value may be reassigned if a <TraceNumber> element is read.
+                        int defaultTraceNumber = 1;
+                        // Collection of Strings that hold the unparsed DataSeries.  The key of the
+                        // Dictionary is the trace number of the DataSeries
+                        Dictionary<int, String> DataStrings = new Dictionary<int, String>();
 
                         // advance the reader past the outer element
                         oneSeriesXmlReader.ReadStartElement();
@@ -209,8 +214,28 @@ namespace TimeSeriesLibrary
                                         break;
 
                                     case "Data":
+                                        // <Data> may have a TraceNumber attribute
+                                        int traceNumber = 0;
+                                        if (oneSeriesXmlReader.MoveToAttribute("Trace"))
+                                        {
+                                            s = oneSeriesXmlReader.Value;
+                                            int.TryParse(s, out traceNumber);
+                                            oneSeriesXmlReader.MoveToElement();
+                                        }
+                                        //s = oneSeriesXmlReader.GetAttribute("Trace");
+                                        //if (int.TryParse(s, out traceNumber) == false)
+                                        //    traceNumber = 0;
+                                        if (DataStrings.ContainsKey(traceNumber))
+                                        {
+                                            throw new TSLibraryException(ErrCode.Enum.Xml_File_Inconsistent,
+                                                ReportedFileName + "contains a time series with more than one trace number " +
+                                                traceNumber.ToString());
+                                        }
+                                        //oneSeriesXmlReader.MoveToContent();
                                         // <Data> contains a whitespace-deliminted string of values that comprise the time series
-                                        DataString = oneSeriesXmlReader.ReadElementContentAsString();
+                                        s = oneSeriesXmlReader.ReadElementContentAsString();
+                                        // add the unparsed string to a dictionary where the trace number is the dictionary key
+                                        DataStrings.Add(traceNumber, s);
                                         foundValueArray = true;
                                         break;
 
@@ -235,7 +260,7 @@ namespace TimeSeriesLibrary
                                         tsImport.SetTimeSeriesType(oneSeriesXmlReader); break;
 
                                     case "TraceNumber": // <TraceNumber> contains the trace number for an ensemble
-                                        tsImport.SetTraceNumber(oneSeriesXmlReader); break;
+                                        defaultTraceNumber = tsImport.GetTraceNumber(oneSeriesXmlReader); break;
 
                                     default:
                                         // Any other tags are simply copied to the String object 'UnprocessedElements'.
@@ -272,28 +297,43 @@ namespace TimeSeriesLibrary
                         {
                             // IRREGULAR TIME SERIES
 
-                            // Split the big data string into an array of strings.  The date/time/value triplets will be
-                            // all collated together.
-                            String[] stringArray = DataString.Split(new char[] { }, StringSplitOptions.RemoveEmptyEntries);
-                            // We'll use this date/value structure to build each item of the date/value array
-                            TSDateValueStruct tsv = new TSDateValueStruct();
-                            // allocate the array of date/value pairs
-                            TSDateValueStruct[] dateValueArray = new TSDateValueStruct[stringArray.Length / 3];
-                            // Loop through the array of strings, 3 elements at a time
-                            for (int i = 2; i < stringArray.Length; i += 3)
-                            {
-                                s = stringArray[i - 2] + " " + stringArray[i - 1];
-                                tsv.Date = DateTime.Parse(s);
-                                tsv.Value = double.Parse(stringArray[i]);
-                                dateValueArray[i / 3] = tsv;
-                            }
                             // The TS object is used to save one record to the database table
                             TS ts = new TS(Connx, TableName, TraceTableName);
-                            // Write to the database and record values in the TSImport object
-                            ts.WriteParametersIrregular(shouldStoreToDatabase, tsImport,
-                                    dateValueArray.Count(), StartDate, dateValueArray.Last().Date, null, null);
-                            ts.WriteTraceIrregular(0, shouldStoreToDatabase, tsImport,
-                                    tsImport.TraceList[0].TraceNumber, dateValueArray);
+                            foreach (KeyValuePair<int, String> keyValuePair in DataStrings)
+                            {
+                                int traceNumber = keyValuePair.Key;
+                                if (traceNumber == 0) traceNumber = defaultTraceNumber;
+                                // Split the big data string into an array of strings.  The date/time/value triplets will be
+                                // all collated together.
+                                String[] stringArray = keyValuePair.Value
+                                            .Split(new char[] { }, StringSplitOptions.RemoveEmptyEntries);
+                                // We'll use this date/value structure to build each item of the date/value array
+                                TSDateValueStruct tsv = new TSDateValueStruct();
+                                // allocate the array of date/value pairs
+                                TSDateValueStruct[] dateValueArray = new TSDateValueStruct[stringArray.Length / 3];
+                                // Loop through the array of strings, 3 elements at a time
+                                for (int i = 2; i < stringArray.Length; i += 3)
+                                {
+                                    s = stringArray[i - 2] + " " + stringArray[i - 1];
+                                    tsv.Date = DateTime.Parse(s);
+                                    tsv.Value = double.Parse(stringArray[i]);
+                                    dateValueArray[i / 3] = tsv;
+                                }
+                                if (tsImport.TraceList.Count == 0)
+                                {
+                                    // Write parameters to the database and record values in the TSImport object
+                                    ts.WriteParametersIrregular(shouldStoreToDatabase, tsImport,
+                                            dateValueArray.Count(), StartDate, dateValueArray.Last().Date, null, null);
+                                }
+                                else
+                                {
+                                    if(dateValueArray.Count() != ts.TimeStepCount || StartDate != ts.BlobStartDate)
+                                        throw new TSLibraryException(ErrCode.Enum.Xml_File_Inconsistent,
+                                            ReportedFileName + "contains a time series with traces that do not overlay each other.");
+                                }
+                                ts.WriteTraceIrregular(0, shouldStoreToDatabase, tsImport,
+                                        traceNumber, dateValueArray);
+                            }
                             tsImport.RecordFromTS(ts);
                             // Done with the TS object.
                             ts = null;
@@ -302,16 +342,30 @@ namespace TimeSeriesLibrary
                         {
                             // REGULAR TIME SERIES
 
-                            // Fancy LINQ statement turns the String object into an array of double[]
-                            valueArray = DataString.Split(new char[] { }, StringSplitOptions.RemoveEmptyEntries)
-                                            .Select(z => double.Parse(z)).ToArray();
                             // The TS object is used to save one record to the database table
                             TS ts = new TS(Connx, TableName, TraceTableName);
-                            // Write to the database and record values in the TSImport object
-                            ts.WriteParametersRegular(shouldStoreToDatabase, tsImport,
-                                    (short)TimeStepUnit, TimeStepQuantity, valueArray.Count(), StartDate, null, null);
-                            ts.WriteTraceRegular(0, shouldStoreToDatabase, tsImport,
-                                    tsImport.TraceList[0].TraceNumber, valueArray);
+                            foreach (KeyValuePair<int, String> keyValuePair in DataStrings)
+                            {
+                                int traceNumber = keyValuePair.Key;
+                                if (traceNumber == 0) traceNumber = defaultTraceNumber;
+                                // Fancy LINQ statement turns the String object into an array of double[]
+                                valueArray = keyValuePair.Value.Split(new char[] { }, StringSplitOptions.RemoveEmptyEntries)
+                                                .Select(z => double.Parse(z)).ToArray();
+                                if (tsImport.TraceList.Count == 0)
+                                {
+                                    // Write to the database and record values in the TSImport object
+                                    ts.WriteParametersRegular(shouldStoreToDatabase, tsImport,
+                                            (short)TimeStepUnit, TimeStepQuantity, valueArray.Count(), StartDate, null, null);
+                                }
+                                else
+                                {
+                                    if (valueArray.Count() != ts.TimeStepCount)
+                                        throw new TSLibraryException(ErrCode.Enum.Xml_File_Inconsistent, ReportedFileName +
+                                            "contains a regular time series whose traces do not all have the same number of time steps.");
+                                }
+                                ts.WriteTraceRegular(0, shouldStoreToDatabase, tsImport,
+                                        traceNumber, valueArray);
+                            }
                             tsImport.RecordFromTS(ts);
                             // Done with the TS object.
                             ts = null;
