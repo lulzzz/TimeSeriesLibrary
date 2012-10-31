@@ -304,6 +304,22 @@ namespace TimeSeriesLibrary
             return tsXml.ReadAndStore(xmlFileName, null, tsImportList, false, true);
         }
         /// <summary>
+        /// This method reads the given XML string and stores each time series that is defined in the
+        /// XML file to a new TSImport object that is added to the given List of TSImport objects.
+        /// </summary>
+        /// <param name="xmlString">the string containing XML that defines one or more time series to import</param>
+        /// <param name="tsImportList">A List of TSImport objects that the method adds to.  One item is added to the List 
+        /// for each time series that is processed in the XML string.  The List must already be instantiated before calling 
+        /// this method.  The method does not change any items that are already in the List.</param>
+        /// <returns>The number of time series records that were successfully read and added to tsImportList</returns>
+        public int XmlImportFromString(String xmlString, List<TSImport> tsImportList)
+        {
+            // Construct new TSXml object without SqlConnection object and table name
+            TSXml tsXml = new TSXml();
+            // Method in the TSXml object does all the work
+            return tsXml.ReadAndStore(null, xmlString, tsImportList, false, true);
+        }
+        /// <summary>
         /// This method reads the given XML file and stores any time series that are defined in the
         /// XML file to the database using the given database connection number and database table name.
         /// Each time series is also stored in a new TSImport object that is addded to the given List 
