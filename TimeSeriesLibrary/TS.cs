@@ -532,11 +532,10 @@ namespace TimeSeriesLibrary
                                 String.Format("The method can only process regular time series, but" +
                                 "the record with Id {0} is irregular.", id));
             }
-            ITimeSeriesTrace traceObject;
-            if(tsImport!=null)
-                traceObject = tsImport.TraceList[0];
-            else
-                traceObject = new TSTrace { TraceNumber = traceNumber };
+            // Create a trace object
+            ITimeSeriesTrace traceObject = new TSTrace { TraceNumber = traceNumber };
+            if (tsImport != null)
+                tsImport.TraceList.Add(traceObject);
             // Convert the array of double values into a byte array...a BLOB
             traceObject.ValueBlob = TSBlobCoder.ConvertArrayToBlobRegular(TimeStepCount, valueArray);
             // compute the Checksum for this trace
@@ -569,7 +568,6 @@ namespace TimeSeriesLibrary
             // Initialize class fields other than the BLOB of data values
             if (!IsInitialized) Initialize(id);
 
-            // This method can only process regular-time-step series
             // This method can only process irregular-time-step series
             if (TimeStepUnit != TSDateCalculator.TimeStepUnitCode.Irregular)
             {
@@ -577,11 +575,10 @@ namespace TimeSeriesLibrary
                                 String.Format("The method can only process irregular time series, but" +
                                 "the record with Id {0} is regular.", id));
             }
-            ITimeSeriesTrace traceObject;
+            // Create a trace object
+            ITimeSeriesTrace traceObject = new TSTrace { TraceNumber = traceNumber };
             if (tsImport != null)
-                traceObject = tsImport.TraceList[0];
-            else
-                traceObject = new TSTrace { TraceNumber = traceNumber };
+                tsImport.TraceList.Add(traceObject);
             // Convert the array of double values into a byte array...a BLOB
             traceObject.ValueBlob = TSBlobCoder.ConvertArrayToBlobIrregular(TimeStepCount, dateValueArray);
             // compute the Checksum for this trace

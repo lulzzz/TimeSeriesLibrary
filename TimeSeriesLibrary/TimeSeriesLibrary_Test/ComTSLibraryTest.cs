@@ -15,6 +15,7 @@ namespace TimeSeriesLibrary_Test
     [TestClass()]
     public class ComTSLibraryTest
     {
+        /*
         static ComTSLibrary _lib;
         static int _connxNumber;
         static SqlConnection _connx;
@@ -408,6 +409,6 @@ namespace TimeSeriesLibrary_Test
             Assert.AreEqual(rowCount, 0);
 
         }
-
+        */
     }
 }
