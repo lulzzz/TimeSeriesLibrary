@@ -29,11 +29,11 @@ namespace Sandbox
     /// </summary>
     public partial class MainWindow : Window
     {
-        const int nVals = 3000, nIter = 2;
+        const int nVals = 30000, nIter = 100;
 
         int connNumber;
-        //TSLibrary tsLib = new TSLibrary();
-        ComTSLibrary ctsLib = new ComTSLibrary();
+        TSLibrary tsLib = new TSLibrary();
+        //ComTSLibrary ctsLib = new ComTSLibrary();
         int testId1;
         int testId2;
         DateTime StartDate = new DateTime(1928, 1, 1, 23, 59, 0);
@@ -42,14 +42,8 @@ namespace Sandbox
         {
             InitializeComponent();
 
-            //connNumber = tsLib.OpenConnection(
-            //    "Data Source=.; Database=OasisOutput; Trusted_Connection=yes;");
-
-            connNumber = ctsLib.OpenConnection(
+            connNumber = tsLib.OpenConnection(
                 "Data Source=.; Database=ObjectModel; Trusted_Connection=yes;");
-
-            ctsLib.DeleteMatchingSeries(connNumber, "RunOutputTimeSeries", "OutputTimeSeriesTraces",
-                    "VariableType='A'");
 
             //WriteArrayTest();
             //ImportTest();
@@ -62,7 +56,8 @@ namespace Sandbox
         }
         private void MainWindowClosed(object sender, EventArgs e)
         {
-            ctsLib.CloseConnection(connNumber);
+            //ctsLib.CloseConnection(connNumber);
+            tsLib.CloseConnection(connNumber);
         }
         
 
@@ -72,36 +67,80 @@ namespace Sandbox
             //ReadArrayTest();
             //ReadListTest();
             //WriteArrayTest();
-            //WriteListTest();
+            WriteListTest();
             //DeleteTest();
             //HashTimer();
 
         }
 
-        void WriteArrayTest()
+        void ReadListTest()
+        {
+            int ret, i;
+
+            List<TimeSeriesValue> valList = new List<TimeSeriesValue>();
+
+            DateTime timerStart = DateTime.Now;
+            for (i = 0; i < nIter; i++)
+            {
+                //TimeLabelBlob.Content = String.Format("Iteration {0}", i);
+                ret = tsLib.ReadAllDatesValues(connNumber,
+                        "OutputTimeSeries", "OutputTimeSeriesTraces",
+                        42400, 1, ref valList);
+            }
+            DateTime timerEnd = DateTime.Now;
+            TimeSpan timerDiff = timerEnd - timerStart;
+            TimeLabelBlob.Content = String.Format("BLOBBED --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
+        }
+        void WriteListTest()
         {
             int i;
 
-            double[] valArray = new double[nVals];
+            List<double> valList = new List<double>();
+            String extraParamNames = "TimeSeriesType, Unit_Id, RunGUID, VariableType, VariableName, RunElementGUID";
+            String extraParamValues = "22, 1, '00000000-0000-0000-0000-000000000000', 'XXX', 'XXX', '00000000-0000-0000-0000-000000000000'";
 
             for (i = 0; i < nVals; i++)
-                valArray[i] = i * 3;
+                valList.Add(i * 1.5);
 
+            DateTime timerStart = DateTime.Now;
             for (i = 0; i < nIter; i++)
             {
-                int id = ctsLib.WriteParametersRegularUnsafe(connNumber, "RunOutputTimeSeries", "OutputTimeSeriesTraces",
-                           3, 1, nVals, StartDate,
-                           new String[6] { "RunGUID", "VariableType", "VariableName", "TimeSeriesType", "RunElementGUID", "Unit_Id" },
-                           new String[6] { "'EF8A01FE-C250-429C-A3AF-160076DE142B'", "'E'", "'D'", "1", "'EF8A01FE-C250-429C-A3AF-160076DE142B'", "1" });
-
-                for (int t = 1; t <= 3; t++)
-                    ctsLib.WriteTraceRegularUnsafe(connNumber, "RunOutputTimeSeries", "OutputTimeSeriesTraces",
-                                id, t, valArray);
+                TimeLabelBlob.Content = String.Format("Iteration {0}", i);
+                TS ts = new TS(tsLib.GetConnectionFromId(connNumber),
+                        "OutputTimeSeries", "OutputTimeSeriesTraces");
+                int id = ts.WriteParametersRegular(true, null, (short)TSDateCalculator.TimeStepUnitCode.Day, 1, nVals, StartDate,
+                        extraParamNames, extraParamValues);
+                ts.WriteTraceRegular(id, true, null, 1, valList.ToArray());
             }
+            DateTime timerEnd = DateTime.Now;
+            TimeSpan timerDiff = timerEnd - timerStart;
+            TimeLabelBlob.Content = String.Format("BLOBWRI --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
         }
 
+        //void WriteArrayTest()
+        //{
+        //    int i;
 
-        /*
+        //    double[] valArray = new double[nVals];
+
+        //    for (i = 0; i < nVals; i++)
+        //        valArray[i] = i * 3;
+
+        //    for (i = 0; i < nIter; i++)
+        //    {
+        //        int id = ctsLib.WriteParametersRegularUnsafe(connNumber, "RunOutputTimeSeries", "OutputTimeSeriesTraces",
+        //                   3, 1, nVals, StartDate,
+        //                   new String[6] { "RunGUID", "VariableType", "VariableName", "TimeSeriesType", "RunElementGUID", "Unit_Id" },
+        //                   new String[6] { "'EF8A01FE-C250-429C-A3AF-160076DE142B'", "'E'", "'D'", "1", "'EF8A01FE-C250-429C-A3AF-160076DE142B'", "1" });
+
+        //        for (int t = 1; t <= 3; t++)
+        //            ctsLib.WriteTraceRegularUnsafe(connNumber, "RunOutputTimeSeries", "OutputTimeSeriesTraces",
+        //                        id, t, valArray);
+        //    }
+        //}
+
+
+        
         void HashTest()
         {
             byte[] inArray1 = new ASCIIEncoding().GetBytes("PartA");
@@ -166,34 +205,34 @@ namespace Sandbox
 
         //    ret = 3;
         //}
-        void ReadOneSeriesGUI()
-        {
-            int ret;
+        //void ReadOneSeriesGUI()
+        //{
+        //    int ret;
 
-            List<TimeSeriesValue> dateValueList = new List<TimeSeriesValue>();
+        //    List<TimeSeriesValue> dateValueList = new List<TimeSeriesValue>();
 
-            ret = tsLib.ReadAllDatesValues(connNumber, "FileStrm2",
-                            testId1, ref dateValueList);
+        //    ret = tsLib.ReadAllDatesValues(connNumber, "FileStrm2",
+        //                    testId1, ref dateValueList);
 
-            ret = tsLib.ReadAllDatesValues(connNumber, "FileStrm2",
-                            testId2, ref dateValueList);
+        //    ret = tsLib.ReadAllDatesValues(connNumber, "FileStrm2",
+        //                    testId2, ref dateValueList);
 
-            ret = tsLib.ReadLimitedDatesValues(connNumber, "FileStrm2",
-                            testId1, nVals, ref dateValueList, StartDate, StartDate.AddDays(3));
+        //    ret = tsLib.ReadLimitedDatesValues(connNumber, "FileStrm2",
+        //                    testId1, nVals, ref dateValueList, StartDate, StartDate.AddDays(3));
 
-            ret = tsLib.ReadLimitedDatesValues(connNumber, "FileStrm2",
-                            testId2, nVals, ref dateValueList, StartDate, StartDate.AddDays(3));
+        //    ret = tsLib.ReadLimitedDatesValues(connNumber, "FileStrm2",
+        //                    testId2, nVals, ref dateValueList, StartDate, StartDate.AddDays(3));
 
-            ret = 3;
-        }
+        //    ret = 3;
+        //}
 
-        void DeleteTest()
-        {
-            bool ret = tsLib.DeleteMatchingSeries(connNumber, "FileStrm2", "Id > 102476");
-            if (ret == false)
-            {
-            }
-        }
+        //void DeleteTest()
+        //{
+        //    bool ret = tsLib.DeleteMatchingSeries(connNumber, "FileStrm2", "Id > 102476");
+        //    if (ret == false)
+        //    {
+        //    }
+        //}
 
         void ImportTest()
         {
@@ -212,27 +251,27 @@ namespace Sandbox
             //TimeLabelBlob.Content = String.Format("Imported --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
         }
 
-        void WriteOneSeriesIrreg()
-        {
-            int i;
-            DateTime date = StartDate;
+        //void WriteOneSeriesIrreg()
+        //{
+        //    int i;
+        //    DateTime date = StartDate;
 
-            TSDateValueStruct[] dateValArray = new TSDateValueStruct[nVals];
-            TS ts = new TS(tsLib.ConnxObject.TSConnectionsCollection[connNumber], "FileStrm2");
+        //    TSDateValueStruct[] dateValArray = new TSDateValueStruct[nVals];
+        //    TS ts = new TS(tsLib.ConnxObject.TSConnectionsCollection[connNumber], "FileStrm2");
 
-            for (i = 0; i < nVals; i++)
-            {
-                dateValArray[i].Date = date;
-                dateValArray[i].Value = i*5;
+        //    for (i = 0; i < nVals; i++)
+        //    {
+        //        dateValArray[i].Date = date;
+        //        dateValArray[i].Value = i*5;
                 
-                date = date.AddDays(1);
-            }
-            testId1 = ts.WriteValuesIrregular(true, null, nVals, dateValArray);
+        //        date = date.AddDays(1);
+        //    }
+        //    testId1 = ts.WriteValuesIrregular(true, null, nVals, dateValArray);
             
-            TSDateValueStruct[] outArray = new TSDateValueStruct[nVals];
-            i = ts.ReadValuesIrregular(testId1, nVals, outArray, StartDate, dateValArray[nVals-1].Date);
-            date = StartDate;
-        }
+        //    TSDateValueStruct[] outArray = new TSDateValueStruct[nVals];
+        //    i = ts.ReadValuesIrregular(testId1, nVals, outArray, StartDate, dateValArray[nVals-1].Date);
+        //    date = StartDate;
+        //}
         //void WriteOneSeriesArray()
         //{
         //    int i;
@@ -251,39 +290,39 @@ namespace Sandbox
         //    DateTime date = StartDate;
 
         //}
-        void WriteOneSeriesList()
-        {
-            int i;
+        //void WriteOneSeriesList()
+        //{
+        //    int i;
 
-            List<double> valList = new List<double>();
-            List<TimeSeriesValue> dateValList = new List<TimeSeriesValue>();
-            DateTime date = StartDate;
+        //    List<double> valList = new List<double>();
+        //    List<TimeSeriesValue> dateValList = new List<TimeSeriesValue>();
+        //    DateTime date = StartDate;
 
-            for (i = 0; i < nVals; i++)
-            {
-                valList.Add(i * 10);
-                dateValList.Add(new TimeSeriesValue { Date = date, Value = i * 10 });
-                date = date.AddDays(3);
-            }
+        //    for (i = 0; i < nVals; i++)
+        //    {
+        //        valList.Add(i * 10);
+        //        dateValList.Add(new TimeSeriesValue { Date = date, Value = i * 10 });
+        //        date = date.AddDays(3);
+        //    }
 
-            //testId2 = tsLib.WriteValuesRegular(connNumber, "FileStrm2",
-            //           3, 1, nVals, valList, StartDate);
+        //    //testId2 = tsLib.WriteValuesRegular(connNumber, "FileStrm2",
+        //    //           3, 1, nVals, valList, StartDate);
 
-            testId1 = tsLib.WriteValues(connNumber, "FileStrm2",
-                            (short)TSDateCalculator.TimeStepUnitCode.Irregular, 0, dateValList);
+        //    testId1 = tsLib.WriteValues(connNumber, "FileStrm2",
+        //                    (short)TSDateCalculator.TimeStepUnitCode.Irregular, 0, dateValList);
 
-            testId2 = tsLib.WriteValues(connNumber, "FileStrm2",
-                            (short)TSDateCalculator.TimeStepUnitCode.Day, 3, dateValList);
+        //    testId2 = tsLib.WriteValues(connNumber, "FileStrm2",
+        //                    (short)TSDateCalculator.TimeStepUnitCode.Day, 3, dateValList);
 
 
-            List<TimeSeriesValue> dv = new List<TimeSeriesValue>();
-            i = tsLib.ReadAllDatesValues(connNumber, "FileStrm2", testId1, ref dv);
-            i = 3;
+        //    List<TimeSeriesValue> dv = new List<TimeSeriesValue>();
+        //    i = tsLib.ReadAllDatesValues(connNumber, "FileStrm2", testId1, ref dv);
+        //    i = 3;
 
-            dv = new List<TimeSeriesValue>();
-            i = tsLib.ReadAllDatesValues(connNumber, "FileStrm2", testId2, ref dv);
-            i = 3;
-        }
+        //    dv = new List<TimeSeriesValue>();
+        //    i = tsLib.ReadAllDatesValues(connNumber, "FileStrm2", testId2, ref dv);
+        //    i = 3;
+        //}
         //void ReadOneSeriesArray()
         //{
         //    int ret;
@@ -316,23 +355,6 @@ namespace Sandbox
         //    TimeSpan timerDiff = timerEnd - timerStart;
         //    TimeLabelBlob.Content = String.Format("BLOBBED --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
         //}
-        void ReadListTest()
-        {
-            int ret, i;
-
-            List<TimeSeriesValue> valList = new List<TimeSeriesValue>();
-
-            DateTime timerStart = DateTime.Now;
-            for (i = 0; i < nIter; i++)
-            {
-                TimeLabelBlob.Content = String.Format("Iteration {0}", i);
-                ret = tsLib.ReadAllDatesValues(connNumber, "FileStrm2",
-                                testId1, ref valList);
-            }
-            DateTime timerEnd = DateTime.Now;
-            TimeSpan timerDiff = timerEnd - timerStart;
-            TimeLabelBlob.Content = String.Format("BLOBBED --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
-        }
 
 
         //void WriteArrayTest()
@@ -355,28 +377,8 @@ namespace Sandbox
         //    TimeSpan timerDiff = timerEnd - timerStart;
         //    TimeLabelBlob.Content = String.Format("BLOBWRI --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
         //}
-        void WriteListTest()
-        {
-            int i;
 
-            List<double> valList = new List<double>();
-
-            for (i = 0; i < nVals; i++)
-                valList.Add(i * 1.5);
-
-            DateTime timerStart = DateTime.Now;
-            for (i = 0; i < nIter; i++)
-            {
-                TimeLabelBlob.Content = String.Format("Iteration {0}", i);
-                tsLib.WriteValuesRegular(connNumber, "FileStrm2",
-                           3, 1, nVals, valList, StartDate);
-            }
-            DateTime timerEnd = DateTime.Now;
-            TimeSpan timerDiff = timerEnd - timerStart;
-            TimeLabelBlob.Content = String.Format("BLOBWRI --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
-        }
-
-*/        
+        
         
     }
 }

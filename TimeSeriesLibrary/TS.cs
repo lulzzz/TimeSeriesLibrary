@@ -502,7 +502,6 @@ namespace TimeSeriesLibrary
         }
         #endregion
 
-
         #region WriteTrace methods
         /// <summary>
         /// This method writes a new record to the trace table for a regular time step series.

@@ -5,6 +5,8 @@ using System.Text;
 using System.IO;
 using System.Security.Cryptography;
 
+using Ionic.Zlib;
+
 namespace TimeSeriesLibrary
 {
     /// <summary>
@@ -179,13 +181,29 @@ namespace TimeSeriesLibrary
             // The number of bytes required for the BLOB
             int nBin = TimeStepCount * sizeof(double);
             // Allocate an array for the BLOB
-            Byte[] blobData = new Byte[nBin];
+            Byte[] uncompressedBlobData = new Byte[nBin];
+            Byte[] compressedBlobData = new Byte[nBin];
             // Copy the array of doubles that was passed to the method into the byte array.  We skip
             // a bit of padding at the beginning that is used to compute the Checksum.  Thus, the
             // byte array (without the padding for Checksum) becomes the BLOB.
-            Buffer.BlockCopy(valueArray, 0, blobData, 0, nBin);
+            Buffer.BlockCopy(valueArray, 0, uncompressedBlobData, 0, nBin);
 
-            return blobData;
+            ZlibCodec zLibCodec = new ZlibCodec(CompressionMode.Compress)
+            {
+                Strategy = CompressionStrategy.Default,
+                CompressLevel = CompressionLevel.Level1,
+                InputBuffer = uncompressedBlobData,
+                OutputBuffer = compressedBlobData,
+                AvailableBytesIn = uncompressedBlobData.Length,
+                AvailableBytesOut = compressedBlobData.Length,
+                NextIn = 0,
+                NextOut = 0
+            };
+            zLibCodec.InitializeDeflate();
+            zLibCodec.Deflate(FlushType.Finish);
+            zLibCodec.EndDeflate();
+            return compressedBlobData.Take((int)zLibCodec.TotalBytesOut).ToArray();
+            //return uncompressedBlobData;
         } 
         #endregion
 
