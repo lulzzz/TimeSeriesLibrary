@@ -5,7 +5,7 @@ using System.Text;
 using System.IO;
 using System.Security.Cryptography;
 
-using Ionic.Zlib;
+using Ionic.BZip2;
 
 namespace TimeSeriesLibrary
 {
@@ -200,30 +200,38 @@ namespace TimeSeriesLibrary
             int nBin = TimeStepCount * sizeof(double);
             // Allocate an array for the BLOB
             Byte[] uncompressedBlobData = new Byte[nBin];
-            Byte[] compressedBlobData = new Byte[nBin];
+            //Byte[] compressedBlobData = new Byte[nBin];
             // Copy the array of doubles that was passed to the method into the byte array.  We skip
             // a bit of padding at the beginning that is used to compute the Checksum.  Thus, the
             // byte array (without the padding for Checksum) becomes the BLOB.
             Buffer.BlockCopy(valueArray, 0, uncompressedBlobData, 0, nBin);
 
-            ZlibCodec zLibCodec = new ZlibCodec(CompressionMode.Compress)
+            using (MemoryStream blobStream = new MemoryStream())
+            using (BZip2OutputStream bZipStream = new BZip2OutputStream(blobStream))
             {
-                Strategy = CompressionStrategy.Default,
-                CompressLevel = CompressionLevel.Level1,
-                InputBuffer = uncompressedBlobData,
-                OutputBuffer = compressedBlobData,
-                AvailableBytesIn = uncompressedBlobData.Length,
-                AvailableBytesOut = compressedBlobData.Length,
-                NextIn = 0,
-                NextOut = 0
-            };
-            zLibCodec.InitializeDeflate();
-            zLibCodec.Deflate(FlushType.Finish);
-            zLibCodec.EndDeflate();
-            // The ZlibCodec method wrote a compressed array into an array that was allocated for
-            // the size of the uncompressed array.  We must slice off the unused bytes ourselves.
-            Array.Resize<Byte>(ref compressedBlobData, (int)zLibCodec.TotalBytesOut);
-            return compressedBlobData;
+                bZipStream.Write(uncompressedBlobData, 0, nBin);
+                bZipStream.Close();
+                return blobStream.ToArray();
+            }
+
+            //ZlibCodec zLibCodec = new ZlibCodec(CompressionMode.Compress)
+            //{
+            //    Strategy = CompressionStrategy.Default,
+            //    CompressLevel = CompressionLevel.Level1,
+            //    InputBuffer = uncompressedBlobData,
+            //    OutputBuffer = compressedBlobData,
+            //    AvailableBytesIn = uncompressedBlobData.Length,
+            //    AvailableBytesOut = compressedBlobData.Length,
+            //    NextIn = 0,
+            //    NextOut = 0
+            //};
+            //zLibCodec.InitializeDeflate();
+            //zLibCodec.Deflate(FlushType.Finish);
+            //zLibCodec.EndDeflate();
+            //// The ZlibCodec method wrote a compressed array into an array that was allocated for
+            //// the size of the uncompressed array.  We must slice off the unused bytes ourselves.
+            //Array.Resize<Byte>(ref compressedBlobData, (int)zLibCodec.TotalBytesOut);
+            //return compressedBlobData;
             //return uncompressedBlobData;
         } 
         #endregion
