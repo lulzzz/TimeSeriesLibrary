@@ -49,6 +49,24 @@ namespace TimeSeriesLibrary
             int nReqValues, DateTime reqStartDate, DateTime reqEndDate,
             Byte[] blobData, double[] valueArray)
         {
+            //// TODO: if the data is compressed, then the number of time steps in the blob will have to be passed to the method
+            //int nTimeSteps = 30200;
+            //Byte[] uncompressedBlobData = new Byte[nTimeSteps * sizeof(double)];
+
+            //ZlibCodec zLibCodec = new ZlibCodec(CompressionMode.Decompress)
+            //{
+            //    InputBuffer = blobData,
+            //    OutputBuffer = uncompressedBlobData,
+            //    AvailableBytesIn = blobData.Length,
+            //    AvailableBytesOut = uncompressedBlobData.Length,
+            //    NextIn = 0,
+            //    NextOut = 0
+            //};
+            //zLibCodec.InitializeInflate();
+            //zLibCodec.Inflate(FlushType.Finish);
+            //zLibCodec.EndInflate();
+            //blobData = uncompressedBlobData.Take((int)zLibCodec.TotalBytesOut).ToArray();
+
             // MemoryStream and BinaryReader objects enable bulk copying of data from the BLOB
             using (MemoryStream blobStream = new MemoryStream(blobData))
             using (BinaryReader blobReader = new BinaryReader(blobStream))
@@ -202,7 +220,10 @@ namespace TimeSeriesLibrary
             zLibCodec.InitializeDeflate();
             zLibCodec.Deflate(FlushType.Finish);
             zLibCodec.EndDeflate();
-            return compressedBlobData.Take((int)zLibCodec.TotalBytesOut).ToArray();
+            // The ZlibCodec method wrote a compressed array into an array that was allocated for
+            // the size of the uncompressed array.  We must slice off the unused bytes ourselves.
+            Array.Resize<Byte>(ref compressedBlobData, (int)zLibCodec.TotalBytesOut);
+            return compressedBlobData;
             //return uncompressedBlobData;
         } 
         #endregion

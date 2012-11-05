@@ -65,9 +65,9 @@ namespace Sandbox
         {
             //ImportTest();
             //ReadArrayTest();
-            //ReadListTest();
+            ReadListTest();
             //WriteArrayTest();
-            WriteListTest();
+            //WriteListTest();
             //DeleteTest();
             //HashTimer();
 
@@ -85,7 +85,7 @@ namespace Sandbox
                 //TimeLabelBlob.Content = String.Format("Iteration {0}", i);
                 ret = tsLib.ReadAllDatesValues(connNumber,
                         "OutputTimeSeries", "OutputTimeSeriesTraces",
-                        42400, 1, ref valList);
+                        46760, 1, ref valList);
             }
             DateTime timerEnd = DateTime.Now;
             TimeSpan timerDiff = timerEnd - timerStart;
