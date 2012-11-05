@@ -29,7 +29,7 @@ namespace Sandbox
     /// </summary>
     public partial class MainWindow : Window
     {
-        const int nVals = 30000, nIter = 500;
+        const int nVals = 30000, nIter = 100;
 
         int connNumber;
         TSLibrary tsLib = new TSLibrary();
@@ -85,7 +85,7 @@ namespace Sandbox
                 //TimeLabelBlob.Content = String.Format("Iteration {0}", i);
                 ret = tsLib.ReadAllDatesValues(connNumber,
                         "OutputTimeSeries", "OutputTimeSeriesTraces",
-                        48660, 1, ref valList);
+                        46760, 1, ref valList);
             }
             DateTime timerEnd = DateTime.Now;
             TimeSpan timerDiff = timerEnd - timerStart;
@@ -97,7 +97,7 @@ namespace Sandbox
 
             List<double> valList = new List<double>();
             String extraParamNames = "TimeSeriesType, Unit_Id, RunGUID, VariableType, VariableName, RunElementGUID";
-            String extraParamValues = "26, 1, '00000000-0000-0000-0000-000000000000', 'XXX', 'XXX', '00000000-0000-0000-0000-000000000000'";
+            String extraParamValues = "22, 1, '00000000-0000-0000-0000-000000000000', 'XXX', 'XXX', '00000000-0000-0000-0000-000000000000'";
 
             for (i = 0; i < nVals; i++)
                 valList.Add(i * 1.5);
