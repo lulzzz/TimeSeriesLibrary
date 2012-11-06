@@ -37,8 +37,8 @@
     <DebugSymbols>true</DebugSymbols>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Ionic.Zlib">
-      <HintPath>C:\Program Files (x86)\Microsoft Visual Studio 10.0\DotNetZip\Tools\Ionic.Zlib.dll</HintPath>
+    <Reference Include="Simplicit.Net.Lzo">
+      <HintPath>G:\SoftwareDownload\developer\LZO.Net\lib\Simplicit.Net.Lzo.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />

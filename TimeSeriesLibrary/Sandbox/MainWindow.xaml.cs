@@ -29,7 +29,7 @@ namespace Sandbox
     /// </summary>
     public partial class MainWindow : Window
     {
-        const int nVals = 30000, nIter = 100;
+        const int nVals = 30000, nIter = 500;
 
         int connNumber;
         TSLibrary tsLib = new TSLibrary();
@@ -43,7 +43,7 @@ namespace Sandbox
             InitializeComponent();
 
             connNumber = tsLib.OpenConnection(
-                "Data Source=.; Database=ObjectModel; Trusted_Connection=yes;");
+                "Data Source=.; Database=HardDriveTS; Trusted_Connection=yes;");
 
             //WriteArrayTest();
             //ImportTest();
@@ -65,9 +65,9 @@ namespace Sandbox
         {
             //ImportTest();
             //ReadArrayTest();
-            ReadListTest();
+            //ReadListTest();
             //WriteArrayTest();
-            //WriteListTest();
+            WriteListTest();
             //DeleteTest();
             //HashTimer();
 
@@ -93,14 +93,18 @@ namespace Sandbox
         }
         void WriteListTest()
         {
-            int i;
+            int i, j=0;
 
             List<double> valList = new List<double>();
             String extraParamNames = "TimeSeriesType, Unit_Id, RunGUID, VariableType, VariableName, RunElementGUID";
             String extraParamValues = "22, 1, '00000000-0000-0000-0000-000000000000', 'XXX', 'XXX', '00000000-0000-0000-0000-000000000000'";
 
             for (i = 0; i < nVals; i++)
-                valList.Add(i * 1.5);
+            {
+                valList.Add(j * 1.5);
+                j++;
+                if (j > i / 9) j = 0;
+            }
 
             DateTime timerStart = DateTime.Now;
             for (i = 0; i < nIter; i++)
