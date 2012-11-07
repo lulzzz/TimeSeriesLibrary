@@ -43,7 +43,7 @@ namespace Sandbox
             InitializeComponent();
 
             connNumber = tsLib.OpenConnection(
-                "Data Source=.; Database=HardDriveTS; Trusted_Connection=yes;");
+                "Data Source=.; Database=ObjectModel; Trusted_Connection=yes;");
 
             //WriteArrayTest();
             //ImportTest();
@@ -65,9 +65,9 @@ namespace Sandbox
         {
             //ImportTest();
             //ReadArrayTest();
-            //ReadListTest();
+            ReadListTest();
             //WriteArrayTest();
-            WriteListTest();
+            //WriteListTest();
             //DeleteTest();
             //HashTimer();
 
@@ -85,7 +85,7 @@ namespace Sandbox
                 //TimeLabelBlob.Content = String.Format("Iteration {0}", i);
                 ret = tsLib.ReadAllDatesValues(connNumber,
                         "OutputTimeSeries", "OutputTimeSeriesTraces",
-                        46760, 1, ref valList);
+                        59375, 1, ref valList);
             }
             DateTime timerEnd = DateTime.Now;
             TimeSpan timerDiff = timerEnd - timerStart;
@@ -101,9 +101,9 @@ namespace Sandbox
 
             for (i = 0; i < nVals; i++)
             {
-                valList.Add(j * 1.5);
+                valList.Add(1.5);
                 j++;
-                if (j > i / 9) j = 0;
+                //if (j > i / 9) j = 0;
             }
 
             DateTime timerStart = DateTime.Now;

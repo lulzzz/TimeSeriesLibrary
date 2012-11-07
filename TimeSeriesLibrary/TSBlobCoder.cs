@@ -5,7 +5,7 @@ using System.Text;
 using System.IO;
 using System.Security.Cryptography;
 
-using Simplicit.Net.Lzo;
+//using Simplicit.Net.Lzo;
 
 namespace TimeSeriesLibrary
 {
@@ -50,8 +50,8 @@ namespace TimeSeriesLibrary
             Byte[] blobData, double[] valueArray)
         {
             //// TODO: if the data is compressed, then the number of time steps in the blob will have to be passed to the method
-            //int nTimeSteps = 30200;
-            //Byte[] uncompressedBlobData = new Byte[nTimeSteps * sizeof(double)];
+            int nTimeSteps = 30000;
+            Byte[] uncompressedBlobData = new Byte[nTimeSteps * sizeof(double)];
 
             //ZlibCodec zLibCodec = new ZlibCodec(CompressionMode.Decompress)
             //{
@@ -66,6 +66,9 @@ namespace TimeSeriesLibrary
             //zLibCodec.Inflate(FlushType.Finish);
             //zLibCodec.EndInflate();
             //blobData = uncompressedBlobData.Take((int)zLibCodec.TotalBytesOut).ToArray();
+
+            LZFX.Decompress(blobData, uncompressedBlobData);
+            blobData = uncompressedBlobData;
 
             // MemoryStream and BinaryReader objects enable bulk copying of data from the BLOB
             using (MemoryStream blobStream = new MemoryStream(blobData))
@@ -206,8 +209,10 @@ namespace TimeSeriesLibrary
             // byte array (without the padding for Checksum) becomes the BLOB.
             Buffer.BlockCopy(valueArray, 0, uncompressedBlobData, 0, nBin);
 
-            LZOCompressor lzoCompressor = new LZOCompressor();
-            compressedBlobData = lzoCompressor.Compress(uncompressedBlobData);
+            //LZOCompressor lzoCompressor = new LZOCompressor();
+            //compressedBlobData = lzoCompressor.Compress(uncompressedBlobData);
+
+            LZFX.Compress(uncompressedBlobData, ref compressedBlobData);
 
             //ZlibCodec zLibCodec = new ZlibCodec(CompressionMode.Compress)
             //{

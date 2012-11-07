@@ -14,6 +14,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		TimeSeriesLibrary.vsmdi = TimeSeriesLibrary.vsmdi
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lzfx", "lzfx\lzfx.vcxproj", "{ED6E8A3A-86BE-4D5F-B833-EE0604C898DB}"
+EndProject
 Global
 	GlobalSection(TestCaseManagementSettings) = postSolution
 		CategoryFile = TimeSeriesLibrary.vsmdi
@@ -77,6 +79,18 @@ Global
 		{935F25D4-F649-4BB6-BA20-CB9E9C9AA752}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{935F25D4-F649-4BB6-BA20-CB9E9C9AA752}.Release|Win32.ActiveCfg = Release|Any CPU
 		{935F25D4-F649-4BB6-BA20-CB9E9C9AA752}.Release|x86.ActiveCfg = Release|Any CPU
+		{ED6E8A3A-86BE-4D5F-B833-EE0604C898DB}.Debug|Any CPU.ActiveCfg = Debug|Win32
+		{ED6E8A3A-86BE-4D5F-B833-EE0604C898DB}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
+		{ED6E8A3A-86BE-4D5F-B833-EE0604C898DB}.Debug|Mixed Platforms.Build.0 = Debug|Win32
+		{ED6E8A3A-86BE-4D5F-B833-EE0604C898DB}.Debug|Win32.ActiveCfg = Debug|Win32
+		{ED6E8A3A-86BE-4D5F-B833-EE0604C898DB}.Debug|Win32.Build.0 = Debug|Win32
+		{ED6E8A3A-86BE-4D5F-B833-EE0604C898DB}.Debug|x86.ActiveCfg = Debug|Win32
+		{ED6E8A3A-86BE-4D5F-B833-EE0604C898DB}.Release|Any CPU.ActiveCfg = Release|Win32
+		{ED6E8A3A-86BE-4D5F-B833-EE0604C898DB}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{ED6E8A3A-86BE-4D5F-B833-EE0604C898DB}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{ED6E8A3A-86BE-4D5F-B833-EE0604C898DB}.Release|Win32.ActiveCfg = Release|Win32
+		{ED6E8A3A-86BE-4D5F-B833-EE0604C898DB}.Release|Win32.Build.0 = Release|Win32
+		{ED6E8A3A-86BE-4D5F-B833-EE0604C898DB}.Release|x86.ActiveCfg = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
