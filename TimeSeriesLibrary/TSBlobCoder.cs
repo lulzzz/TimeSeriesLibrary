@@ -45,34 +45,19 @@ namespace TimeSeriesLibrary
         /// <returns>The number of time steps that were actually written to valueArray</returns>
         public static unsafe int ConvertBlobToArrayRegular(
             TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
-            DateTime blobStartDate, bool applyLimits,
+            int timeStepCount, DateTime blobStartDate, bool applyLimits,
             int nReqValues, DateTime reqStartDate, DateTime reqEndDate,
-            Byte[] blobData, double[] valueArray)
+            Byte[] blobData, double[] valueArray,
+            Boolean hasLZFXcompression, Boolean hasZlibCompression)
         {
             //// TODO: if the data is compressed, then the number of time steps in the blob will have to be passed to the method
             //int nTimeSteps = 30000;
-            //Byte[] uncompressedBlobData = new Byte[nTimeSteps * sizeof(double)];
-            //Byte[] compressedBlobData = new Byte[nTimeSteps * sizeof(double)];
-
-            //ZlibCodec zLibCodec = new ZlibCodec(CompressionMode.Decompress)
-            //{
-            //    InputBuffer = blobData,
-            //    OutputBuffer = compressedBlobData,
-            //    AvailableBytesIn = blobData.Length,
-            //    AvailableBytesOut = compressedBlobData.Length,
-            //    NextIn = 0,
-            //    NextOut = 0
-            //};
-            //zLibCodec.InitializeInflate();
-            //zLibCodec.Inflate(FlushType.Finish);
-            //zLibCodec.EndInflate();
-            //Array.Resize<Byte>(ref compressedBlobData, (int)zLibCodec.TotalBytesOut);
-
-            //LZFX.Decompress(compressedBlobData, uncompressedBlobData);
-            //blobData = uncompressedBlobData;
+            Byte[] decompressedBlobData
+                    = DecompressBlob(blobData, timeStepCount * sizeof(double),
+                            hasLZFXcompression, hasZlibCompression);
 
             // MemoryStream and BinaryReader objects enable bulk copying of data from the BLOB
-            using (MemoryStream blobStream = new MemoryStream(blobData))
+            using (MemoryStream blobStream = new MemoryStream(decompressedBlobData))
             using (BinaryReader blobReader = new BinaryReader(blobStream))
             {
                 // How many elements of size 'double' are in the BLOB?
@@ -198,42 +183,21 @@ namespace TimeSeriesLibrary
         /// <param name="valueArray">The array of time series values to convert into a BLOB</param>
         /// <returns>The BLOB that is created from valueArray</returns>
         public static unsafe byte[] ConvertArrayToBlobRegular(
-            int TimeStepCount, double[] valueArray)
+            int TimeStepCount, double[] valueArray,
+            Boolean hasLZFXcompression, Boolean hasZlibCompression, int compressionLevel)
         {
             // The number of bytes required for the BLOB
             int nBin = TimeStepCount * sizeof(double);
             // Allocate an array for the BLOB
-            Byte[] uncompressedBlobData = new Byte[nBin];
-            Byte[] compressedBlobData = new Byte[nBin];
+            Byte[] blobData = new Byte[nBin];
             // Copy the array of doubles that was passed to the method into the byte array.  We skip
             // a bit of padding at the beginning that is used to compute the Checksum.  Thus, the
             // byte array (without the padding for Checksum) becomes the BLOB.
-            Buffer.BlockCopy(valueArray, 0, uncompressedBlobData, 0, nBin);
+            Buffer.BlockCopy(valueArray, 0, blobData, 0, nBin);
 
-            LZFX.Compress(uncompressedBlobData, ref compressedBlobData);
-
-            int compressedLength = compressedBlobData.Length;
-            Byte[] recompressedBlobData = new Byte[compressedLength];
-            ZlibCodec zLibCodec = new ZlibCodec(CompressionMode.Compress)
-            {
-                Strategy = CompressionStrategy.Default,
-                CompressLevel = CompressionLevel.Level1,
-                InputBuffer = compressedBlobData,
-                OutputBuffer = recompressedBlobData,
-                AvailableBytesIn = compressedLength,
-                AvailableBytesOut = compressedLength,
-                NextIn = 0,
-                NextOut = 0
-            };
-            zLibCodec.InitializeDeflate();
-            zLibCodec.Deflate(FlushType.Finish);
-            zLibCodec.EndDeflate();
-            // The ZlibCodec method wrote a compressed array into an array that was allocated for
-            // the size of the uncompressed array.  We must slice off the unused bytes ourselves.
-            Array.Resize<Byte>(ref recompressedBlobData, (int)zLibCodec.TotalBytesOut);
-
-            return recompressedBlobData;
-            //return uncompressedBlobData;
+            Byte[] compressedBlobData 
+                    = CompressBlob(blobData, hasLZFXcompression, hasZlibCompression, compressionLevel);
+            return compressedBlobData;
         } 
         #endregion
 
@@ -414,7 +378,8 @@ namespace TimeSeriesLibrary
         /// </summary>
         /// <param name="uncompressedBlob">the uncompressed byte array</param>
         /// <returns>the compressed byte array</returns>
-        public static unsafe Byte[] CompressBlob(Byte[] uncompressedBlob)
+        public static unsafe Byte[] CompressBlob(Byte[] uncompressedBlob,
+                        Boolean hasLZFXcompression, Boolean hasZlibCompression, int compressionLevel)
         {
             // the byte-array length of the input blob
             int inputLength = uncompressedBlob.Length;
@@ -458,7 +423,8 @@ namespace TimeSeriesLibrary
         /// </summary>
         /// <param name="compressedBlob">the byte array to be decompressed</param>
         /// <returns>the decompressed byte array</returns>
-        public static unsafe Byte[] DecompressBlob(Byte[] compressedBlob, int decompressedLength)
+        public static unsafe Byte[] DecompressBlob(Byte[] compressedBlob, int decompressedLength,
+                    Boolean hasLZFXcompression, Boolean hasZlibCompression)
         {
             // the byte array of the output blob
             Byte[] decompressedBlob = new Byte[decompressedLength];

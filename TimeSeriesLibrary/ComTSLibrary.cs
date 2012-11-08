@@ -242,7 +242,7 @@ namespace TimeSeriesLibrary
                 // Construct new TS object with SqlConnection object and table name
                 TS ts = new TS(connx, paramTableName, traceTableName);
 
-                return ts.ReadValuesRegular(id, traceNumber, nReqValues, valueArray, reqStartDate, reqEndDate);
+                return 0; // ts.ReadValuesRegular(id, traceNumber, nReqValues, valueArray, reqStartDate, reqEndDate);// TODO: temporary comment during testing %%%!!
             }
             catch (Exception e)
             {
@@ -305,7 +305,7 @@ namespace TimeSeriesLibrary
                     // Allocate an array to hold the time series' data values
                     double[] valueArray = new double[nReqValues];
                     // Read the data values from the database
-                    nValuesRead = ts.ReadValuesRegular(id, traceNumber, nReqValues, valueArray, reqStartDate, reqEndDate);
+                    nValuesRead = 0; // ts.ReadValuesRegular(id, traceNumber, nReqValues, valueArray, reqStartDate, reqEndDate); // TODO: temporary comment during testing %%%!!
                     // Allocate an array to hold the time series' date values
                     DateTime[] dateArray = new DateTime[nValuesRead];
                     // Fill the array with the date values corresponding to the time steps defined
@@ -422,7 +422,7 @@ namespace TimeSeriesLibrary
                 // Construct new TS object with SqlConnection object and table name
                 TS ts = new TS(connx, paramTableName, traceTableName);
 
-                ts.WriteTraceRegular(id, true, null, traceNumber, valueArray);
+                // ts.WriteTraceRegular(id, true, null, traceNumber, valueArray); // TODO: commented during testing %%%!!
             }
             catch (Exception e)
             {

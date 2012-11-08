@@ -65,7 +65,7 @@ namespace Sandbox
         {
             //ImportTest();
             //ReadArrayTest();
-            ReadListTest();
+            ReadListTest(true, true);
             //WriteArrayTest();
             //WriteListTest();
             //DeleteTest();
@@ -73,7 +73,20 @@ namespace Sandbox
 
         }
 
-        void ReadListTest()
+        void CompressionTimeTrial()
+        {
+            // read all timeseries from RunGUID = '703DCAE1-2BB3-4833-BE63-9D0CF12DDE86', store in TS objects
+
+            // loop thru several compression options
+
+            // foreach TS object, compress it into a collection of blobs
+            // record time and compression ratios to file
+
+            // foreach blob in the collection, decompress
+            // record time to file
+        }
+
+        void ReadListTest(Boolean hasLZFXcompression, Boolean hasZlibCompression)
         {
             int ret, i;
 
@@ -85,13 +98,14 @@ namespace Sandbox
                 //TimeLabelBlob.Content = String.Format("Iteration {0}", i);
                 ret = tsLib.ReadAllDatesValues(connNumber,
                         "OutputTimeSeries", "OutputTimeSeriesTraces",
-                        70055, 1, ref valList);
+                        70055, 1, ref valList,
+                        hasLZFXcompression, hasZlibCompression);
             }
             DateTime timerEnd = DateTime.Now;
             TimeSpan timerDiff = timerEnd - timerStart;
             TimeLabelBlob.Content = String.Format("BLOBBED --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
         }
-        void WriteListTest()
+        void WriteListTest(Boolean hasLZFXcompression, Boolean hasZlibCompression, int compressionLevel)
         {
             int i, j=0;
 
@@ -114,7 +128,7 @@ namespace Sandbox
                         "OutputTimeSeries", "OutputTimeSeriesTraces");
                 int id = ts.WriteParametersRegular(true, null, (short)TSDateCalculator.TimeStepUnitCode.Day, 1, nVals, StartDate,
                         extraParamNames, extraParamValues);
-                ts.WriteTraceRegular(id, true, null, 1, valList.ToArray());
+                ts.WriteTraceRegular(id, true, null, 1, valList.ToArray(), hasLZFXcompression, hasZlibCompression, compressionLevel);
             }
             DateTime timerEnd = DateTime.Now;
             TimeSpan timerDiff = timerEnd - timerStart;

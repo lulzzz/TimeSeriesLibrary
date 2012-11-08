@@ -237,7 +237,8 @@ namespace TimeSeriesLibrary
         /// <param name="reqEndDate">The latest date in the time series that will be written to the array of values</param>
         /// <returns>The number of values actually filled into the array</returns>
         public unsafe int ReadValuesRegular(int id, int traceNumber,
-            int nReqValues, double[] valueArray, DateTime reqStartDate, DateTime reqEndDate)
+            int nReqValues, double[] valueArray, DateTime reqStartDate, DateTime reqEndDate,
+            Boolean hasLZFXcompression, Boolean hasZlibCompression)
         {
             // Initialize class fields other than the BLOB of data values
             if (!IsInitialized) Initialize(id);
@@ -260,9 +261,10 @@ namespace TimeSeriesLibrary
             ReadValues(id, traceNumber, ref blobData);
             // Convert the BLOB into an array of double values (valueArray)
             return TSBlobCoder.ConvertBlobToArrayRegular(TimeStepUnit, TimeStepQuantity,
-                                BlobStartDate, true,
+                                TimeStepCount, BlobStartDate, true,
                                 nReqValues, reqStartDate, reqEndDate, 
-                                blobData, valueArray);
+                                blobData, valueArray,
+                                hasLZFXcompression, hasZlibCompression);
         }
         #endregion
 
@@ -519,7 +521,8 @@ namespace TimeSeriesLibrary
         public unsafe void WriteTraceRegular(int id,
                     bool doWriteToDB, TSImport tsImport,
                     int traceNumber,
-                    double[] valueArray)
+                    double[] valueArray,
+                    Boolean hasLZFXcompression, Boolean hasZlibCompression, int compressionLevel)
         {
             // Initialize class fields other than the BLOB of data values
             if (!IsInitialized) Initialize(id);
@@ -536,7 +539,8 @@ namespace TimeSeriesLibrary
             if (tsImport != null)
                 tsImport.TraceList.Add(traceObject);
             // Convert the array of double values into a byte array...a BLOB
-            traceObject.ValueBlob = TSBlobCoder.ConvertArrayToBlobRegular(TimeStepCount, valueArray);
+            traceObject.ValueBlob = TSBlobCoder.ConvertArrayToBlobRegular(TimeStepCount, valueArray,
+                        hasLZFXcompression, hasZlibCompression, compressionLevel);
             // compute the Checksum for this trace
             traceObject.Checksum = TSBlobCoder.ComputeTraceChecksum(traceObject);
 

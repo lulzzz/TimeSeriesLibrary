@@ -37,8 +37,9 @@ namespace TimeSeriesLibrary
         /// <returns>The number of time steps added to dateValueList</returns>
         public int ConvertBlobToListAll(
             TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
-            DateTime blobStartDate,
-            Byte[] blobData, ref List<TimeSeriesValue> dateValueList)
+            int timeStepCount, DateTime blobStartDate,
+            Byte[] blobData, ref List<TimeSeriesValue> dateValueList,
+            Boolean hasLZFXcompression, Boolean hasZlibCompression)
         {
             // The private method ConvertBlobToList() will do all the real work here.
             // This private method takes parameters for limiting a portion of the List to be
@@ -51,9 +52,9 @@ namespace TimeSeriesLibrary
             // Let the private core method do all the real work.
             // We pass it the 'applyLimits' value of false, to tell it to ignore the 'req' limit values.
             return ConvertBlobToList(timeStepUnit, timeStepQuantity,
-                        blobStartDate, false,
+                        timeStepCount, blobStartDate, false,
                         nReqValues, reqStartDate, reqEndDate,
-                        blobData, ref dateValueList);
+                        blobData, ref dateValueList, hasLZFXcompression, hasZlibCompression);
         }
 
         /// <summary>
@@ -77,16 +78,17 @@ namespace TimeSeriesLibrary
         /// <returns>The number of time steps added to dateValueList</returns>
         public int ConvertBlobToListLimited(
             TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
-            DateTime blobStartDate,
+            int timeStepCount, DateTime blobStartDate,
             int nReqValues, DateTime reqStartDate, DateTime reqEndDate,
-            Byte[] blobData, ref List<TimeSeriesValue> dateValueList)
+            Byte[] blobData, ref List<TimeSeriesValue> dateValueList,
+            Boolean hasLZFXcompression, Boolean hasZlibCompression)
         {
             // Let the private core method do all the real work.
             // We pass it the 'applyLimits' value of true.
             return ConvertBlobToList(timeStepUnit, timeStepQuantity,
-                        blobStartDate, true, 
+                        timeStepCount, blobStartDate, true, 
                         nReqValues, reqStartDate, reqEndDate,
-                        blobData, ref dateValueList);
+                        blobData, ref dateValueList, hasLZFXcompression, hasZlibCompression);
         }
 
 
@@ -117,9 +119,10 @@ namespace TimeSeriesLibrary
         /// <returns>The number of time steps added to dateValueList</returns>
         private unsafe int ConvertBlobToList(
             TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
-            DateTime blobStartDate, Boolean applyLimits,
+            int timeStepCount, DateTime blobStartDate, Boolean applyLimits,
             int nReqValues, DateTime reqStartDate, DateTime reqEndDate,
-            Byte[] blobData, ref List<TimeSeriesValue> dateValueList)
+            Byte[] blobData, ref List<TimeSeriesValue> dateValueList,
+            Boolean hasLZFXcompression, Boolean hasZlibCompression)
         {
             int nValuesRead = 0;
 
@@ -156,9 +159,9 @@ namespace TimeSeriesLibrary
                 double[] valueArray = new double[nReqValues];
                 // Method in the TSBlobCoder class does the real work
                 nValuesRead = TSBlobCoder.ConvertBlobToArrayRegular(timeStepUnit, timeStepQuantity,
-                                    blobStartDate, applyLimits,
-                                    nReqValues, reqStartDate, reqEndDate,
-                                    blobData, valueArray);
+                                     timeStepCount, blobStartDate, applyLimits,
+                                     nReqValues, reqStartDate, reqEndDate,
+                                     blobData, valueArray, hasLZFXcompression, hasZlibCompression);
                 // Allocate an array to hold the time series' date values
                 DateTime[] dateArray = new DateTime[nValuesRead];
                 // Fill the array with the date values corresponding to the time steps defined
@@ -190,7 +193,8 @@ namespace TimeSeriesLibrary
         /// <param name="dateValueList">A List of TimeSeriesValue objects that will be converted to a BLOB</param>
         /// <returns>The BLOB (byte array) of time series values that was created from dateValueList</returns>
         public byte[] ConvertListToBlob(TSDateCalculator.TimeStepUnitCode timeStepUnit,
-                            List<TimeSeriesValue> dateValueList)
+                            List<TimeSeriesValue> dateValueList,
+                            Boolean hasLZFXcompression, Boolean hasZlibCompression, int compressionLevel)
         {
             int timeStepCount = dateValueList.Count;
 
@@ -212,7 +216,8 @@ namespace TimeSeriesLibrary
                 // we convert the List of date/value objects to an Array values.
                 double[] valueArray = dateValueList.Select(dv => dv.Value).ToArray();
                 // Let the method in TSBlobCoder class do all the work
-                return TSBlobCoder.ConvertArrayToBlobRegular(timeStepCount, valueArray);
+                return TSBlobCoder.ConvertArrayToBlobRegular(timeStepCount, valueArray,
+                        hasLZFXcompression, hasZlibCompression, compressionLevel);
             }
         }
         /// <summary>
@@ -240,8 +245,9 @@ namespace TimeSeriesLibrary
         public byte[] ConvertListToBlobWithChecksum(
                     TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
                     int timeStepCount, DateTime blobStartDate, DateTime blobEndDate,
-                    List<TimeSeriesValue> dateValueList, 
-                    ITimeSeriesTrace traceObject)
+                    List<TimeSeriesValue> dateValueList,
+                    ITimeSeriesTrace traceObject,
+                    Boolean hasLZFXcompression, Boolean hasZlibCompression, int compressionLevel)
         {
             // Error checks
             if (dateValueList.Count != timeStepCount)
@@ -252,7 +258,8 @@ namespace TimeSeriesLibrary
                 throw new TSLibraryException(ErrCode.Enum.Checksum_Improper_EndDate);
             
             // Convert the List dateValueList into a BLOB.  The sibling method does all the work.
-            traceObject.ValueBlob = ConvertListToBlob(timeStepUnit, dateValueList);
+            traceObject.ValueBlob = ConvertListToBlob(timeStepUnit, dateValueList,
+                                        hasLZFXcompression, hasZlibCompression, compressionLevel);
             // Method in TSBlobCoder class computes the checksum
             traceObject.Checksum = TSBlobCoder.ComputeTraceChecksum(traceObject);
 
@@ -461,7 +468,7 @@ namespace TimeSeriesLibrary
             // allocate an array of doubles, since the ReadValuesRegular method works from arrays (not Lists)
             double[] valueArray = new double[nReqValues];
             // The real work gets done in ReadValuesRegular method of the TS object
-            int ret = ts.ReadValuesRegular(id, traceNumber, nReqValues, valueArray, reqStartDate, reqEndDate);
+            int ret = 0; // ts.ReadValuesRegular(id, traceNumber, nReqValues, valueArray, reqStartDate, reqEndDate);// TODO: temporary comment during testing %%%!!
             // convert the array that ReadValuesRegular filled into a List
             valueList = valueArray.ToList<double>();
             return ret;
@@ -487,7 +494,8 @@ namespace TimeSeriesLibrary
         // usage: for GUI to retrieve an entire time series.  The length of the list is allocated in this method.
         public int ReadAllDatesValues(
                 int connectionNumber, String tableName, String traceTableName, int id, int traceNumber,
-                ref List<TimeSeriesValue> dateValueList)
+                ref List<TimeSeriesValue> dateValueList,
+                Boolean hasLZFXcompression, Boolean hasZlibCompression)
         {
             // Get the connection that we'll pass along.
             SqlConnection connx = GetConnectionFromId(connectionNumber);
@@ -502,7 +510,8 @@ namespace TimeSeriesLibrary
             // beginning, end, and length of the timeseries as stored in the database.  Therefore, 
             // it will return the entire time series as found in the database.
             return ReadLimitedDatesValues(connectionNumber, tableName, traceTableName, id, traceNumber,
-                        ts.TimeStepCount, ref dateValueList, ts.BlobStartDate, ts.BlobEndDate);
+                        ts.TimeStepCount, ref dateValueList, ts.BlobStartDate, ts.BlobEndDate,
+                        hasLZFXcompression, hasZlibCompression);
         }
 
         /// <summary>
@@ -531,7 +540,8 @@ namespace TimeSeriesLibrary
         /// <returns>The number of values that the method added to the list</returns>
         public int ReadLimitedDatesValues(
                 int connectionNumber, String tableName, String traceTableName, int id, int traceNumber,
-                int nReqValues, ref List<TimeSeriesValue> dateValueList, DateTime reqStartDate, DateTime reqEndDate)
+                int nReqValues, ref List<TimeSeriesValue> dateValueList, DateTime reqStartDate, DateTime reqEndDate,
+                Boolean hasLZFXcompression, Boolean hasZlibCompression)
         {
             // Get the connection that we'll pass along.
             SqlConnection connx = GetConnectionFromId(connectionNumber);
@@ -569,7 +579,8 @@ namespace TimeSeriesLibrary
                 // Allocate an array to hold the time series' data values
                 double[] valueArray = new double[nReqValues];
                 // Read the data values from the database
-                nValuesRead = ts.ReadValuesRegular(id, traceNumber, nReqValues, valueArray, reqStartDate, reqEndDate);
+                nValuesRead = ts.ReadValuesRegular(id, traceNumber, nReqValues, valueArray, reqStartDate, reqEndDate,
+                                    hasLZFXcompression, hasZlibCompression);
                 // Allocate an array to hold the time series' date values
                 DateTime[] dateArray = new DateTime[nValuesRead];
                 // Fill the array with the date values corresponding to the time steps defined
