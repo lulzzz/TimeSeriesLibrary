@@ -5,7 +5,7 @@ using System.Text;
 using System.IO;
 using System.Security.Cryptography;
 
-//using Simplicit.Net.Lzo;
+using Ionic.Zlib;
 
 namespace TimeSeriesLibrary
 {
@@ -50,25 +50,26 @@ namespace TimeSeriesLibrary
             Byte[] blobData, double[] valueArray)
         {
             //// TODO: if the data is compressed, then the number of time steps in the blob will have to be passed to the method
-            int nTimeSteps = 30000;
-            Byte[] uncompressedBlobData = new Byte[nTimeSteps * sizeof(double)];
+            //int nTimeSteps = 30000;
+            //Byte[] uncompressedBlobData = new Byte[nTimeSteps * sizeof(double)];
+            //Byte[] compressedBlobData = new Byte[nTimeSteps * sizeof(double)];
 
             //ZlibCodec zLibCodec = new ZlibCodec(CompressionMode.Decompress)
             //{
             //    InputBuffer = blobData,
-            //    OutputBuffer = uncompressedBlobData,
+            //    OutputBuffer = compressedBlobData,
             //    AvailableBytesIn = blobData.Length,
-            //    AvailableBytesOut = uncompressedBlobData.Length,
+            //    AvailableBytesOut = compressedBlobData.Length,
             //    NextIn = 0,
             //    NextOut = 0
             //};
             //zLibCodec.InitializeInflate();
             //zLibCodec.Inflate(FlushType.Finish);
             //zLibCodec.EndInflate();
-            //blobData = uncompressedBlobData.Take((int)zLibCodec.TotalBytesOut).ToArray();
+            //Array.Resize<Byte>(ref compressedBlobData, (int)zLibCodec.TotalBytesOut);
 
-            LZFX.Decompress(blobData, uncompressedBlobData);
-            blobData = uncompressedBlobData;
+            //LZFX.Decompress(compressedBlobData, uncompressedBlobData);
+            //blobData = uncompressedBlobData;
 
             // MemoryStream and BinaryReader objects enable bulk copying of data from the BLOB
             using (MemoryStream blobStream = new MemoryStream(blobData))
@@ -209,32 +210,29 @@ namespace TimeSeriesLibrary
             // byte array (without the padding for Checksum) becomes the BLOB.
             Buffer.BlockCopy(valueArray, 0, uncompressedBlobData, 0, nBin);
 
-            //LZOCompressor lzoCompressor = new LZOCompressor();
-            //compressedBlobData = lzoCompressor.Compress(uncompressedBlobData);
-
             LZFX.Compress(uncompressedBlobData, ref compressedBlobData);
 
-            //ZlibCodec zLibCodec = new ZlibCodec(CompressionMode.Compress)
-            //{
-            //    Strategy = CompressionStrategy.Default,
-            //    CompressLevel = CompressionLevel.Level1,
-            //    InputBuffer = uncompressedBlobData,
-            //    OutputBuffer = compressedBlobData,
-            //    AvailableBytesIn = uncompressedBlobData.Length,
-            //    AvailableBytesOut = compressedBlobData.Length,
-            //    NextIn = 0,
-            //    NextOut = 0
-            //};
-            //zLibCodec.InitializeDeflate();
+            int compressedLength = compressedBlobData.Length;
+            Byte[] recompressedBlobData = new Byte[compressedLength];
+            ZlibCodec zLibCodec = new ZlibCodec(CompressionMode.Compress)
+            {
+                Strategy = CompressionStrategy.Default,
+                CompressLevel = CompressionLevel.Level1,
+                InputBuffer = compressedBlobData,
+                OutputBuffer = recompressedBlobData,
+                AvailableBytesIn = compressedLength,
+                AvailableBytesOut = compressedLength,
+                NextIn = 0,
+                NextOut = 0
+            };
+            zLibCodec.InitializeDeflate();
+            zLibCodec.Deflate(FlushType.Finish);
+            zLibCodec.EndDeflate();
+            // The ZlibCodec method wrote a compressed array into an array that was allocated for
+            // the size of the uncompressed array.  We must slice off the unused bytes ourselves.
+            Array.Resize<Byte>(ref recompressedBlobData, (int)zLibCodec.TotalBytesOut);
 
-
-
-            //zLibCodec.Deflate(FlushType.Finish);
-            //zLibCodec.EndDeflate();
-            //// The ZlibCodec method wrote a compressed array into an array that was allocated for
-            //// the size of the uncompressed array.  We must slice off the unused bytes ourselves.
-            //Array.Resize<Byte>(ref compressedBlobData, (int)zLibCodec.TotalBytesOut);
-            return compressedBlobData;
+            return recompressedBlobData;
             //return uncompressedBlobData;
         } 
         #endregion
@@ -409,5 +407,89 @@ namespace TimeSeriesLibrary
         }
         #endregion
 
+
+        #region Compression Methods
+        /// <summary>
+        /// This returns a compressed version of the given byte array
+        /// </summary>
+        /// <param name="uncompressedBlob">the uncompressed byte array</param>
+        /// <returns>the compressed byte array</returns>
+        public static unsafe Byte[] CompressBlob(Byte[] uncompressedBlob)
+        {
+            // the byte-array length of the input blob
+            int inputLength = uncompressedBlob.Length;
+            // the byte array that will be created by the first compression
+            Byte[] compressedBlob1 = new Byte[inputLength];
+            
+            // First compression is done by the LZFX routine.
+            // This method resizes the compressed byte array for us.
+            LZFX.Compress(uncompressedBlob, ref compressedBlob1);
+
+            // record the length of the byte array from the first compression
+            int compressedLength1 = compressedBlob1.Length;
+            // the byte array that will be created by the second compression
+            Byte[] compressedBlob2 = new Byte[compressedLength1];
+
+            // Second compression is done by zlib.  We do level 1 compression
+            // since it is fastest, and greater compression levels return only
+            // small increments of greater compression.
+            ZlibCodec zLibCodec = new ZlibCodec(CompressionMode.Compress)
+            {
+                Strategy = CompressionStrategy.Default,
+                CompressLevel = CompressionLevel.Level1,
+                InputBuffer = compressedBlob1,
+                OutputBuffer = compressedBlob2,
+                AvailableBytesIn = compressedLength1,
+                AvailableBytesOut = compressedLength1,
+                NextIn = 0,
+                NextOut = 0
+            };
+            zLibCodec.InitializeDeflate();
+            zLibCodec.Deflate(FlushType.Finish);
+            zLibCodec.EndDeflate();
+            // The ZlibCodec method wrote a compressed array into an array that was allocated for
+            // the size of the uncompressed array.  We must slice off the unused bytes ourselves.
+            Array.Resize<Byte>(ref compressedBlob2, (int)zLibCodec.TotalBytesOut);
+            
+            return compressedBlob2;
+        }
+        /// <summary>
+        /// This method returns an uncompressed version of the given compressed byte array
+        /// </summary>
+        /// <param name="compressedBlob">the byte array to be decompressed</param>
+        /// <returns>the decompressed byte array</returns>
+        public static unsafe Byte[] DecompressBlob(Byte[] compressedBlob, int decompressedLength)
+        {
+            // the byte array of the output blob
+            Byte[] decompressedBlob = new Byte[decompressedLength];
+            // the byte array of the blob that has undergone the first decompression
+            Byte[] partlyCompressedBlob = new Byte[decompressedLength];
+
+            // First decompression (reverse of the second compression) is done by zlib.
+            ZlibCodec zLibCodec = new ZlibCodec(CompressionMode.Decompress)
+            {
+                InputBuffer = compressedBlob,
+                OutputBuffer = partlyCompressedBlob,
+                AvailableBytesIn = compressedBlob.Length,
+                AvailableBytesOut = partlyCompressedBlob.Length,
+                NextIn = 0,
+                NextOut = 0
+            };
+            zLibCodec.InitializeInflate();
+            zLibCodec.Inflate(FlushType.Finish);
+            zLibCodec.EndInflate();
+            // The ZlibCodec method wrote the halfway-decompressed array into an array that was allocated for
+            // the size of the fully uncompressed array.  We must slice off the unused bytes ourselves.
+            // This is importand since the second decompression will look at the exact length of this array.
+            Array.Resize<Byte>(ref partlyCompressedBlob, (int)zLibCodec.TotalBytesOut);
+
+            // Second decompression (reverse of first compression) is done by LZFX routine.
+            // This method will throw an exception if the decompressed data does not
+            // exactly fit into the allocated array size.
+            LZFX.Decompress(partlyCompressedBlob, decompressedBlob);
+
+            return decompressedBlob;
+        }
+        #endregion
     }
 }

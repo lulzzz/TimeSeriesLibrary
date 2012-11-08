@@ -85,7 +85,7 @@ namespace Sandbox
                 //TimeLabelBlob.Content = String.Format("Iteration {0}", i);
                 ret = tsLib.ReadAllDatesValues(connNumber,
                         "OutputTimeSeries", "OutputTimeSeriesTraces",
-                        59375, 1, ref valList);
+                        70055, 1, ref valList);
             }
             DateTime timerEnd = DateTime.Now;
             TimeSpan timerDiff = timerEnd - timerStart;
