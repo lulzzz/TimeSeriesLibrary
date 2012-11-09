@@ -63,21 +63,28 @@ namespace Sandbox
 
         private void GoButtonClick(object sender, RoutedEventArgs e)
         {
-            //ImportTest();
-            //ReadArrayTest();
-            //ReadListTest(true, true);
-            //WriteArrayTest();
-            //WriteListTest();
-            //DeleteTest();
-            //HashTimer();
-            CompressionTimeTrial();
+            try
+            {
+                //ImportTest();
+                //ReadArrayTest();
+                //ReadListTest(true, true);
+                //WriteArrayTest();
+                //WriteListTest();
+                //DeleteTest();
+                //HashTimer();
+                CompressionTimeTrial(true);
+            }
+            catch (Exception exc)
+            {
+                MessageBox.Show(exc.Message);
+            }
 
         }
 
         /// <summary>
         /// 
         /// </summary>
-        void CompressionTimeTrial()
+        void CompressionTimeTrial(Boolean shouldUseDB)
         {
             Dictionary<TS, double[]> tsList = new Dictionary<TS, double[]>();
             SqlConnection connx = tsLib.GetConnectionFromId(connNumber);
@@ -113,6 +120,9 @@ namespace Sandbox
             }
             TimeLabelBlob.Content = "";
             StreamWriter outfile = new StreamWriter("Compress.csv");
+
+            String extraParamNames = "TimeSeriesType, Unit_Id, RunGUID, VariableType, VariableName, RunElementGUID";
+            String extraParamValues = "22, 1, '00000000-0000-0000-0000-000000000000', 'XXX', 'XXX', '00000000-0000-0000-0000-000000000000'";
 
             Boolean hasLZFX, hasZlib;  int zlibCompressionLevel;
             DateTime timerStart, timerEnd;  TimeSpan timerDiff;  String spanString, labelString;
@@ -163,11 +173,21 @@ namespace Sandbox
                 foreach (TS ts in tsList.Keys)
                 {
                     double[] valueArray = tsList[ts];
-                    byte[] blob = TSBlobCoder.ConvertArrayToBlobRegular(ts.TimeStepCount, valueArray, hasLZFX, hasZlib, zlibCompressionLevel);
-                    float uncompressedSize = valueArray.Length * sizeof(double);
-                    float compressedSize = blob.Length;
-                    float compressionRatio = compressedSize / uncompressedSize;
-                    resultList.Add(ts, new Tuple<double, byte[]>(compressionRatio, blob));
+                    if (shouldUseDB)
+                    {
+                        int id = ts.WriteParametersRegular(true, null, 
+                                    (short)ts.TimeStepUnit, ts.TimeStepQuantity, ts.TimeStepCount, ts.BlobStartDate,
+                                    extraParamNames, extraParamValues);
+                        ts.WriteTraceRegular(id, true, null, 1, valueArray, hasLZFX, hasZlib, zlibCompressionLevel);
+                    }
+                    else
+                    {
+                        byte[] blob = TSBlobCoder.ConvertArrayToBlobRegular(ts.TimeStepCount, valueArray, hasLZFX, hasZlib, zlibCompressionLevel);
+                        float uncompressedSize = valueArray.Length * sizeof(double);
+                        float compressedSize = blob.Length;
+                        float compressionRatio = compressedSize / uncompressedSize;
+                        resultList.Add(ts, new Tuple<double, byte[]>(compressionRatio, blob));
+                    }
                 }
                 timerEnd = DateTime.Now;
                 timerDiff = timerEnd - timerStart;
@@ -175,11 +195,14 @@ namespace Sandbox
                 TimeLabelBlob.Content += spanString + "\n";
 
                 outfile.WriteLine(labelString);
-                foreach (TS ts in tsList.Keys)
+                if (!shouldUseDB)
                 {
-                    outfile.WriteLine(resultList[ts].Item1.ToString("0.0000"));
+                    foreach (TS ts in tsList.Keys)
+                    {
+                        outfile.WriteLine(resultList[ts].Item1.ToString("0.0000"));
+                    }
+                    outfile.WriteLine("");
                 }
-                outfile.WriteLine("");
                 outfile.WriteLine(spanString);
                 outfile.WriteLine("");
                 outfile.WriteLine("");
@@ -192,13 +215,22 @@ namespace Sandbox
                 // record time to file
                 foreach (TS ts in tsList.Keys)
                 {
-                    double[] valueArray = new double[ts.TimeStepCount];
-                    byte[] blob = resultList[ts].Item2;
-                    TSBlobCoder.ConvertBlobToArrayRegular(ts.TimeStepUnit, ts.TimeStepQuantity,
-                                    ts.TimeStepCount, ts.BlobStartDate, 
-                                    false, ts.TimeStepCount, ts.BlobStartDate, ts.BlobEndDate, 
-                                    blob, valueArray, 
-                                    hasLZFX, hasZlib);
+                    if (shouldUseDB)
+                    {
+                        List<TimeSeriesValue> valueList = new List<TimeSeriesValue>();
+                        tsLib.ReadAllDatesValues(connNumber, "OutputTimeSeries", "OutputTimeSeriesTraces",
+                                ts.Id, 1, ref valueList, hasLZFX, hasZlib);
+                    }
+                    else
+                    {
+                        double[] valueArray = new double[ts.TimeStepCount];
+                        byte[] blob = resultList[ts].Item2;
+                        TSBlobCoder.ConvertBlobToArrayRegular(ts.TimeStepUnit, ts.TimeStepQuantity,
+                                        ts.TimeStepCount, ts.BlobStartDate,
+                                        false, ts.TimeStepCount, ts.BlobStartDate, ts.BlobEndDate,
+                                        blob, valueArray,
+                                        hasLZFX, hasZlib);
+                    }
                 }
                 timerEnd = DateTime.Now;
                 timerDiff = timerEnd - timerStart;
