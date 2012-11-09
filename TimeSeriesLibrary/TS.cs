@@ -18,7 +18,7 @@ namespace TimeSeriesLibrary
         /// <summary>
         /// Object handles the connection to the database
         /// </summary>
-        private SqlConnection Connx;
+        public SqlConnection Connx;  // TODO: make it private %%%
         /// <summary>
         /// name of the database table that stores parameters of this time series
         /// </summary>

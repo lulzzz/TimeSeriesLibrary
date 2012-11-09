@@ -72,7 +72,7 @@ namespace Sandbox
                 //WriteListTest();
                 //DeleteTest();
                 //HashTimer();
-                CompressionTimeTrial(true);
+                CompressionTimeTrial(true, true);
             }
             catch (Exception exc)
             {
@@ -82,14 +82,21 @@ namespace Sandbox
         }
 
         /// <summary>
-        /// 
+        /// This method was developed in order to carefully time the speed effect of doing compression on time
+        /// series.  The method reads all output timeseries from a previously executed run.  The characteristics of
+        /// the different time series in the run lead to different compression ratios, and therefore different
+        /// speed effects.  Therefore, this test does not time just one or a few hypothetical time series, but rather
+        /// it determines the effect on a whole set of time series that are actually in use.
         /// </summary>
-        void CompressionTimeTrial(Boolean shouldUseDB)
+        /// <param name="shouldUseDB">If true, then the method will record the time to actually read and write
+        /// the time series to database.  If fasle, the method only converts the value arrays to and from BLOB</param>
+        /// <param name="shouldUseHardDrive">If true, the method will switch to the database that is on hard drive</param>
+        void CompressionTimeTrial(Boolean shouldUseDB, Boolean shouldUseHardDrive)
         {
             Dictionary<TS, double[]> tsList = new Dictionary<TS, double[]>();
             SqlConnection connx = tsLib.GetConnectionFromId(connNumber);
-            // read all timeseries from RunGUID = '703DCAE1-2BB3-4833-BE63-9D0CF12DDE86', store in TS objects
-            String comm = String.Format("select Id from OutputTimeSeries where RunGUID='703DCAE1-2BB3-4833-BE63-9D0CF12DDE86'");
+            // read all timeseries from a particular run, store in TS objects
+            String comm = String.Format("select Id from OutputTimeSeries where RunGUID='28005d8e-9966-433a-982a-7b786bbf0cfc'");
             using (SqlDataAdapter adp = new SqlDataAdapter(comm, connx))
             using (DataTable dTable = new DataTable())
             {
@@ -118,6 +125,20 @@ namespace Sandbox
                 }
 
             }
+            if (shouldUseHardDrive)
+            {
+                // This was done because I have my main database on SSD, but I wanted to test the speed
+                // of a database on hard drive.  Here we switch to the HD database.
+
+                // I temporarily made property TS.Connx public so that the below code would work
+
+                //tsLib.CloseConnection(connNumber);
+                //connNumber = tsLib.OpenConnection(
+                //    "Data Source=.; Database=HardDriveTS; Trusted_Connection=yes;");
+                //foreach (TS ts in tsList.Keys)
+                //    ts.Connx = tsLib.GetConnectionFromId(connNumber);
+            }
+
             TimeLabelBlob.Content = "";
             StreamWriter outfile = new StreamWriter("Compress.csv");
 
@@ -127,7 +148,7 @@ namespace Sandbox
             Boolean hasLZFX, hasZlib;  int zlibCompressionLevel;
             DateTime timerStart, timerEnd;  TimeSpan timerDiff;  String spanString, labelString;
             // loop thru several compression options
-            for (int optionIndex = 0; optionIndex < 6; optionIndex++)
+            for (int optionIndex = 0; optionIndex < 4; optionIndex++)
             {
                 switch (optionIndex)
                 {
@@ -150,16 +171,6 @@ namespace Sandbox
                         hasLZFX = false;
                         hasZlib = true;
                         zlibCompressionLevel = 1;
-                        break;
-                    case 4:
-                        hasLZFX = false;
-                        hasZlib = true;
-                        zlibCompressionLevel = 2;
-                        break;
-                    case 5:
-                        hasLZFX = false;
-                        hasZlib = true;
-                        zlibCompressionLevel = 3;
                         break;
                     default:
                         throw new NotImplementedException();
