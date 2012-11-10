@@ -14,8 +14,9 @@ namespace TimeSeriesLibrary
     /// a BLOB (byte array) and visa-versa.  All of this class's methods
     /// are static, so the class does not need to be instantiated.
     /// </summary>
-    public class TSBlobCoder
+    public static class TSBlobCoder
     {
+
         #region Method ConvertBlobToArrayRegular
         /// <summary>
         /// This method converts a BLOB (byte array) to an array of regular time step timeseries 
@@ -30,6 +31,7 @@ namespace TimeSeriesLibrary
         /// <param name="timeStepUnit">TSDateCalculator.TimeStepUnitCode value for Minute,Hour,Day,Week,Month, Year, or Irregular</param>
         /// <param name="timeStepQuantity">The number of the given unit that defines the time step.
         /// For instance, if the time step is 6 hours long, then this value is 6.</param>
+        /// <param name="timeStepCount">the number of time steps that are stored in the blob</param>
         /// <param name="blobStartDate">Date of the first time step in the BLOB</param>
         /// <param name="applyLimits">If true, then the method will convert only a portion of the BLOB,
         /// according to the parameter values nReqValues, reqStartDate, and reqEndDate.  If false, the method
@@ -42,19 +44,18 @@ namespace TimeSeriesLibrary
         /// If applyLimits==false, then this value is ignored.</param>
         /// <param name="blobData">the BLOB that will be converted</param>
         /// <param name="valueArray">the array of time series values that is produced from the BLOB</param>
+        /// <param name="compressionCode">a generation number that indicates what compression technique to use</param>
         /// <returns>The number of time steps that were actually written to valueArray</returns>
         public static unsafe int ConvertBlobToArrayRegular(
             TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
             int timeStepCount, DateTime blobStartDate, bool applyLimits,
             int nReqValues, DateTime reqStartDate, DateTime reqEndDate,
-            Byte[] blobData, double[] valueArray,
-            Boolean hasLZFXcompression, Boolean hasZlibCompression)
+            Byte[] blobData, double[] valueArray, int compressionCode)
         {
-            //// TODO: if the data is compressed, then the number of time steps in the blob will have to be passed to the method
-            //int nTimeSteps = 30000;
+            // The BLOB is kept in a compressed form, so our first step is to decompress it before
+            // anything else can be done.
             Byte[] decompressedBlobData
-                    = DecompressBlob(blobData, timeStepCount * sizeof(double),
-                            hasLZFXcompression, hasZlibCompression);
+                    = DecompressBlob(blobData, timeStepCount * sizeof(double), compressionCode);
 
             // MemoryStream and BinaryReader objects enable bulk copying of data from the BLOB
             using (MemoryStream blobStream = new MemoryStream(decompressedBlobData))
@@ -115,6 +116,7 @@ namespace TimeSeriesLibrary
         /// the given array of values.  The array of values must have been allocated 
         /// large enough prior to calling this method.
         /// </summary>
+        /// <param name="timeStepCount">the number of time steps that are stored in the blob</param>
         /// <param name="applyLimits">If true, then the method will convert only a portion of the BLOB,
         /// according to the parameter values nReqValues, reqStartDate, and reqEndDate.  If false, the method
         /// converts the entire BLOB into a value array.</param>
@@ -126,12 +128,18 @@ namespace TimeSeriesLibrary
         /// If applyLimits==false, then this value is ignored.</param>
         /// <param name="blobData">the BLOB that will be converted</param>
         /// <param name="dateValueArray">the array of time series values that is produced from the BLOB</param>
+        /// <param name="compressionCode">a generation number that indicates what compression technique to use</param>
         /// <returns>The number of time steps that were actually written to dateValueArray</returns>
-        public static unsafe int ConvertBlobToArrayIrregular(bool applyLimits,
+        public static unsafe int ConvertBlobToArrayIrregular(int timeStepCount, bool applyLimits,
             int nReqValues, DateTime reqStartDate, DateTime reqEndDate,
-            Byte[] blobData, TSDateValueStruct[] dateValueArray)
+            Byte[] blobData, TSDateValueStruct[] dateValueArray, int compressionCode)
         {
             int numReadValues = 0;
+
+            // The BLOB is kept in a compressed form, so our first step is to decompress it before
+            // anything else can be done.
+            Byte[] decompressedBlobData
+                    = DecompressBlob(blobData, timeStepCount * sizeof(TSDateValueStruct), compressionCode);
 
             // MemoryStream and BinaryReader objects enable bulk copying of data from the BLOB
             using (MemoryStream blobStream = new MemoryStream(blobData))
@@ -181,10 +189,10 @@ namespace TimeSeriesLibrary
         /// </summary>
         /// <param name="TimeStepCount">The number of time steps in the given array of time series values</param>
         /// <param name="valueArray">The array of time series values to convert into a BLOB</param>
+        /// <param name="compressionCode">a generation number that indicates what compression technique to use</param>
         /// <returns>The BLOB that is created from valueArray</returns>
         public static unsafe byte[] ConvertArrayToBlobRegular(
-            int TimeStepCount, double[] valueArray,
-            Boolean hasLZFXcompression, Boolean hasZlibCompression, int compressionLevel)
+            int TimeStepCount, double[] valueArray, int compressionCode)
         {
             // The number of bytes required for the BLOB
             int nBin = TimeStepCount * sizeof(double);
@@ -195,8 +203,8 @@ namespace TimeSeriesLibrary
             // byte array (without the padding for Checksum) becomes the BLOB.
             Buffer.BlockCopy(valueArray, 0, blobData, 0, nBin);
 
-            Byte[] compressedBlobData 
-                    = CompressBlob(blobData, hasLZFXcompression, hasZlibCompression, compressionLevel);
+            // the BLOB is stored in a compressed form, so our last step is to compress it
+            Byte[] compressedBlobData = CompressBlob(blobData, compressionCode);
             return compressedBlobData;
         } 
         #endregion
@@ -209,9 +217,10 @@ namespace TimeSeriesLibrary
         /// </summary>
         /// <param name="TimeStepCount">The number of time steps in the given array of time series values</param>
         /// <param name="dateValueArray">The array of time series values to convert into a BLOB</param>
+        /// <param name="compressionCode">a generation number that indicates what compression technique to use</param>
         /// <returns>The BLOB that is created from dateValueArray</returns>
         public static unsafe byte[] ConvertArrayToBlobIrregular(
-            int TimeStepCount, TSDateValueStruct[] dateValueArray)
+            int TimeStepCount, TSDateValueStruct[] dateValueArray, int compressionCode)
         {
             // The number of bytes required for the BLOB
             int nBin = TimeStepCount * sizeof(TSDateValueStruct);
@@ -229,8 +238,10 @@ namespace TimeSeriesLibrary
                     blobWriter.Write(dateValueArray[i].Date.ToBinary());
                     blobWriter.Write(dateValueArray[i].Value);
                 }
-                return blobData;
             }
+            // the BLOB is stored in a compressed form, so our last step is to compress it
+            Byte[] compressedBlobData = CompressBlob(blobData, compressionCode);
+            return blobData;
         } 
         #endregion
 
@@ -241,9 +252,9 @@ namespace TimeSeriesLibrary
         /// timeseries' BLOB of values, plus a TSParameters object that contains a short string of 
         /// numbers that TimeSeriesLibrary is responsible for keeping in accord with the BLOB.
         /// </summary>
-        /// <param name="tsp"></param>
-        /// <param name="blobData"></param>
-        /// <returns></returns>
+        /// <param name="tsp">TSParameters object that contains the parameters of the time series</param>
+        /// <param name="traceList">collection of trace objects for the time series</param>
+        /// <returns>the Checksum as a byte[16] array</returns>
         public static byte[] ComputeChecksum(TSParameters tsp, List<ITimeSeriesTrace> traceList)
         {
             // simply unpack the TSParameters object and call the overload of this method
@@ -374,124 +385,69 @@ namespace TimeSeriesLibrary
 
         #region Compression Methods
         /// <summary>
+        /// This constant tells us what the current value is for the generation number of
+        /// compression approach.  In case the compression methods of this class ever change
+        /// the previous algorithm for decompressing the data should not be deleted, but can
+        /// still be used by invoking the compression code that was current at the time that
+        /// an old time series was compressed.
+        /// </summary>
+        public const int currentCompressionCode = 1;
+
+        /// <summary>
         /// This returns a compressed version of the given byte array
         /// </summary>
         /// <param name="uncompressedBlob">the uncompressed byte array</param>
+        /// <param name="compressionCode">a generation number that indicates what compression technique to use</param>
         /// <returns>the compressed byte array</returns>
-        public static unsafe Byte[] CompressBlob(Byte[] uncompressedBlob,
-                        Boolean hasLZFXcompression, Boolean hasZlibCompression, int compressionLevelInt)
+        public static unsafe Byte[] CompressBlob(Byte[] uncompressedBlob, int compressionCode)
         {
-            Byte[] compressedBlob1;
-            if (hasLZFXcompression)
+            if (compressionCode == 1)
             {
+                Byte[] compressedBlob;
                 // the byte-array length of the input blob
                 int inputLength = uncompressedBlob.Length;
-                // the byte array that will be created by the first compression
-                compressedBlob1 = new Byte[(int)(inputLength * 1.05)];
+                // The byte array that will be created by the first compression.
+                // Note that some incompressible BLOBs will actually be made larger by LZFX
+                // compression.  We have observed about 1% increase over the original BLOB,
+                // to the factor of 1.05 is expected to be safe.
+                compressedBlob = new Byte[(int)(inputLength * 1.05)];
 
-                // First compression is done by the LZFX routine.
+                // Compress using LZFX algorithm.
                 // This method resizes the compressed byte array for us.
-                LZFX.Compress(uncompressedBlob, ref compressedBlob1);
+                LZFX.Compress(uncompressedBlob, ref compressedBlob);
+                return compressedBlob;
             }
             else
-                compressedBlob1 = uncompressedBlob;
-
-            if (hasZlibCompression)
-            {
-                CompressionLevel compressionLevel;
-                switch (compressionLevelInt)
-                {
-                    case 1: compressionLevel = CompressionLevel.Level1; break;
-                    case 2: compressionLevel = CompressionLevel.Level2; break;
-                    case 3: compressionLevel = CompressionLevel.Level3; break;
-                    case 4: compressionLevel = CompressionLevel.Level4; break;
-                    case 5: compressionLevel = CompressionLevel.Level5; break;
-                    case 6: compressionLevel = CompressionLevel.Level6; break;
-                    case 7: compressionLevel = CompressionLevel.Level7; break;
-                    case 8: compressionLevel = CompressionLevel.Level8; break;
-                    case 9: compressionLevel = CompressionLevel.Level9; break;
-                    default: compressionLevel = CompressionLevel.Default; break;
-                }
-
-                // record the length of the byte array from the first compression
-                int compressedLength1 = compressedBlob1.Length;
-                // the byte array that will be created by the second compression
-                Byte[] compressedBlob2 = new Byte[compressedLength1];
-
-                // Second compression is done by zlib.  We do level 1 compression
-                // since it is fastest, and greater compression levels return only
-                // small increments of greater compression.
-                ZlibCodec zLibCodec = new ZlibCodec(CompressionMode.Compress)
-                {
-                    Strategy = CompressionStrategy.Default,
-                    CompressLevel = compressionLevel,
-                    InputBuffer = compressedBlob1,
-                    OutputBuffer = compressedBlob2,
-                    AvailableBytesIn = compressedLength1,
-                    AvailableBytesOut = compressedLength1,
-                    NextIn = 0,
-                    NextOut = 0
-                };
-                zLibCodec.InitializeDeflate();
-                zLibCodec.Deflate(FlushType.Finish);
-                zLibCodec.EndDeflate();
-                // The ZlibCodec method wrote a compressed array into an array that was allocated for
-                // the size of the uncompressed array.  We must slice off the unused bytes ourselves.
-                Array.Resize<Byte>(ref compressedBlob2, (int)zLibCodec.TotalBytesOut);
-
-                return compressedBlob2;
+            {   // return without doing any compression
+                return uncompressedBlob;
             }
-            else
-                return compressedBlob1;
+
         }
         /// <summary>
         /// This method returns an uncompressed version of the given compressed byte array
         /// </summary>
-        /// <param name="compressedBlob">the byte array to be decompressed</param>
+        /// <param name="inputBlob">the byte array to be decompressed</param>
+        /// <param name="decompressedLength">the known length of the decompressed byte array</param>
+        /// <param name="compressionCode">a generation number that indicates what compression technique to use</param>
         /// <returns>the decompressed byte array</returns>
-        public static unsafe Byte[] DecompressBlob(Byte[] compressedBlob, int decompressedLength,
-                    Boolean hasLZFXcompression, Boolean hasZlibCompression)
+        public static unsafe Byte[] DecompressBlob(Byte[] inputBlob, int decompressedLength,
+                                                    int compressionCode)
         {
-            Byte[] partlyCompressedBlob;
-
-            if (hasZlibCompression)
-            {
-                // the byte array of the blob that has undergone the first decompression
-                partlyCompressedBlob = new Byte[(int)(decompressedLength * 1.05)];
-                // First decompression (reverse of the second compression) is done by zlib.
-                ZlibCodec zLibCodec = new ZlibCodec(CompressionMode.Decompress)
-                {
-                    InputBuffer = compressedBlob,
-                    OutputBuffer = partlyCompressedBlob,
-                    AvailableBytesIn = compressedBlob.Length,
-                    AvailableBytesOut = partlyCompressedBlob.Length,
-                    NextIn = 0,
-                    NextOut = 0
-                };
-                zLibCodec.InitializeInflate();
-                zLibCodec.Inflate(FlushType.Finish);
-                zLibCodec.EndInflate();
-                // The ZlibCodec method wrote the halfway-decompressed array into an array that was allocated for
-                // the size of the fully uncompressed array.  We must slice off the unused bytes ourselves.
-                // This is importand since the second decompression will look at the exact length of this array.
-                Array.Resize<Byte>(ref partlyCompressedBlob, (int)zLibCodec.TotalBytesOut);
-            }
-            else
-                partlyCompressedBlob = compressedBlob;
-
-            if (hasLZFXcompression)
+            if (compressionCode == 1)
             {
                 // the byte array of the output blob
                 Byte[] decompressedBlob = new Byte[decompressedLength];
-                // Second decompression (reverse of first compression) is done by LZFX routine.
+                // Decompress using LZFX algorithm.
                 // This method will throw an exception if the decompressed data does not
                 // exactly fit into the allocated array size.
-                LZFX.Decompress(partlyCompressedBlob, decompressedBlob);
+                LZFX.Decompress(inputBlob, decompressedBlob);
 
                 return decompressedBlob;
             }
             else
-                return partlyCompressedBlob;
+            {   // return without doing any compression
+                return inputBlob;
+            }
         }
         #endregion
     }

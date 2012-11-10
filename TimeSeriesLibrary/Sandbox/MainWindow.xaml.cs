@@ -72,7 +72,7 @@ namespace Sandbox
                 //WriteListTest();
                 //DeleteTest();
                 //HashTimer();
-                CompressionTimeTrial(true, true);
+                //CompressionTimeTrial(true, true);
             }
             catch (Exception exc)
             {
@@ -81,182 +81,184 @@ namespace Sandbox
 
         }
 
-        /// <summary>
-        /// This method was developed in order to carefully time the speed effect of doing compression on time
-        /// series.  The method reads all output timeseries from a previously executed run.  The characteristics of
-        /// the different time series in the run lead to different compression ratios, and therefore different
-        /// speed effects.  Therefore, this test does not time just one or a few hypothetical time series, but rather
-        /// it determines the effect on a whole set of time series that are actually in use.
-        /// </summary>
-        /// <param name="shouldUseDB">If true, then the method will record the time to actually read and write
-        /// the time series to database.  If fasle, the method only converts the value arrays to and from BLOB</param>
-        /// <param name="shouldUseHardDrive">If true, the method will switch to the database that is on hard drive</param>
-        void CompressionTimeTrial(Boolean shouldUseDB, Boolean shouldUseHardDrive)
-        {
-            Dictionary<TS, double[]> tsList = new Dictionary<TS, double[]>();
-            SqlConnection connx = tsLib.GetConnectionFromId(connNumber);
-            // read all timeseries from a particular run, store in TS objects
-            String comm = String.Format("select Id from OutputTimeSeries where RunGUID='28005d8e-9966-433a-982a-7b786bbf0cfc'");
-            using (SqlDataAdapter adp = new SqlDataAdapter(comm, connx))
-            using (DataTable dTable = new DataTable())
-            {
-                try
-                {
-                    adp.Fill(dTable);
-                }
-                catch (Exception e)
-                {   throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
-                                    "Table 'OutputTimeSeries' could not be opened using query:\n\n" + comm, e);
-                }
-                if (dTable.Rows.Count < 1)
-                {
-                    throw new TSLibraryException(ErrCode.Enum.Record_Not_Found_Table,
-                                "Found zero records using query:\n\n." + comm);
-                }
-                foreach (DataRow dataRow in dTable.Rows)
-                {
-                    int id = dataRow.Field<int>("Id");
-                    TS ts = new TS(connx, "OutputTimeSeries", "OutputTimeSeriesTraces");
-                    if (!ts.IsInitialized) ts.Initialize(id);
-                    double[] valueArray = new double[ts.TimeStepCount];
-                    ts.ReadValuesRegular(id, 1, ts.TimeStepCount, valueArray, ts.BlobStartDate, ts.BlobEndDate, false, false);
-                    tsList.Add(ts, valueArray);
-                    TimeLabelBlob.Content = dTable.Rows.IndexOf(dataRow).ToString();
-                }
+        #region CompressionTimeTrial
+        ///// <summary>
+        ///// This method was developed in order to carefully time the speed effect of doing compression on time
+        ///// series.  The method reads all output timeseries from a previously executed run.  The characteristics of
+        ///// the different time series in the run lead to different compression ratios, and therefore different
+        ///// speed effects.  Therefore, this test does not time just one or a few hypothetical time series, but rather
+        ///// it determines the effect on a whole set of time series that are actually in use.
+        ///// </summary>
+        ///// <param name="shouldUseDB">If true, then the method will record the time to actually read and write
+        ///// the time series to database.  If fasle, the method only converts the value arrays to and from BLOB</param>
+        ///// <param name="shouldUseHardDrive">If true, the method will switch to the database that is on hard drive</param>
+        //void CompressionTimeTrial(Boolean shouldUseDB, Boolean shouldUseHardDrive)
+        //{
+        //    Dictionary<TS, double[]> tsList = new Dictionary<TS, double[]>();
+        //    SqlConnection connx = tsLib.GetConnectionFromId(connNumber);
+        //    // read all timeseries from a particular run, store in TS objects
+        //    String comm = String.Format("select Id from OutputTimeSeries where RunGUID='28005d8e-9966-433a-982a-7b786bbf0cfc'");
+        //    using (SqlDataAdapter adp = new SqlDataAdapter(comm, connx))
+        //    using (DataTable dTable = new DataTable())
+        //    {
+        //        try
+        //        {
+        //            adp.Fill(dTable);
+        //        }
+        //        catch (Exception e)
+        //        {   throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
+        //                            "Table 'OutputTimeSeries' could not be opened using query:\n\n" + comm, e);
+        //        }
+        //        if (dTable.Rows.Count < 1)
+        //        {
+        //            throw new TSLibraryException(ErrCode.Enum.Record_Not_Found_Table,
+        //                        "Found zero records using query:\n\n." + comm);
+        //        }
+        //        foreach (DataRow dataRow in dTable.Rows)
+        //        {
+        //            int id = dataRow.Field<int>("Id");
+        //            TS ts = new TS(connx, "OutputTimeSeries", "OutputTimeSeriesTraces");
+        //            if (!ts.IsInitialized) ts.Initialize(id);
+        //            double[] valueArray = new double[ts.TimeStepCount];
+        //            ts.ReadValuesRegular(id, 1, ts.TimeStepCount, valueArray, ts.BlobStartDate, ts.BlobEndDate, false, false);
+        //            tsList.Add(ts, valueArray);
+        //            TimeLabelBlob.Content = dTable.Rows.IndexOf(dataRow).ToString();
+        //        }
 
-            }
-            if (shouldUseHardDrive)
-            {
-                // This was done because I have my main database on SSD, but I wanted to test the speed
-                // of a database on hard drive.  Here we switch to the HD database.
+        //    }
+        //    if (shouldUseHardDrive)
+        //    {
+        //        // This was done because I have my main database on SSD, but I wanted to test the speed
+        //        // of a database on hard drive.  Here we switch to the HD database.
 
-                // I temporarily made property TS.Connx public so that the below code would work
+        //        // I temporarily made property TS.Connx public so that the below code would work
 
-                //tsLib.CloseConnection(connNumber);
-                //connNumber = tsLib.OpenConnection(
-                //    "Data Source=.; Database=HardDriveTS; Trusted_Connection=yes;");
-                //foreach (TS ts in tsList.Keys)
-                //    ts.Connx = tsLib.GetConnectionFromId(connNumber);
-            }
+        //        //tsLib.CloseConnection(connNumber);
+        //        //connNumber = tsLib.OpenConnection(
+        //        //    "Data Source=.; Database=HardDriveTS; Trusted_Connection=yes;");
+        //        //foreach (TS ts in tsList.Keys)
+        //        //    ts.Connx = tsLib.GetConnectionFromId(connNumber);
+        //    }
 
-            TimeLabelBlob.Content = "";
-            StreamWriter outfile = new StreamWriter("Compress.csv");
+        //    TimeLabelBlob.Content = "";
+        //    StreamWriter outfile = new StreamWriter("Compress.csv");
 
-            String extraParamNames = "TimeSeriesType, Unit_Id, RunGUID, VariableType, VariableName, RunElementGUID";
-            String extraParamValues = "22, 1, '00000000-0000-0000-0000-000000000000', 'XXX', 'XXX', '00000000-0000-0000-0000-000000000000'";
+        //    String extraParamNames = "TimeSeriesType, Unit_Id, RunGUID, VariableType, VariableName, RunElementGUID";
+        //    String extraParamValues = "22, 1, '00000000-0000-0000-0000-000000000000', 'XXX', 'XXX', '00000000-0000-0000-0000-000000000000'";
 
-            Boolean hasLZFX, hasZlib;  int zlibCompressionLevel;
-            DateTime timerStart, timerEnd;  TimeSpan timerDiff;  String spanString, labelString;
-            // loop thru several compression options
-            for (int optionIndex = 0; optionIndex < 4; optionIndex++)
-            {
-                switch (optionIndex)
-                {
-                    case 0:
-                        hasLZFX = false;
-                        hasZlib = false;
-                        zlibCompressionLevel = 1;
-                        break;
-                    case 1:
-                        hasLZFX = true;
-                        hasZlib = false;
-                        zlibCompressionLevel = 1;
-                        break;
-                    case 2:
-                        hasLZFX = true;
-                        hasZlib = true;
-                        zlibCompressionLevel = 1;
-                        break;
-                    case 3:
-                        hasLZFX = false;
-                        hasZlib = true;
-                        zlibCompressionLevel = 1;
-                        break;
-                    default:
-                        throw new NotImplementedException();
-                }
-                Dictionary<TS, Tuple<double, byte[]>> resultList = new Dictionary<TS, Tuple<double, byte[]>>();
-                labelString = "COMPRESS LZFX=" + hasLZFX.ToString() + " zlib=" + hasZlib.ToString()
-                                + " lev=" + zlibCompressionLevel.ToString();
-                timerStart = DateTime.Now;
-                // foreach TS object, compress it into a collection of blobs
-                // record time and compression ratios to file
-                foreach (TS ts in tsList.Keys)
-                {
-                    double[] valueArray = tsList[ts];
-                    if (shouldUseDB)
-                    {
-                        int id = ts.WriteParametersRegular(true, null, 
-                                    (short)ts.TimeStepUnit, ts.TimeStepQuantity, ts.TimeStepCount, ts.BlobStartDate,
-                                    extraParamNames, extraParamValues);
-                        ts.WriteTraceRegular(id, true, null, 1, valueArray, hasLZFX, hasZlib, zlibCompressionLevel);
-                    }
-                    else
-                    {
-                        byte[] blob = TSBlobCoder.ConvertArrayToBlobRegular(ts.TimeStepCount, valueArray, hasLZFX, hasZlib, zlibCompressionLevel);
-                        float uncompressedSize = valueArray.Length * sizeof(double);
-                        float compressedSize = blob.Length;
-                        float compressionRatio = compressedSize / uncompressedSize;
-                        resultList.Add(ts, new Tuple<double, byte[]>(compressionRatio, blob));
-                    }
-                }
-                timerEnd = DateTime.Now;
-                timerDiff = timerEnd - timerStart;
-                spanString = String.Format(" {0:hh\\:mm\\:ss\\.f}", timerDiff);
-                TimeLabelBlob.Content += spanString + "\n";
+        //    Boolean hasLZFX, hasZlib;  int zlibCompressionLevel;
+        //    DateTime timerStart, timerEnd;  TimeSpan timerDiff;  String spanString, labelString;
+        //    // loop thru several compression options
+        //    for (int optionIndex = 0; optionIndex < 4; optionIndex++)
+        //    {
+        //        switch (optionIndex)
+        //        {
+        //            case 0:
+        //                hasLZFX = false;
+        //                hasZlib = false;
+        //                zlibCompressionLevel = 1;
+        //                break;
+        //            case 1:
+        //                hasLZFX = true;
+        //                hasZlib = false;
+        //                zlibCompressionLevel = 1;
+        //                break;
+        //            case 2:
+        //                hasLZFX = true;
+        //                hasZlib = true;
+        //                zlibCompressionLevel = 1;
+        //                break;
+        //            case 3:
+        //                hasLZFX = false;
+        //                hasZlib = true;
+        //                zlibCompressionLevel = 1;
+        //                break;
+        //            default:
+        //                throw new NotImplementedException();
+        //        }
+        //        Dictionary<TS, Tuple<double, byte[]>> resultList = new Dictionary<TS, Tuple<double, byte[]>>();
+        //        labelString = "COMPRESS LZFX=" + hasLZFX.ToString() + " zlib=" + hasZlib.ToString()
+        //                        + " lev=" + zlibCompressionLevel.ToString();
+        //        timerStart = DateTime.Now;
+        //        // foreach TS object, compress it into a collection of blobs
+        //        // record time and compression ratios to file
+        //        foreach (TS ts in tsList.Keys)
+        //        {
+        //            double[] valueArray = tsList[ts];
+        //            if (shouldUseDB)
+        //            {
+        //                int id = ts.WriteParametersRegular(true, null, 
+        //                            (short)ts.TimeStepUnit, ts.TimeStepQuantity, ts.TimeStepCount, ts.BlobStartDate,
+        //                            extraParamNames, extraParamValues);
+        //                ts.WriteTraceRegular(id, true, null, 1, valueArray, hasLZFX, hasZlib, zlibCompressionLevel);
+        //            }
+        //            else
+        //            {
+        //                byte[] blob = TSBlobCoder.ConvertArrayToBlobRegular(ts.TimeStepCount, valueArray, hasLZFX, hasZlib, zlibCompressionLevel);
+        //                float uncompressedSize = valueArray.Length * sizeof(double);
+        //                float compressedSize = blob.Length;
+        //                float compressionRatio = compressedSize / uncompressedSize;
+        //                resultList.Add(ts, new Tuple<double, byte[]>(compressionRatio, blob));
+        //            }
+        //        }
+        //        timerEnd = DateTime.Now;
+        //        timerDiff = timerEnd - timerStart;
+        //        spanString = String.Format(" {0:hh\\:mm\\:ss\\.f}", timerDiff);
+        //        TimeLabelBlob.Content += spanString + "\n";
 
-                outfile.WriteLine(labelString);
-                if (!shouldUseDB)
-                {
-                    foreach (TS ts in tsList.Keys)
-                    {
-                        outfile.WriteLine(resultList[ts].Item1.ToString("0.0000"));
-                    }
-                    outfile.WriteLine("");
-                }
-                outfile.WriteLine(spanString);
-                outfile.WriteLine("");
-                outfile.WriteLine("");
+        //        outfile.WriteLine(labelString);
+        //        if (!shouldUseDB)
+        //        {
+        //            foreach (TS ts in tsList.Keys)
+        //            {
+        //                outfile.WriteLine(resultList[ts].Item1.ToString("0.0000"));
+        //            }
+        //            outfile.WriteLine("");
+        //        }
+        //        outfile.WriteLine(spanString);
+        //        outfile.WriteLine("");
+        //        outfile.WriteLine("");
 
 
-                labelString = "DECOMPRS LZFX=" + hasLZFX.ToString() + " zlib=" + hasZlib.ToString()
-                                + " lev=" + zlibCompressionLevel.ToString();
-                timerStart = DateTime.Now;
-                // foreach blob in the collection, decompress
-                // record time to file
-                foreach (TS ts in tsList.Keys)
-                {
-                    if (shouldUseDB)
-                    {
-                        List<TimeSeriesValue> valueList = new List<TimeSeriesValue>();
-                        tsLib.ReadAllDatesValues(connNumber, "OutputTimeSeries", "OutputTimeSeriesTraces",
-                                ts.Id, 1, ref valueList, hasLZFX, hasZlib);
-                    }
-                    else
-                    {
-                        double[] valueArray = new double[ts.TimeStepCount];
-                        byte[] blob = resultList[ts].Item2;
-                        TSBlobCoder.ConvertBlobToArrayRegular(ts.TimeStepUnit, ts.TimeStepQuantity,
-                                        ts.TimeStepCount, ts.BlobStartDate,
-                                        false, ts.TimeStepCount, ts.BlobStartDate, ts.BlobEndDate,
-                                        blob, valueArray,
-                                        hasLZFX, hasZlib);
-                    }
-                }
-                timerEnd = DateTime.Now;
-                timerDiff = timerEnd - timerStart;
-                spanString = String.Format(" {0:hh\\:mm\\:ss\\.f}", timerDiff);
-                TimeLabelBlob.Content += spanString + "\n";
+        //        labelString = "DECOMPRS LZFX=" + hasLZFX.ToString() + " zlib=" + hasZlib.ToString()
+        //                        + " lev=" + zlibCompressionLevel.ToString();
+        //        timerStart = DateTime.Now;
+        //        // foreach blob in the collection, decompress
+        //        // record time to file
+        //        foreach (TS ts in tsList.Keys)
+        //        {
+        //            if (shouldUseDB)
+        //            {
+        //                List<TimeSeriesValue> valueList = new List<TimeSeriesValue>();
+        //                tsLib.ReadAllDatesValues(connNumber, "OutputTimeSeries", "OutputTimeSeriesTraces",
+        //                        ts.Id, 1, ref valueList, hasLZFX, hasZlib);
+        //            }
+        //            else
+        //            {
+        //                double[] valueArray = new double[ts.TimeStepCount];
+        //                byte[] blob = resultList[ts].Item2;
+        //                TSBlobCoder.ConvertBlobToArrayRegular(ts.TimeStepUnit, ts.TimeStepQuantity,
+        //                                ts.TimeStepCount, ts.BlobStartDate,
+        //                                false, ts.TimeStepCount, ts.BlobStartDate, ts.BlobEndDate,
+        //                                blob, valueArray,
+        //                                hasLZFX, hasZlib);
+        //            }
+        //        }
+        //        timerEnd = DateTime.Now;
+        //        timerDiff = timerEnd - timerStart;
+        //        spanString = String.Format(" {0:hh\\:mm\\:ss\\.f}", timerDiff);
+        //        TimeLabelBlob.Content += spanString + "\n";
 
-                outfile.WriteLine(labelString);
-                outfile.WriteLine(spanString);
-                outfile.WriteLine("");
-                outfile.WriteLine("");
-            }
-            outfile.Close();
+        //        outfile.WriteLine(labelString);
+        //        outfile.WriteLine(spanString);
+        //        outfile.WriteLine("");
+        //        outfile.WriteLine("");
+        //    }
+        //    outfile.Close();
 
-        }
-
+        //}
+        
+        #endregion
         /// <summary>
         /// 
         /// </summary>

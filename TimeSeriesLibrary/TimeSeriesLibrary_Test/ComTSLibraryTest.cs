@@ -105,7 +105,7 @@ namespace TimeSeriesLibrary_Test
                 // 
                 Assert.AreEqual(timeStepQuantity, row.Field<int>("TimeStepQuantity"));
                 Assert.AreEqual(timeStepUnit, row.Field<int>("TimeStepUnit"));
-                Assert.AreEqual(timeStepCount, row.Field<int>("RecordCount"));
+                Assert.AreEqual(timeStepCount, row.Field<int>("TimeStepCount"));
                 Assert.AreEqual(startDate, row.Field<DateTime>("StartDate"));
                 Assert.AreEqual(0, row.Field<int>("TimeSeriesType"));
                 Assert.AreEqual(1, row.Field<int>("Unit_Id"));
@@ -140,7 +140,7 @@ namespace TimeSeriesLibrary_Test
                 // 
                 Assert.AreEqual(timeStepQuantity, row.Field<int>("TimeStepQuantity"));
                 Assert.AreEqual(timeStepUnit, row.Field<int>("TimeStepUnit"));
-                Assert.AreEqual(timeStepCount, row.Field<int>("RecordCount"));
+                Assert.AreEqual(timeStepCount, row.Field<int>("TimeStepCount"));
                 Assert.AreEqual(startDate, row.Field<DateTime>("StartDate"));
                 Assert.AreEqual(endDate, row.Field<DateTime>("EndDate"));
                 Assert.AreEqual(1, row.Field<int>("TimeSeriesType"));

@@ -18,7 +18,7 @@ namespace TimeSeriesLibrary
         /// <summary>
         /// Object handles the connection to the database
         /// </summary>
-        public SqlConnection Connx;  // TODO: make it private %%%
+        private SqlConnection Connx;
         /// <summary>
         /// name of the database table that stores parameters of this time series
         /// </summary>
@@ -43,7 +43,7 @@ namespace TimeSeriesLibrary
         /// <summary>
         /// MD5 Checksum computed from the BLOB and meta-parameters when the timeseries is saved to database.
         /// </summary>
-        public Byte[] Checksum; 
+        public Byte[] Checksum;
         #endregion
 
         #region Properties linked to TSParameters field
@@ -66,7 +66,7 @@ namespace TimeSeriesLibrary
             set { TSParameters.TimeStepQuantity = value; }
         }
         /// <summary>
-        /// Date of the first time step stored in the databasepublic 
+        /// Date of the first time step stored in the database
         /// </summary>
         // This property simply refers to a field of the TSParameters object
         public DateTime BlobStartDate
@@ -92,18 +92,14 @@ namespace TimeSeriesLibrary
             get { return TSParameters.TimeStepCount; }
             set { TSParameters.TimeStepCount = value; }
         }
-        #endregion
-
-
-        #region Static Constructor
         /// <summary>
-        /// Static constructor is called before the first instance of the class is initialized--not when an
-        /// individual instance of the class is initialized.  That is, the static constructor is only called
-        /// once per run.  The static constructor can only set static data for the class.
+        /// The compression code that indicates what compression algorithm is used to compress the BLOB
         /// </summary>
-        static TS()
+        // This property simply refers to a field of the TSParameters object
+        public int CompressionCode
         {
-            // Can be deleted ?  Stuff that we were doing here has be moved elsewhere.
+            get { return TSParameters.CompressionCode; }
+            set { TSParameters.CompressionCode = value; }
         }
         #endregion
 
@@ -156,8 +152,9 @@ namespace TimeSeriesLibrary
             // store the method's input parameters
             Id = id;
             // Define the SQL query
-            
-            String comm = String.Format("select TimeStepUnit,TimeStepQuantity,RecordCount,StartDate,EndDate " +
+
+            String comm = String.Format("select TimeStepUnit,TimeStepQuantity," +
+                                        "TimeStepCount,StartDate,EndDate,CompressionCode " +
                                         "from {0} where Id='{1}'", ParametersTableName, Id);
             // SqlDataAdapter object will use the query to fill the DataTable
             using (SqlDataAdapter adp = new SqlDataAdapter(comm, Connx))
@@ -182,9 +179,10 @@ namespace TimeSeriesLibrary
                 // Assign properties from table to this object
                 TimeStepUnit = (TSDateCalculator.TimeStepUnitCode)dTable.Rows[0].Field<int>("TimeStepUnit");
                 TimeStepQuantity = (short)dTable.Rows[0].Field<int>("TimeStepQuantity");
-                TimeStepCount = dTable.Rows[0].Field<int>("RecordCount");
+                TimeStepCount = dTable.Rows[0].Field<int>("TimeStepCount");
                 BlobStartDate = dTable.Rows[0].Field<DateTime>("StartDate");
                 BlobEndDate = dTable.Rows[0].Field<DateTime>("EndDate");
+                CompressionCode = dTable.Rows[0].Field<int>("CompressionCode");
                 dTable.Dispose();
             }
             IsInitialized = true;
@@ -204,7 +202,7 @@ namespace TimeSeriesLibrary
         {
             // note: by including 'where 1=0', we ensure that an empty resultset will be returned.
             return String.Format("select" +
-                                 "  Id, TimeStepUnit, TimeStepQuantity, RecordCount, StartDate, EndDate, Checksum" +
+                                 "  Id, TimeStepUnit, TimeStepQuantity, TimeStepCount, StartDate, EndDate, Checksum" +
                                  "  from {0} where 1=0", ParametersTableName);
         }
         /// <summary>
@@ -237,8 +235,7 @@ namespace TimeSeriesLibrary
         /// <param name="reqEndDate">The latest date in the time series that will be written to the array of values</param>
         /// <returns>The number of values actually filled into the array</returns>
         public unsafe int ReadValuesRegular(int id, int traceNumber,
-            int nReqValues, double[] valueArray, DateTime reqStartDate, DateTime reqEndDate,
-            Boolean hasLZFXcompression, Boolean hasZlibCompression)
+            int nReqValues, double[] valueArray, DateTime reqStartDate, DateTime reqEndDate)
         {
             // Initialize class fields other than the BLOB of data values
             if (!IsInitialized) Initialize(id);
@@ -264,7 +261,7 @@ namespace TimeSeriesLibrary
                                 TimeStepCount, BlobStartDate, true,
                                 nReqValues, reqStartDate, reqEndDate, 
                                 blobData, valueArray,
-                                hasLZFXcompression, hasZlibCompression);
+                                CompressionCode);
         }
         #endregion
 
@@ -305,8 +302,8 @@ namespace TimeSeriesLibrary
             // method ReadValues reads data from the database into the byte array
             ReadValues(id, traceNumber, ref blobData);
             // convert the byte array into date/value pairs
-            return TSBlobCoder.ConvertBlobToArrayIrregular(true, nReqValues, reqStartDate, reqEndDate,
-                            blobData, dateValueArray);
+            return TSBlobCoder.ConvertBlobToArrayIrregular(TimeStepCount, true, nReqValues, reqStartDate, reqEndDate,
+                            blobData, dateValueArray, CompressionCode);
 
         }
         #endregion
@@ -387,7 +384,9 @@ namespace TimeSeriesLibrary
             // The method's parameters are used to compute the meta-parameters of this time series
             TSParameters.SetParametersRegular(
                     (TSDateCalculator.TimeStepUnitCode)timeStepUnit, timeStepQuantity,
-                    timeStepCount, outStartDate);
+                    timeStepCount, outStartDate,
+                    // new time series are always compressed by the current compression technique            
+                    TSBlobCoder.currentCompressionCode);
             IsInitialized = true;
             // Compute the Checksum for this time series ensemble.  Because this is a newly
             // written series, there are not yet any traces to incorporate into the checksum
@@ -426,7 +425,9 @@ namespace TimeSeriesLibrary
         {
             ErrorCheckWriteValues(doWriteToDB, tsImport);
             // The method's parameters are used to compute the meta-parameters of this time series
-            TSParameters.SetParametersIrregular(timeStepCount, outStartDate, outEndDate);
+            TSParameters.SetParametersIrregular(timeStepCount, outStartDate, outEndDate, 
+                            // new time series are always compressed by the current compression technique            
+                            TSBlobCoder.currentCompressionCode);
             IsInitialized = true;
             // Compute the Checksum for this time series ensemble.  Because this is a newly
             // written series, there are not yet any traces to incorporate into the checksum
@@ -460,7 +461,7 @@ namespace TimeSeriesLibrary
             String valString = ((short)TimeStepUnit).ToString();
             // Add the rest of the column names and column values such that each is preceded by a comma
             AppendStringPair(ref colString, ref valString, "TimeStepQuantity", TimeStepQuantity.ToString());
-            AppendStringPair(ref colString, ref valString, "RecordCount", TimeStepCount.ToString());
+            AppendStringPair(ref colString, ref valString, "TimeStepCount", TimeStepCount.ToString());
             AppendStringPair(ref colString, ref valString, "StartDate", "'" + BlobStartDate.ToString() + "'");
             AppendStringPair(ref colString, ref valString, "EndDate", "'" + BlobEndDate.ToString() + "'");
             AppendStringPair(ref colString, ref valString, "Checksum", ByteArrayToString(Checksum));
@@ -539,8 +540,8 @@ namespace TimeSeriesLibrary
             if (tsImport != null)
                 tsImport.TraceList.Add(traceObject);
             // Convert the array of double values into a byte array...a BLOB
-            traceObject.ValueBlob = TSBlobCoder.ConvertArrayToBlobRegular(TimeStepCount, valueArray,
-                        hasLZFXcompression, hasZlibCompression, compressionLevel);
+            traceObject.ValueBlob 
+                = TSBlobCoder.ConvertArrayToBlobRegular(TimeStepCount, valueArray, CompressionCode);
             // compute the Checksum for this trace
             traceObject.Checksum = TSBlobCoder.ComputeTraceChecksum(traceObject);
 
@@ -583,7 +584,8 @@ namespace TimeSeriesLibrary
             if (tsImport != null)
                 tsImport.TraceList.Add(traceObject);
             // Convert the array of double values into a byte array...a BLOB
-            traceObject.ValueBlob = TSBlobCoder.ConvertArrayToBlobIrregular(TimeStepCount, dateValueArray);
+            traceObject.ValueBlob 
+                = TSBlobCoder.ConvertArrayToBlobIrregular(TimeStepCount, dateValueArray, CompressionCode);
             // compute the Checksum for this trace
             traceObject.Checksum = TSBlobCoder.ComputeTraceChecksum(traceObject);
 
@@ -644,6 +646,9 @@ namespace TimeSeriesLibrary
         /// This method updates the value in the Checksum field of the parameters table.
         /// It does not modify any other fields.
         /// </summary>
+        /// <param name="doWriteToDB">true if the method should actually save the timeseries to the database</param>
+        /// <param name="tsImport">TSImport object into which the method will record values that it has computed.
+        /// If this parameter is null, then the method will skip the recording of such paramters to an object.</param>
         private void UpdateParametersChecksum(bool doWriteToDB, TSImport tsImport)
         {
             String comm;

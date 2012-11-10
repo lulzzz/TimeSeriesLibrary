@@ -30,16 +30,17 @@ namespace TimeSeriesLibrary
         /// <param name="timeStepQuantity">The number of the given unit that defines the time step.
         /// For instance, if the time step is 6 hours long, then this value is 6.  If timeStepUnit is 
         /// Irregular, then this value is ignored.</param>
+        /// <param name="timeStepCount">the number of time steps that are stored in the blob</param>
         /// <param name="blobStartDate">The DateTime value of the first time step in the BLOB. If 
         /// timeStepUnit is Irregular, then this value is ignored.</param>
         /// <param name="blobData">The BLOB (byte array) that this method will convert</param>
         /// <param name="dateValueList">The List of TimeSeriesValues that this method will create from the BLOB.</param>
+        /// <param name="compressionCode">a generation number that indicates what compression technique to use</param>
         /// <returns>The number of time steps added to dateValueList</returns>
         public int ConvertBlobToListAll(
             TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
             int timeStepCount, DateTime blobStartDate,
-            Byte[] blobData, ref List<TimeSeriesValue> dateValueList,
-            Boolean hasLZFXcompression, Boolean hasZlibCompression)
+            Byte[] blobData, ref List<TimeSeriesValue> dateValueList, int compressionCode)
         {
             // The private method ConvertBlobToList() will do all the real work here.
             // This private method takes parameters for limiting a portion of the List to be
@@ -54,7 +55,7 @@ namespace TimeSeriesLibrary
             return ConvertBlobToList(timeStepUnit, timeStepQuantity,
                         timeStepCount, blobStartDate, false,
                         nReqValues, reqStartDate, reqEndDate,
-                        blobData, ref dateValueList, hasLZFXcompression, hasZlibCompression);
+                        blobData, ref dateValueList, compressionCode);
         }
 
         /// <summary>
@@ -68,6 +69,7 @@ namespace TimeSeriesLibrary
         /// <param name="timeStepQuantity">The number of the given unit that defines the time step.
         /// For instance, if the time step is 6 hours long, then this value is 6.  If timeStepUnit is 
         /// Irregular, then this value is ignored.</param>
+        /// <param name="timeStepCount">the number of time steps that are stored in the blob</param>
         /// <param name="blobStartDate">The DateTime value of the first time step in the BLOB. If 
         /// timeStepUnit is Irregular, then this value is ignored.</param>
         /// <param name="nReqValues">The maximum number of time steps that should be added to dateValueList</param>
@@ -75,20 +77,20 @@ namespace TimeSeriesLibrary
         /// <param name="reqEndDate">The latest date that will be added to dateValueList</param>
         /// <param name="blobData">The BLOB (byte array) that this method will convert into a List</param>
         /// <param name="dateValueList">The List of TimeSeriesValues that this method will create from the BLOB.</param>
+        /// <param name="compressionCode">a generation number that indicates what compression technique to use</param>
         /// <returns>The number of time steps added to dateValueList</returns>
         public int ConvertBlobToListLimited(
             TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
             int timeStepCount, DateTime blobStartDate,
             int nReqValues, DateTime reqStartDate, DateTime reqEndDate,
-            Byte[] blobData, ref List<TimeSeriesValue> dateValueList,
-            Boolean hasLZFXcompression, Boolean hasZlibCompression)
+            Byte[] blobData, ref List<TimeSeriesValue> dateValueList, int compressionCode)
         {
             // Let the private core method do all the real work.
             // We pass it the 'applyLimits' value of true.
             return ConvertBlobToList(timeStepUnit, timeStepQuantity,
                         timeStepCount, blobStartDate, true, 
                         nReqValues, reqStartDate, reqEndDate,
-                        blobData, ref dateValueList, hasLZFXcompression, hasZlibCompression);
+                        blobData, ref dateValueList, compressionCode);
         }
 
 
@@ -103,6 +105,7 @@ namespace TimeSeriesLibrary
         /// <param name="timeStepQuantity">The number of the given unit that defines the time step.
         /// For instance, if the time step is 6 hours long, then this value is 6.  If timeStepUnit is 
         /// Irregular, then this value is ignored.</param>
+        /// <param name="timeStepCount">the number of time steps that are stored in the blob</param>
         /// <param name="blobStartDate">The DateTime value of the first time step in the BLOB. If 
         /// timeStepUnit is Irregular, then this value is ignored.</param>
         /// <param name="applyLimits">If value is true, then nReqValues, reqStartDate, and reqEndDate will be
@@ -116,13 +119,13 @@ namespace TimeSeriesLibrary
         /// If applyLimits==false, then this value is ignored.</param>
         /// <param name="blobData">The BLOB (byte array) that this method will convert into a List</param>
         /// <param name="dateValueList">The List of TimeSeriesValues that this method will create from the BLOB.</param>
+        /// <param name="compressionCode">a generation number that indicates what compression technique to use</param>
         /// <returns>The number of time steps added to dateValueList</returns>
         private unsafe int ConvertBlobToList(
             TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
             int timeStepCount, DateTime blobStartDate, Boolean applyLimits,
             int nReqValues, DateTime reqStartDate, DateTime reqEndDate,
-            Byte[] blobData, ref List<TimeSeriesValue> dateValueList,
-            Boolean hasLZFXcompression, Boolean hasZlibCompression)
+            Byte[] blobData, ref List<TimeSeriesValue> dateValueList, int compressionCode)
         {
             int nValuesRead = 0;
 
@@ -137,9 +140,9 @@ namespace TimeSeriesLibrary
                 // Allocate an array of date/value pairs that TSBlobCoder method will fill
                 TSDateValueStruct[] dateValueArray = new TSDateValueStruct[nReqValues];
                 // Method in the TSBlobCoder class does the real work
-                nValuesRead = TSBlobCoder.ConvertBlobToArrayIrregular(applyLimits, 
+                nValuesRead = TSBlobCoder.ConvertBlobToArrayIrregular(timeStepCount, applyLimits, 
                                     nReqValues, reqStartDate, reqEndDate,
-                                    blobData, dateValueArray);
+                                    blobData, dateValueArray, compressionCode);
                 // resize the array so that the List that we make from it will have exactly the right size
                 if(nValuesRead!=nReqValues)
                     Array.Resize<TSDateValueStruct>(ref dateValueArray, nValuesRead);
@@ -161,7 +164,7 @@ namespace TimeSeriesLibrary
                 nValuesRead = TSBlobCoder.ConvertBlobToArrayRegular(timeStepUnit, timeStepQuantity,
                                      timeStepCount, blobStartDate, applyLimits,
                                      nReqValues, reqStartDate, reqEndDate,
-                                     blobData, valueArray, hasLZFXcompression, hasZlibCompression);
+                                     blobData, valueArray, compressionCode);
                 // Allocate an array to hold the time series' date values
                 DateTime[] dateArray = new DateTime[nValuesRead];
                 // Fill the array with the date values corresponding to the time steps defined
@@ -193,8 +196,7 @@ namespace TimeSeriesLibrary
         /// <param name="dateValueList">A List of TimeSeriesValue objects that will be converted to a BLOB</param>
         /// <returns>The BLOB (byte array) of time series values that was created from dateValueList</returns>
         public byte[] ConvertListToBlob(TSDateCalculator.TimeStepUnitCode timeStepUnit,
-                            List<TimeSeriesValue> dateValueList,
-                            Boolean hasLZFXcompression, Boolean hasZlibCompression, int compressionLevel)
+                            List<TimeSeriesValue> dateValueList)
         {
             int timeStepCount = dateValueList.Count;
 
@@ -206,7 +208,8 @@ namespace TimeSeriesLibrary
                 // we convert the List of objects to an Array of struct instances.
                 TSDateValueStruct[] dateValueArray = dateValueList.Select(tsv => (TSDateValueStruct)tsv).ToArray();
                 // Let the method in TSBlobCoder class do all the work
-                return TSBlobCoder.ConvertArrayToBlobIrregular(timeStepCount, dateValueArray);
+                return TSBlobCoder.ConvertArrayToBlobIrregular(timeStepCount, dateValueArray, 
+                                    TSBlobCoder.currentCompressionCode);
             }
             else
             {
@@ -216,8 +219,8 @@ namespace TimeSeriesLibrary
                 // we convert the List of date/value objects to an Array values.
                 double[] valueArray = dateValueList.Select(dv => dv.Value).ToArray();
                 // Let the method in TSBlobCoder class do all the work
-                return TSBlobCoder.ConvertArrayToBlobRegular(timeStepCount, valueArray,
-                        hasLZFXcompression, hasZlibCompression, compressionLevel);
+                return TSBlobCoder.ConvertArrayToBlobRegular(timeStepCount, valueArray, 
+                                        TSBlobCoder.currentCompressionCode);
             }
         }
         /// <summary>
@@ -241,13 +244,13 @@ namespace TimeSeriesLibrary
         /// <param name="traceObject">an object which contains the a TraceNumber property that is used to 
         /// compute the checksum.  The computed BLOB and checksum are both saved to the appropriate properties
         /// of this object.</param>
+        /// <param name="compressionCode">a generation number that indicates what compression technique to use</param>
         /// <returns>The BLOB (byte array) of time series values that was created from dateValueList</returns>
         public byte[] ConvertListToBlobWithChecksum(
                     TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
                     int timeStepCount, DateTime blobStartDate, DateTime blobEndDate,
                     List<TimeSeriesValue> dateValueList,
-                    ITimeSeriesTrace traceObject,
-                    Boolean hasLZFXcompression, Boolean hasZlibCompression, int compressionLevel)
+                    ITimeSeriesTrace traceObject)
         {
             // Error checks
             if (dateValueList.Count != timeStepCount)
@@ -258,8 +261,7 @@ namespace TimeSeriesLibrary
                 throw new TSLibraryException(ErrCode.Enum.Checksum_Improper_EndDate);
             
             // Convert the List dateValueList into a BLOB.  The sibling method does all the work.
-            traceObject.ValueBlob = ConvertListToBlob(timeStepUnit, dateValueList,
-                                        hasLZFXcompression, hasZlibCompression, compressionLevel);
+            traceObject.ValueBlob = ConvertListToBlob(timeStepUnit, dateValueList);
             // Method in TSBlobCoder class computes the checksum
             traceObject.Checksum = TSBlobCoder.ComputeTraceChecksum(traceObject);
 
@@ -468,7 +470,7 @@ namespace TimeSeriesLibrary
             // allocate an array of doubles, since the ReadValuesRegular method works from arrays (not Lists)
             double[] valueArray = new double[nReqValues];
             // The real work gets done in ReadValuesRegular method of the TS object
-            int ret = 0; // ts.ReadValuesRegular(id, traceNumber, nReqValues, valueArray, reqStartDate, reqEndDate);// TODO: temporary comment during testing %%%!!
+            int ret = ts.ReadValuesRegular(id, traceNumber, nReqValues, valueArray, reqStartDate, reqEndDate);
             // convert the array that ReadValuesRegular filled into a List
             valueList = valueArray.ToList<double>();
             return ret;
@@ -579,8 +581,7 @@ namespace TimeSeriesLibrary
                 // Allocate an array to hold the time series' data values
                 double[] valueArray = new double[nReqValues];
                 // Read the data values from the database
-                nValuesRead = ts.ReadValuesRegular(id, traceNumber, nReqValues, valueArray, reqStartDate, reqEndDate,
-                                    hasLZFXcompression, hasZlibCompression);
+                nValuesRead = ts.ReadValuesRegular(id, traceNumber, nReqValues, valueArray, reqStartDate, reqEndDate);
                 // Allocate an array to hold the time series' date values
                 DateTime[] dateArray = new DateTime[nValuesRead];
                 // Fill the array with the date values corresponding to the time steps defined
