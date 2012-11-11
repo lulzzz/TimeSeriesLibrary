@@ -5,8 +5,6 @@ using System.Text;
 using System.IO;
 using System.Security.Cryptography;
 
-using Ionic.Zlib;
-
 namespace TimeSeriesLibrary
 {
     /// <summary>
@@ -207,7 +205,10 @@ namespace TimeSeriesLibrary
             // byte array (without the padding for Checksum) becomes the BLOB.
             Buffer.BlockCopy(valueArray, 0, blobData, 0, nBin);
 
-            // compute the checksum using the uncompressed BLOB
+            // Compute the checksum using the uncompressed BLOB.  During development, it was 
+            // demonstrated that the checksum would be computed faster on the compressed BLOB.
+            // However, this could make it difficult to upgrade the compression algorithm in the
+            // future, because the checksum value would be dependent on the compression algorithm.
             traceObject.Checksum = ComputeTraceChecksum(traceObject.TraceNumber, blobData);
 
             // the BLOB is stored in a compressed form, so our last step is to compress it
@@ -251,7 +252,10 @@ namespace TimeSeriesLibrary
                 }
             }
 
-            // compute the checksum using the uncompressed BLOB
+            // Compute the checksum using the uncompressed BLOB.  During development, it was 
+            // demonstrated that the checksum would be computed faster on the compressed BLOB.
+            // However, this could make it difficult to upgrade the compression algorithm in the
+            // future, because the checksum value would be dependent on the compression algorithm.
             traceObject.Checksum = ComputeTraceChecksum(traceObject.TraceNumber, blobData);
 
             // the BLOB is stored in a compressed form, so our last step is to compress it

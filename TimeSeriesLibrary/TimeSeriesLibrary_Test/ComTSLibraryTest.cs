@@ -13,6 +13,7 @@ namespace TimeSeriesLibrary_Test
     ///to contain all ComTSLibraryTest Unit Tests
     ///</summary>
     [TestClass()]
+    [DeploymentItem("lzfx.dll")]
     public class ComTSLibraryTest
     {
         /*

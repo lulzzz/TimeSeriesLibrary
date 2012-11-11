@@ -262,54 +262,54 @@ namespace Sandbox
         /// <summary>
         /// 
         /// </summary>
-        void ReadListTest(Boolean hasLZFXcompression, Boolean hasZlibCompression)
-        {
-            int ret, i;
+        //void ReadListTest(Boolean hasLZFXcompression, Boolean hasZlibCompression)
+        //{
+        //    int ret, i;
 
-            List<TimeSeriesValue> valList = new List<TimeSeriesValue>();
+        //    List<TimeSeriesValue> valList = new List<TimeSeriesValue>();
 
-            DateTime timerStart = DateTime.Now;
-            for (i = 0; i < nIter; i++)
-            {
-                //TimeLabelBlob.Content = String.Format("Iteration {0}", i);
-                ret = tsLib.ReadAllDatesValues(connNumber,
-                        "OutputTimeSeries", "OutputTimeSeriesTraces",
-                        70055, 1, ref valList,
-                        hasLZFXcompression, hasZlibCompression);
-            }
-            DateTime timerEnd = DateTime.Now;
-            TimeSpan timerDiff = timerEnd - timerStart;
-            TimeLabelBlob.Content = String.Format("BLOBBED --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
-        }
-        void WriteListTest(Boolean hasLZFXcompression, Boolean hasZlibCompression, int compressionLevel)
-        {
-            int i, j=0;
+        //    DateTime timerStart = DateTime.Now;
+        //    for (i = 0; i < nIter; i++)
+        //    {
+        //        //TimeLabelBlob.Content = String.Format("Iteration {0}", i);
+        //        ret = tsLib.ReadAllDatesValues(connNumber,
+        //                "OutputTimeSeries", "OutputTimeSeriesTraces",
+        //                70055, 1, ref valList,
+        //                hasLZFXcompression, hasZlibCompression);
+        //    }
+        //    DateTime timerEnd = DateTime.Now;
+        //    TimeSpan timerDiff = timerEnd - timerStart;
+        //    TimeLabelBlob.Content = String.Format("BLOBBED --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
+        //}
+        //void WriteListTest(Boolean hasLZFXcompression, Boolean hasZlibCompression, int compressionLevel)
+        //{
+        //    int i, j=0;
 
-            List<double> valList = new List<double>();
-            String extraParamNames = "TimeSeriesType, Unit_Id, RunGUID, VariableType, VariableName, RunElementGUID";
-            String extraParamValues = "22, 1, '00000000-0000-0000-0000-000000000000', 'XXX', 'XXX', '00000000-0000-0000-0000-000000000000'";
+        //    List<double> valList = new List<double>();
+        //    String extraParamNames = "TimeSeriesType, Unit_Id, RunGUID, VariableType, VariableName, RunElementGUID";
+        //    String extraParamValues = "22, 1, '00000000-0000-0000-0000-000000000000', 'XXX', 'XXX', '00000000-0000-0000-0000-000000000000'";
 
-            for (i = 0; i < nVals; i++)
-            {
-                valList.Add(1.5);
-                j++;
-                //if (j > i / 9) j = 0;
-            }
+        //    for (i = 0; i < nVals; i++)
+        //    {
+        //        valList.Add(1.5);
+        //        j++;
+        //        //if (j > i / 9) j = 0;
+        //    }
 
-            DateTime timerStart = DateTime.Now;
-            for (i = 0; i < nIter; i++)
-            {
-                TimeLabelBlob.Content = String.Format("Iteration {0}", i);
-                TS ts = new TS(tsLib.GetConnectionFromId(connNumber),
-                        "OutputTimeSeries", "OutputTimeSeriesTraces");
-                int id = ts.WriteParametersRegular(true, null, (short)TSDateCalculator.TimeStepUnitCode.Day, 1, nVals, StartDate,
-                        extraParamNames, extraParamValues);
-                ts.WriteTraceRegular(id, true, null, 1, valList.ToArray(), hasLZFXcompression, hasZlibCompression, compressionLevel);
-            }
-            DateTime timerEnd = DateTime.Now;
-            TimeSpan timerDiff = timerEnd - timerStart;
-            TimeLabelBlob.Content = String.Format("BLOBWRI --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
-        }
+        //    DateTime timerStart = DateTime.Now;
+        //    for (i = 0; i < nIter; i++)
+        //    {
+        //        TimeLabelBlob.Content = String.Format("Iteration {0}", i);
+        //        TS ts = new TS(tsLib.GetConnectionFromId(connNumber),
+        //                "OutputTimeSeries", "OutputTimeSeriesTraces");
+        //        int id = ts.WriteParametersRegular(true, null, (short)TSDateCalculator.TimeStepUnitCode.Day, 1, nVals, StartDate,
+        //                extraParamNames, extraParamValues);
+        //        ts.WriteTraceRegular(id, true, null, 1, valList.ToArray(), hasLZFXcompression, hasZlibCompression, compressionLevel);
+        //    }
+        //    DateTime timerEnd = DateTime.Now;
+        //    TimeSpan timerDiff = timerEnd - timerStart;
+        //    TimeLabelBlob.Content = String.Format("BLOBWRI --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
+        //}
 
         //void WriteArrayTest()
         //{

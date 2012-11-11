@@ -522,8 +522,7 @@ namespace TimeSeriesLibrary
         public unsafe void WriteTraceRegular(int id,
                     bool doWriteToDB, TSImport tsImport,
                     int traceNumber,
-                    double[] valueArray,
-                    Boolean hasLZFXcompression, Boolean hasZlibCompression, int compressionLevel)
+                    double[] valueArray)
         {
             // Initialize class fields other than the BLOB of data values
             if (!IsInitialized) Initialize(id);

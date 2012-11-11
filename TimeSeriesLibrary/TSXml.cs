@@ -363,8 +363,8 @@ namespace TimeSeriesLibrary
                                         throw new TSLibraryException(ErrCode.Enum.Xml_File_Inconsistent, ReportedFileName +
                                             "contains a regular time series whose traces do not all have the same number of time steps.");
                                 }
-                                //ts.WriteTraceRegular(0, shouldStoreToDatabase, tsImport,
-                                //        traceNumber, valueArray);  // TODO: commented during testing %%%!!
+                                ts.WriteTraceRegular(0, shouldStoreToDatabase, tsImport,
+                                        traceNumber, valueArray);
                             }
                             tsImport.RecordFromTS(ts);
                             // Done with the TS object.

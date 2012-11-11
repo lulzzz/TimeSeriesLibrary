@@ -13,6 +13,7 @@ namespace TimeSeriesLibrary_Test
     ///to contain all TSLibraryTest Unit Tests
     ///</summary>
     [TestClass()]
+    [DeploymentItem("lzfx.dll")]
     public class TSLibraryTest
     {
         static List<TimeSeriesValue> IrregList1 = new List<TimeSeriesValue>();
@@ -107,10 +108,12 @@ namespace TimeSeriesLibrary_Test
             TSLibrary tsLib = new TSLibrary();
             List<TimeSeriesValue> outList = new List<TimeSeriesValue>();
 
-            byte[] blobData = tsLib.ConvertListToBlob(timeStepUnit, inList);
+            byte[] blobData = tsLib.ConvertListToBlobWithChecksum(timeStepUnit, timeStepQuantity,
+                                inList.Count, inList.First().Date, inList.Last().Date, inList,
+                                new TSTrace { TraceNumber=1 });
 
             int ret = tsLib.ConvertBlobToListAll(timeStepUnit, timeStepQuantity,
-                            blobStartDate, blobData, ref outList);
+                            inList.Count, blobStartDate, blobData, ref outList, TSBlobCoder.currentCompressionCode);
 
             // The return value of the function must match the number of items in the original list
             Assert.AreEqual(ret, inList.Count);
@@ -167,12 +170,14 @@ namespace TimeSeriesLibrary_Test
             TSLibrary tsLib = new TSLibrary();
             List<TimeSeriesValue> outList = new List<TimeSeriesValue>();
 
-            byte[] blobData = tsLib.ConvertListToBlob(timeStepUnit, inList);
+            byte[] blobData = tsLib.ConvertListToBlobWithChecksum(timeStepUnit, timeStepQuantity,
+                                inList.Count, inList.First().Date, inList.Last().Date, inList,
+                                new TSTrace { TraceNumber = 1 });
 
             int ret = tsLib.ConvertBlobToListLimited(timeStepUnit, timeStepQuantity,
-                            blobStartDate,
+                            inList.Count, blobStartDate,
                             nMax, inList[nCutStart].Date, inList[inList.Count - nCutEnd - 1].Date,
-                            blobData, ref outList);
+                            blobData, ref outList, TSBlobCoder.currentCompressionCode);
 
             // The return value of the function must match the number of items in the original list
             Assert.AreEqual(ret, Math.Min(nMax, inList.Count - nCutStart - nCutEnd));

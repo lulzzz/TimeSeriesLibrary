@@ -13,6 +13,7 @@ namespace TimeSeriesLibrary_Test
     ///to contain all TSXmlTest Unit Tests
     ///</summary>
     [TestClass()]
+    [DeploymentItem("lzfx.dll")]
     public class TSXmlTest
     {
         TSXml TsXml;
@@ -140,8 +141,9 @@ namespace TimeSeriesLibrary_Test
             List<TimeSeriesValue> tsvList = null;
             // Verify BLOB # 1 in import list
             TsLib.ConvertBlobToListAll(TsImportList[0].TimeStepUnit, TsImportList[0].TimeStepQuantity,
-                        TsImportList[0].BlobStartDate, TsImportList[0].TraceList[0].ValueBlob,
-                        ref tsvList);
+                        TsImportList[0].TimeStepCount, TsImportList[0].BlobStartDate, 
+                        TsImportList[0].TraceList[0].ValueBlob,
+                        ref tsvList, TSBlobCoder.currentCompressionCode);
             Assert.AreEqual(tsvList.Count, 9);
             Assert.AreEqual(tsvList[0].Value, 12.3);
             Assert.AreEqual(tsvList[1].Value, 21.5);
@@ -149,8 +151,9 @@ namespace TimeSeriesLibrary_Test
             Assert.AreEqual(tsvList[8].Value, 12.4);
             // Verify BLOB # 2 in import list
             TsLib.ConvertBlobToListAll(TsImportList[1].TimeStepUnit, TsImportList[1].TimeStepQuantity,
-                        TsImportList[1].BlobStartDate, TsImportList[1].TraceList[0].ValueBlob,
-                        ref tsvList);
+                        TsImportList[1].TimeStepCount, TsImportList[1].BlobStartDate,
+                        TsImportList[1].TraceList[0].ValueBlob,
+                        ref tsvList, TSBlobCoder.currentCompressionCode);
             Assert.AreEqual(tsvList.Count, 11);
             Assert.AreEqual(tsvList[0].Value, 12.5);
             Assert.AreEqual(tsvList[1].Value, 21.7);
@@ -158,8 +161,9 @@ namespace TimeSeriesLibrary_Test
             Assert.AreEqual(tsvList[10].Value, 12.6);
             // Verify BLOB # 3 in import list
             TsLib.ConvertBlobToListAll(TsImportList[2].TimeStepUnit, TsImportList[2].TimeStepQuantity,
-                        TsImportList[2].BlobStartDate, TsImportList[2].TraceList[0].ValueBlob,
-                        ref tsvList);
+                        TsImportList[2].TimeStepCount, TsImportList[2].BlobStartDate,
+                        TsImportList[2].TraceList[0].ValueBlob,
+                        ref tsvList, TSBlobCoder.currentCompressionCode);
             Assert.AreEqual(tsvList.Count, 17);
             Assert.AreEqual(tsvList[0].Value, 312.5); Assert.AreEqual(tsvList[0].Date, DateTime.Parse("01/01/1930 11:59:00"));
             Assert.AreEqual(tsvList[5].Value, 360.8); Assert.AreEqual(tsvList[5].Date, DateTime.Parse("01/03/1930 23:59:00"));
@@ -264,8 +268,9 @@ namespace TimeSeriesLibrary_Test
             List<TimeSeriesValue> tsvList = null;
             // Verify BLOB of Series# 1 Trace# 1 in import list
             TsLib.ConvertBlobToListAll(TsImportList[0].TimeStepUnit, TsImportList[0].TimeStepQuantity,
-                        TsImportList[0].BlobStartDate, 
-                        TsImportList[0].TraceList.Single(t => t.TraceNumber == 1).ValueBlob, ref tsvList);
+                        TsImportList[0].TimeStepCount, TsImportList[0].BlobStartDate,
+                        TsImportList[0].TraceList.Single(t => t.TraceNumber == 1).ValueBlob,
+                        ref tsvList, TSBlobCoder.currentCompressionCode);
             Assert.AreEqual(tsvList.Count, 10);
             Assert.AreEqual(tsvList[0].Value, 12.3);
             Assert.AreEqual(tsvList[1].Value, 21.5);
@@ -273,8 +278,9 @@ namespace TimeSeriesLibrary_Test
             Assert.AreEqual(tsvList[8].Value, 20.1);
             // Verify BLOB # of Series# 1 Trace# 3 in import list
             TsLib.ConvertBlobToListAll(TsImportList[0].TimeStepUnit, TsImportList[0].TimeStepQuantity,
-                        TsImportList[0].BlobStartDate, 
-                        TsImportList[0].TraceList.Single(t => t.TraceNumber == 3).ValueBlob, ref tsvList);
+                        TsImportList[0].TimeStepCount, TsImportList[0].BlobStartDate, 
+                        TsImportList[0].TraceList.Single(t => t.TraceNumber == 3).ValueBlob,
+                        ref tsvList, TSBlobCoder.currentCompressionCode);
             Assert.AreEqual(tsvList.Count, 10);
             Assert.AreEqual(tsvList[0].Value, 32.3);
             Assert.AreEqual(tsvList[1].Value, 51.5);
@@ -282,8 +288,9 @@ namespace TimeSeriesLibrary_Test
             Assert.AreEqual(tsvList[9].Value, 50.0);
             // Verify BLOB # of Series# 2 Trace# 1 in import list
             TsLib.ConvertBlobToListAll(TsImportList[1].TimeStepUnit, TsImportList[1].TimeStepQuantity,
-                        TsImportList[1].BlobStartDate, 
-                        TsImportList[1].TraceList.Single(t => t.TraceNumber == 1).ValueBlob, ref tsvList);
+                        TsImportList[1].TimeStepCount, TsImportList[1].BlobStartDate, 
+                        TsImportList[1].TraceList.Single(t => t.TraceNumber == 1).ValueBlob,
+                        ref tsvList, TSBlobCoder.currentCompressionCode);
             Assert.AreEqual(tsvList.Count, 17);
             Assert.AreEqual(tsvList[0].Value, 112.5); Assert.AreEqual(tsvList[0].Date, DateTime.Parse("01/01/1930 11:59:00"));
             Assert.AreEqual(tsvList[1].Value, 121.7); Assert.AreEqual(tsvList[5].Date, DateTime.Parse("01/03/1930 23:59:00"));
@@ -291,8 +298,9 @@ namespace TimeSeriesLibrary_Test
             Assert.AreEqual(tsvList[16].Value, 312.2); Assert.AreEqual(tsvList[16].Date, DateTime.Parse("01/15/1930 23:59:00"));
             // Verify BLOB # of Series# 2 Trace# 3 in import list
             TsLib.ConvertBlobToListAll(TsImportList[1].TimeStepUnit, TsImportList[1].TimeStepQuantity,
-                        TsImportList[1].BlobStartDate,
-                        TsImportList[1].TraceList.Single(t => t.TraceNumber == 3).ValueBlob, ref tsvList);
+                        TsImportList[1].TimeStepCount, TsImportList[1].BlobStartDate,
+                        TsImportList[1].TraceList.Single(t => t.TraceNumber == 3).ValueBlob,
+                        ref tsvList, TSBlobCoder.currentCompressionCode);
             Assert.AreEqual(tsvList.Count, 17);
             Assert.AreEqual(tsvList[0].Value, 312.5); Assert.AreEqual(tsvList[0].Date, DateTime.Parse("01/01/1930 11:59:00"));
             Assert.AreEqual(tsvList[1].Value, 321.7); Assert.AreEqual(tsvList[5].Date, DateTime.Parse("01/03/1930 23:59:00"));

@@ -7,9 +7,23 @@ using System.Text;
 
 namespace TimeSeriesLibrary
 {
+    /// <summary>
+    /// This static class is used to call the functions in lzfx.dll, which is coded in C and compiled for
+    /// native Win32.  LZFX is a fast-executing compression and decompression algorithm for byte arrays, 
+    /// although it does not achieve great compression ratios.  The lzfx DLL is based on BSD-licensed source 
+    /// code from http://lzfx.googlecode.com.  
+    /// </summary>
     static unsafe class LZFX
     {
         #region Dll-Imports
+        // Because the DLL is accessed using the DllImport attribute on these functions, if any
+        // test classes depend on the LZFX class, then those classes will need to have the 
+        // 'DeploymentItem' attribute.  This is because when Visual Studio runs tests, it copies
+        // the assembly to a temporary folder, but it does not recognized that the unmanaged
+        // lzfx.dll is a dependency that needs to be copied into this temporary folder.
+        // For more information, see:
+        // http://social.msdn.microsoft.com/forums/en-US/vststest/thread/9ffe18d4-e1fa-4de4-845f-634843802bb9/
+
         [DllImport("lzfx.dll", CallingConvention = CallingConvention.Cdecl)]
         private extern static int lzfx_compress(void* ibuf, uint ilen,
                           void* obuf, uint *olen);
@@ -18,12 +32,23 @@ namespace TimeSeriesLibrary
                             void* obuf, uint *olen);
         #endregion
 
-
+        #region Methods
+        /// <summary>
+        /// Assigns a compressed verion of InputByteArray to OutputByteArray
+        /// </summary>
+        /// <param name="InputByteArray">The byte array that is to be compressed</param>
+        /// <param name="OutputByteArray">The byte array into which the compressed data
+        /// is to be written.  This array must be allocated before calling the method, and
+        /// it must be large enough to contain the compressed data.  Note that if the data
+        /// in InputByteArray is highly incompressible (floating point data that uses its
+        /// full precision range is a known example), then OutputByteArray may need to be
+        /// slightly larger than the InputByteArray.  This method will resize OutputByteArray
+        /// so that its allocated size is no larger than the data it contains.</param>
         static public void Compress(byte[] InputByteArray, ref byte[] OutputByteArray)
         {
             uint uOutputByteArrayLength = Convert.ToUInt32(OutputByteArray.Length);
 
-            fixed(void* inputPtr = InputByteArray, outputPtr = OutputByteArray)
+            fixed (void* inputPtr = InputByteArray, outputPtr = OutputByteArray)
             {
                 lzfx_compress(inputPtr, Convert.ToUInt32(InputByteArray.Length),
                               outputPtr, &uOutputByteArrayLength);
@@ -32,6 +57,15 @@ namespace TimeSeriesLibrary
             Array.Resize<byte>(ref OutputByteArray, OutputByteArrayLength);
         }
 
+        /// <summary>
+        /// Assigns a decompressed version of InputByteArray to OutputByteArray
+        /// </summary>
+        /// <param name="InputByteArray">The byte array that is to be decompressed</param>
+        /// <param name="OutputByteArray">The byte array into which the decompressed data
+        /// is to be written.  This array must be allocated before calling the method, and
+        /// it must have exactly the length that is needed to contain the decompressed data.
+        /// If the decompressed data is found to be any larger or smaller than the length of
+        /// OutputByteArray, then this method throws an exception.</param>
         static public void Decompress(byte[] InputByteArray, byte[] OutputByteArray)
         {
             uint uOutputByteArrayLength = Convert.ToUInt32(OutputByteArray.Length);
@@ -45,7 +79,8 @@ namespace TimeSeriesLibrary
             if (OutputByteArrayLength != OutputByteArray.Length)
                 throw new TSLibraryException(ErrCode.Enum.Compression_Error,
                         "The decompressed size of a time series byte array was incorrect.");
-        }
+        } 
+        #endregion
 
     }
 }

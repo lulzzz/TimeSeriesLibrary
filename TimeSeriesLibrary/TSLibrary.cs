@@ -136,7 +136,7 @@ namespace TimeSeriesLibrary
                 // If we're not limiting the output list (i.e., we're returning every time step from
                 // the BLOB), then set the size of the intermediate array to match the size of the BLOB.
                 if (applyLimits == false)
-                    nReqValues = blobData.Length / sizeof(TSDateValueStruct);
+                    nReqValues = timeStepCount;
                 // Allocate an array of date/value pairs that TSBlobCoder method will fill
                 TSDateValueStruct[] dateValueArray = new TSDateValueStruct[nReqValues];
                 // Method in the TSBlobCoder class does the real work
@@ -157,7 +157,7 @@ namespace TimeSeriesLibrary
                 // If we're not limiting the output list (i.e., we're returning every time step from
                 // the BLOB), then set the size of the intermediate array to match the size of the BLOB.
                 if (applyLimits == false)
-                    nReqValues = blobData.Length / sizeof(double);
+                    nReqValues = timeStepCount;
                 // Allocate an array of values that TSBlobCoder method will fill
                 double[] valueArray = new double[nReqValues];
                 // Method in the TSBlobCoder class does the real work
@@ -479,8 +479,7 @@ namespace TimeSeriesLibrary
         // usage: for GUI to retrieve an entire time series.  The length of the list is allocated in this method.
         public int ReadAllDatesValues(
                 int connectionNumber, String tableName, String traceTableName, int id, int traceNumber,
-                ref List<TimeSeriesValue> dateValueList,
-                Boolean hasLZFXcompression, Boolean hasZlibCompression)
+                ref List<TimeSeriesValue> dateValueList)
         {
             // Get the connection that we'll pass along.
             SqlConnection connx = GetConnectionFromId(connectionNumber);
@@ -495,8 +494,7 @@ namespace TimeSeriesLibrary
             // beginning, end, and length of the timeseries as stored in the database.  Therefore, 
             // it will return the entire time series as found in the database.
             return ReadLimitedDatesValues(connectionNumber, tableName, traceTableName, id, traceNumber,
-                        ts.TimeStepCount, ref dateValueList, ts.BlobStartDate, ts.BlobEndDate,
-                        hasLZFXcompression, hasZlibCompression);
+                        ts.TimeStepCount, ref dateValueList, ts.BlobStartDate, ts.BlobEndDate);
         }
 
         /// <summary>
@@ -525,8 +523,7 @@ namespace TimeSeriesLibrary
         /// <returns>The number of values that the method added to the list</returns>
         public int ReadLimitedDatesValues(
                 int connectionNumber, String tableName, String traceTableName, int id, int traceNumber,
-                int nReqValues, ref List<TimeSeriesValue> dateValueList, DateTime reqStartDate, DateTime reqEndDate,
-                Boolean hasLZFXcompression, Boolean hasZlibCompression)
+                int nReqValues, ref List<TimeSeriesValue> dateValueList, DateTime reqStartDate, DateTime reqEndDate)
         {
             // Get the connection that we'll pass along.
             SqlConnection connx = GetConnectionFromId(connectionNumber);
