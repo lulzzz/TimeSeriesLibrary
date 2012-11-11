@@ -234,7 +234,7 @@ namespace TimeSeriesLibrary
                 TSDateValueStruct[] dateValueArray = dateValueList.Select(tsv => (TSDateValueStruct)tsv).ToArray();
                 // Let the method in TSBlobCoder class do all the work
                 traceObject.ValueBlob = TSBlobCoder.ConvertArrayToBlobIrregular(timeStepCount, dateValueArray,
-                                    TSBlobCoder.currentCompressionCode);
+                                    TSBlobCoder.currentCompressionCode, traceObject);
             }
             else
             {
@@ -245,11 +245,8 @@ namespace TimeSeriesLibrary
                 double[] valueArray = dateValueList.Select(dv => dv.Value).ToArray();
                 // Let the method in TSBlobCoder class do all the work
                 traceObject.ValueBlob = TSBlobCoder.ConvertArrayToBlobRegular(timeStepCount, valueArray,
-                                        TSBlobCoder.currentCompressionCode);
+                                        TSBlobCoder.currentCompressionCode, traceObject);
             }
-
-            // Method in TSBlobCoder class computes the checksum
-            traceObject.Checksum = TSBlobCoder.ComputeTraceChecksum(traceObject);
 
             return traceObject.ValueBlob;
         }

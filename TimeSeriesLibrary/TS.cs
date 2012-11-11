@@ -540,10 +540,8 @@ namespace TimeSeriesLibrary
             if (tsImport != null)
                 tsImport.TraceList.Add(traceObject);
             // Convert the array of double values into a byte array...a BLOB
-            traceObject.ValueBlob 
-                = TSBlobCoder.ConvertArrayToBlobRegular(TimeStepCount, valueArray, CompressionCode);
-            // compute the Checksum for this trace
-            traceObject.Checksum = TSBlobCoder.ComputeTraceChecksum(traceObject);
+            traceObject.ValueBlob = TSBlobCoder.ConvertArrayToBlobRegular
+                                        (TimeStepCount, valueArray, CompressionCode, traceObject);
 
             // Write a new record to the trace table
             if(doWriteToDB)
@@ -584,10 +582,8 @@ namespace TimeSeriesLibrary
             if (tsImport != null)
                 tsImport.TraceList.Add(traceObject);
             // Convert the array of double values into a byte array...a BLOB
-            traceObject.ValueBlob 
-                = TSBlobCoder.ConvertArrayToBlobIrregular(TimeStepCount, dateValueArray, CompressionCode);
-            // compute the Checksum for this trace
-            traceObject.Checksum = TSBlobCoder.ComputeTraceChecksum(traceObject);
+            traceObject.ValueBlob = TSBlobCoder.ConvertArrayToBlobIrregular
+                                        (TimeStepCount, dateValueArray, CompressionCode, traceObject);
 
             // Write a new record to the trace table
             if (doWriteToDB)
@@ -897,9 +893,7 @@ namespace TimeSeriesLibrary
 
                         ITimeSeriesTrace traceObject = new TSTrace();
                         // Convert the array of double values into a byte array...a BLOB
-                        traceObject.ValueBlob = TSBlobCoder.ConvertArrayToBlobRegular(TimeStepCount, valueArray);
-                        // compute the Checksum for this trace
-                        traceObject.Checksum = TSBlobCoder.ComputeTraceChecksum(traceObject);
+                        traceObject.ValueBlob = TSBlobCoder.ConvertArrayToBlobRegular(TimeStepCount, valueArray, traceObject);
 
 
                         // WriteValues method will handle all of the database interaction

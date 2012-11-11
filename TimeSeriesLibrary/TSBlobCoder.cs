@@ -185,14 +185,18 @@ namespace TimeSeriesLibrary
         #region Method ConvertArrayToBlobRegular
         /// <summary>
         /// This method converts the given array of time series values (array of double precision
-        /// floats) to a BLOB (byte array).
+        /// floats) to a BLOB (byte array).  It also sets the computes the MD5 checksum
+        /// from the resultant BLOB, and sets the Checksum property of the given ITimeSeriesTrace
+        /// object accordingly.
         /// </summary>
         /// <param name="TimeStepCount">The number of time steps in the given array of time series values</param>
         /// <param name="valueArray">The array of time series values to convert into a BLOB</param>
         /// <param name="compressionCode">a generation number that indicates what compression technique to use</param>
+        /// <param name="traceObject">object whose TraceNumber property will be used to compute the checksum,
+        /// and whose Checksum property will be set accordingly</param>
         /// <returns>The BLOB that is created from valueArray</returns>
         public static unsafe byte[] ConvertArrayToBlobRegular(
-            int TimeStepCount, double[] valueArray, int compressionCode)
+            int TimeStepCount, double[] valueArray, int compressionCode, ITimeSeriesTrace traceObject)
         {
             // The number of bytes required for the BLOB
             int nBin = TimeStepCount * sizeof(double);
@@ -202,6 +206,9 @@ namespace TimeSeriesLibrary
             // a bit of padding at the beginning that is used to compute the Checksum.  Thus, the
             // byte array (without the padding for Checksum) becomes the BLOB.
             Buffer.BlockCopy(valueArray, 0, blobData, 0, nBin);
+
+            // compute the checksum using the uncompressed BLOB
+            traceObject.Checksum = ComputeTraceChecksum(traceObject.TraceNumber, blobData);
 
             // the BLOB is stored in a compressed form, so our last step is to compress it
             Byte[] compressedBlobData = CompressBlob(blobData, compressionCode);
@@ -213,14 +220,18 @@ namespace TimeSeriesLibrary
         #region Method ConvertArrayToBlobIrregular
         /// <summary>
         /// This method converts the given array of time series values (date/value pairs stored in 
-        /// TSDateValueStruct) to a BLOB (byte array).
+        /// TSDateValueStruct) to a BLOB (byte array).  It also sets the computes the MD5 checksum
+        /// from the resultant BLOB, and sets the Checksum property of the given ITimeSeriesTrace
+        /// object accordingly.
         /// </summary>
         /// <param name="TimeStepCount">The number of time steps in the given array of time series values</param>
         /// <param name="dateValueArray">The array of time series values to convert into a BLOB</param>
         /// <param name="compressionCode">a generation number that indicates what compression technique to use</param>
+        /// <param name="traceObject">object whose TraceNumber property will be used to compute the checksum,
+        /// and whose Checksum property will be set accordingly</param>
         /// <returns>The BLOB that is created from dateValueArray</returns>
         public static unsafe byte[] ConvertArrayToBlobIrregular(
-            int TimeStepCount, TSDateValueStruct[] dateValueArray, int compressionCode)
+            int TimeStepCount, TSDateValueStruct[] dateValueArray, int compressionCode, ITimeSeriesTrace traceObject)
         {
             // The number of bytes required for the BLOB
             int nBin = TimeStepCount * sizeof(TSDateValueStruct);
@@ -239,6 +250,10 @@ namespace TimeSeriesLibrary
                     blobWriter.Write(dateValueArray[i].Value);
                 }
             }
+
+            // compute the checksum using the uncompressed BLOB
+            traceObject.Checksum = ComputeTraceChecksum(traceObject.TraceNumber, blobData);
+
             // the BLOB is stored in a compressed form, so our last step is to compress it
             Byte[] compressedBlobData = CompressBlob(blobData, compressionCode);
             return blobData;
@@ -348,11 +363,8 @@ namespace TimeSeriesLibrary
         /// computed from the trace number and from the BLOB that contains the values for each time 
         /// step of the time series.
         /// </summary>
-        /// <param name="traceObject">an ITimeSeriesTrace object that contains the trace number and the 
-        /// BLOB for this trace.  The BLOB must be computed before calling this method, as the method will
-        /// not compute it.</param>
         /// <returns>the Checksum as a byte[16] array</returns>
-        public static byte[] ComputeTraceChecksum(ITimeSeriesTrace traceObject)
+        public static byte[] ComputeTraceChecksum(int traceNumber, byte[] valueBlob)
         {
             // The MD5 Checksum will be computed from two byte arrays.  The first byte array contains
             // the trace number and the second byte array is the time series array itself.
@@ -366,7 +378,7 @@ namespace TimeSeriesLibrary
                 // Write relevant parameters (not including the BLOB itself) into a short byte array
 
                 // Trace Number
-                binWriter.Write(traceObject.TraceNumber);
+                binWriter.Write(traceNumber);
 
                 // MD5CryptoServiceProvider object has methods to compute the Checksum
                 using (MD5CryptoServiceProvider md5Hasher = new MD5CryptoServiceProvider())
@@ -374,7 +386,7 @@ namespace TimeSeriesLibrary
                     // feed the short byte array into the MD5 hash computer
                     md5Hasher.TransformBlock(binArray, 0, sizeof(Int32), binArray, 0);
                     // feed the BLOB of timeseries values into the MD5 hash computer
-                    md5Hasher.TransformFinalBlock(traceObject.ValueBlob, 0, traceObject.ValueBlob.Length);
+                    md5Hasher.TransformFinalBlock(valueBlob, 0, valueBlob.Length);
                     // return the hash (Checksum) value
                     return md5Hasher.Hash;
                 }
