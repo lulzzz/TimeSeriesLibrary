@@ -189,42 +189,6 @@ namespace TimeSeriesLibrary
         #region ConvertListToBlob() methods
         /// <summary>
         /// This method converts a List of TimeSeriesValue objects into a BLOB (byte array) of
-        /// time series values.  The entire List is converted into the BLOB--i.e., the method
-        /// does not take any parameters for limiting the size of the List that is created.
-        /// </summary>
-        /// <param name="timeStepUnit">TSDateCalculator.TimeStepUnitCode value for Minute,Hour,Day,Week,Month, Year, or Irregular</param>
-        /// <param name="dateValueList">A List of TimeSeriesValue objects that will be converted to a BLOB</param>
-        /// <returns>The BLOB (byte array) of time series values that was created from dateValueList</returns>
-        public byte[] ConvertListToBlob(TSDateCalculator.TimeStepUnitCode timeStepUnit,
-                            List<TimeSeriesValue> dateValueList)
-        {
-            int timeStepCount = dateValueList.Count;
-
-            if (timeStepUnit == TSDateCalculator.TimeStepUnitCode.Irregular)
-            {
-                // IRREGULAR TIME SERIES
-
-                // The method in TSBlobCoder can only process an array of TSDateValueStruct.  Therefore
-                // we convert the List of objects to an Array of struct instances.
-                TSDateValueStruct[] dateValueArray = dateValueList.Select(tsv => (TSDateValueStruct)tsv).ToArray();
-                // Let the method in TSBlobCoder class do all the work
-                return TSBlobCoder.ConvertArrayToBlobIrregular(timeStepCount, dateValueArray, 
-                                    TSBlobCoder.currentCompressionCode);
-            }
-            else
-            {
-                // REGULAR TIME SERIES
-
-                // The method in TSBlobCoder can only process an array of double values.  Therefore
-                // we convert the List of date/value objects to an Array values.
-                double[] valueArray = dateValueList.Select(dv => dv.Value).ToArray();
-                // Let the method in TSBlobCoder class do all the work
-                return TSBlobCoder.ConvertArrayToBlobRegular(timeStepCount, valueArray, 
-                                        TSBlobCoder.currentCompressionCode);
-            }
-        }
-        /// <summary>
-        /// This method converts a List of TimeSeriesValue objects into a BLOB (byte array) of
         /// time series values and computes a checksum from the BLOB.  The BLOB and the checksum
         /// are both stored in the ITimeSeriesTrace parameter.  The TraceNumber property of the
         /// ITimeSeriesTrace parameter must be set before calling this method.
@@ -260,8 +224,30 @@ namespace TimeSeriesLibrary
             if (dateValueList.Last().Date != blobEndDate)
                 throw new TSLibraryException(ErrCode.Enum.Checksum_Improper_EndDate);
             
-            // Convert the List dateValueList into a BLOB.  The sibling method does all the work.
-            traceObject.ValueBlob = ConvertListToBlob(timeStepUnit, dateValueList);
+            // Convert the List dateValueList into a BLOB.
+            if (timeStepUnit == TSDateCalculator.TimeStepUnitCode.Irregular)
+            {
+                // IRREGULAR TIME SERIES
+
+                // The method in TSBlobCoder can only process an array of TSDateValueStruct.  Therefore
+                // we convert the List of objects to an Array of struct instances.
+                TSDateValueStruct[] dateValueArray = dateValueList.Select(tsv => (TSDateValueStruct)tsv).ToArray();
+                // Let the method in TSBlobCoder class do all the work
+                traceObject.ValueBlob = TSBlobCoder.ConvertArrayToBlobIrregular(timeStepCount, dateValueArray,
+                                    TSBlobCoder.currentCompressionCode);
+            }
+            else
+            {
+                // REGULAR TIME SERIES
+
+                // The method in TSBlobCoder can only process an array of double values.  Therefore
+                // we convert the List of date/value objects to an Array values.
+                double[] valueArray = dateValueList.Select(dv => dv.Value).ToArray();
+                // Let the method in TSBlobCoder class do all the work
+                traceObject.ValueBlob = TSBlobCoder.ConvertArrayToBlobRegular(timeStepCount, valueArray,
+                                        TSBlobCoder.currentCompressionCode);
+            }
+
             // Method in TSBlobCoder class computes the checksum
             traceObject.Checksum = TSBlobCoder.ComputeTraceChecksum(traceObject);
 
