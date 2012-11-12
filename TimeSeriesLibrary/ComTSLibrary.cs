@@ -20,6 +20,8 @@ namespace TimeSeriesLibrary
     public unsafe interface _ComTSLibrary
     {
         [ComVisible(true)]
+        void ResetErrorHandler();
+        [ComVisible(true)]
         bool GetHasError();
         [ComVisible(true)]
         void GetErrorMessage(sbyte* pErrorMessage);
@@ -91,12 +93,18 @@ namespace TimeSeriesLibrary
 
         #region Error Handling
         private bool _hasError = false;
+        public void ResetErrorHandler()
+        {
+            _hasError = false;
+            _errorMessage = "";
+            _errorMessageByte = new byte[] { 0 };
+        }
         public bool GetHasError()
         {
             //GC.Collect();
             return _hasError;
         }
-        private byte[] _errorMessageSbyte;
+        private byte[] _errorMessageByte = new byte[] { 0 };
         private String _errorMessage;
         private String ErrorMessage
         {
@@ -105,13 +113,13 @@ namespace TimeSeriesLibrary
             {
                 _errorMessage = value;
                 _hasError = true;
-                _errorMessageSbyte = System.Text.Encoding.ASCII.GetBytes(_errorMessage);
+                _errorMessageByte = System.Text.Encoding.ASCII.GetBytes(_errorMessage);
             }
         }
         public void GetErrorMessage(sbyte* pErrorMessage)
         {
             sbyte* pNext = pErrorMessage;
-            foreach(byte b in _errorMessageSbyte)
+            foreach(byte b in _errorMessageByte)
             {
                 *pNext = (sbyte)b;
                 pNext++;
@@ -242,7 +250,7 @@ namespace TimeSeriesLibrary
                 // Construct new TS object with SqlConnection object and table name
                 TS ts = new TS(connx, paramTableName, traceTableName);
 
-                return 0; // ts.ReadValuesRegular(id, traceNumber, nReqValues, valueArray, reqStartDate, reqEndDate);// TODO: temporary comment during testing %%%!!
+                return ts.ReadValuesRegular(id, traceNumber, nReqValues, valueArray, reqStartDate, reqEndDate);
             }
             catch (Exception e)
             {
@@ -305,7 +313,7 @@ namespace TimeSeriesLibrary
                     // Allocate an array to hold the time series' data values
                     double[] valueArray = new double[nReqValues];
                     // Read the data values from the database
-                    nValuesRead = 0; // ts.ReadValuesRegular(id, traceNumber, nReqValues, valueArray, reqStartDate, reqEndDate); // TODO: temporary comment during testing %%%!!
+                    nValuesRead = ts.ReadValuesRegular(id, traceNumber, nReqValues, valueArray, reqStartDate, reqEndDate);
                     // Allocate an array to hold the time series' date values
                     DateTime[] dateArray = new DateTime[nValuesRead];
                     // Fill the array with the date values corresponding to the time steps defined
@@ -422,7 +430,7 @@ namespace TimeSeriesLibrary
                 // Construct new TS object with SqlConnection object and table name
                 TS ts = new TS(connx, paramTableName, traceTableName);
 
-                // ts.WriteTraceRegular(id, true, null, traceNumber, valueArray); // TODO: commented during testing %%%!!
+                ts.WriteTraceRegular(id, true, null, traceNumber, valueArray);
             }
             catch (Exception e)
             {

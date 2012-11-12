@@ -465,6 +465,7 @@ namespace TimeSeriesLibrary
             AppendStringPair(ref colString, ref valString, "StartDate", "'" + BlobStartDate.ToString() + "'");
             AppendStringPair(ref colString, ref valString, "EndDate", "'" + BlobEndDate.ToString() + "'");
             AppendStringPair(ref colString, ref valString, "Checksum", ByteArrayToString(Checksum));
+            AppendStringPair(ref colString, ref valString, "CompressionCode", CompressionCode.ToString());
             // Now our strings contain all of the columns that TimeSeriesLibrary is responsible for
             // handling.  The caller may pass in additional column names and values that we now add
             // to our strings.
