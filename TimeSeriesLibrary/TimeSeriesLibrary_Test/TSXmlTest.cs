@@ -129,6 +129,11 @@ namespace TimeSeriesLibrary_Test
             Assert.AreEqual(TsImportList[1].TraceList.Count, 1);
             Assert.AreEqual(TsImportList[2].TraceList.Count, 1);
 
+            // Verify CompressionCode in import list
+            Assert.AreEqual(TsImportList[0].CompressionCode, TSBlobCoder.currentCompressionCode);
+            Assert.AreEqual(TsImportList[1].CompressionCode, TSBlobCoder.currentCompressionCode);
+            Assert.AreEqual(TsImportList[2].CompressionCode, TSBlobCoder.currentCompressionCode);
+
             // Verify Checksum in import list
             // The checksums are verified against previous values, so the test is only as good as the
             // original trial.  However, it is good if the test flags any change, to ensure that the

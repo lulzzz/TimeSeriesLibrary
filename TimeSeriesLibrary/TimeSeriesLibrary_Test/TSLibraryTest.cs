@@ -107,13 +107,14 @@ namespace TimeSeriesLibrary_Test
         {
             TSLibrary tsLib = new TSLibrary();
             List<TimeSeriesValue> outList = new List<TimeSeriesValue>();
+            int compressionCode;
 
             byte[] blobData = tsLib.ConvertListToBlobWithChecksum(timeStepUnit, timeStepQuantity,
                                 inList.Count, inList.First().Date, inList.Last().Date, inList,
-                                new TSTrace { TraceNumber=1 });
+                                new TSTrace { TraceNumber=1 }, out compressionCode);
 
             int ret = tsLib.ConvertBlobToListAll(timeStepUnit, timeStepQuantity,
-                            inList.Count, blobStartDate, blobData, ref outList, TSBlobCoder.currentCompressionCode);
+                            inList.Count, blobStartDate, blobData, ref outList, compressionCode);
 
             // The return value of the function must match the number of items in the original list
             Assert.AreEqual(ret, inList.Count);
@@ -169,15 +170,16 @@ namespace TimeSeriesLibrary_Test
         {
             TSLibrary tsLib = new TSLibrary();
             List<TimeSeriesValue> outList = new List<TimeSeriesValue>();
+            int compressionCode;
 
             byte[] blobData = tsLib.ConvertListToBlobWithChecksum(timeStepUnit, timeStepQuantity,
                                 inList.Count, inList.First().Date, inList.Last().Date, inList,
-                                new TSTrace { TraceNumber = 1 });
+                                new TSTrace { TraceNumber = 1 }, out compressionCode);
 
             int ret = tsLib.ConvertBlobToListLimited(timeStepUnit, timeStepQuantity,
                             inList.Count, blobStartDate,
                             nMax, inList[nCutStart].Date, inList[inList.Count - nCutEnd - 1].Date,
-                            blobData, ref outList, TSBlobCoder.currentCompressionCode);
+                            blobData, ref outList, compressionCode);
 
             // The return value of the function must match the number of items in the original list
             Assert.AreEqual(ret, Math.Min(nMax, inList.Count - nCutStart - nCutEnd));
@@ -257,14 +259,15 @@ namespace TimeSeriesLibrary_Test
                 TSDateCalculator.TimeStepUnitCode u2, short q2, List<TimeSeriesValue> list2, ITimeSeriesTrace trace2)
         {
             TSLibrary tsLib = new TSLibrary();
+            int compressionCode;
 
             tsLib.ConvertListToBlobWithChecksum(
                 u1, q1, list1.Count,
-                list1[0].Date, list1[list1.Count - 1].Date, list1, trace1);
+                list1[0].Date, list1[list1.Count - 1].Date, list1, trace1, out compressionCode);
 
             tsLib.ConvertListToBlobWithChecksum(
                 u2, q2, list2.Count,
-                list2[0].Date, list2[list2.Count - 1].Date, list2, trace2);
+                list2[0].Date, list2[list2.Count - 1].Date, list2, trace2, out compressionCode);
 
             Assert.IsTrue(trace1.Checksum.Length == 16);
             Assert.IsTrue(trace2.Checksum.Length == 16);
@@ -439,13 +442,14 @@ namespace TimeSeriesLibrary_Test
         {
             TSLibrary tsLib = new TSLibrary();
             TSTrace traceObject = new TSTrace { TraceNumber = 1 };
+            int compressionCode;
 
             try
             {
                 byte[] blobData = tsLib.ConvertListToBlobWithChecksum(
                         TSDateCalculator.TimeStepUnitCode.Irregular, 0,
                         IrregList1.Count, IrregList1.First().Date, IrregList1.Last().Date,
-                        IrregList1, traceObject);
+                        IrregList1, traceObject, out compressionCode);
                 Assert.IsTrue(true);
             }
             catch (TSLibraryException)
@@ -459,13 +463,14 @@ namespace TimeSeriesLibrary_Test
         {
             TSLibrary tsLib = new TSLibrary();
             TSTrace traceObject = new TSTrace { TraceNumber = 1 };
+            int compressionCode;
 
             try
             {
                 byte[] blobData = tsLib.ConvertListToBlobWithChecksum(
                         TSDateCalculator.TimeStepUnitCode.Irregular, 0,
                         IrregList1.Count+3, IrregList1.First().Date, IrregList1.Last().Date,
-                        IrregList1, traceObject);
+                        IrregList1, traceObject, out compressionCode);
                 Assert.Fail("Should have thrown exception");
             }
             catch (TSLibraryException e)
@@ -479,13 +484,14 @@ namespace TimeSeriesLibrary_Test
         {
             TSLibrary tsLib = new TSLibrary();
             TSTrace traceObject = new TSTrace { TraceNumber = 1 };
+            int compressionCode;
 
             try
             {
                 byte[] blobData = tsLib.ConvertListToBlobWithChecksum(
                         TSDateCalculator.TimeStepUnitCode.Irregular, 0,
                         IrregList1.Count, IrregList1.First().Date.AddDays(2), IrregList1.Last().Date,
-                        IrregList1, traceObject);
+                        IrregList1, traceObject, out compressionCode);
                 Assert.Fail("Should have thrown exception");
             }
             catch (TSLibraryException e)
@@ -499,13 +505,14 @@ namespace TimeSeriesLibrary_Test
         {
             TSLibrary tsLib = new TSLibrary();
             TSTrace traceObject = new TSTrace { TraceNumber = 1 };
+            int compressionCode;
 
             try
             {
                 byte[] blobData = tsLib.ConvertListToBlobWithChecksum(
                         TSDateCalculator.TimeStepUnitCode.Irregular, 0,
                         IrregList1.Count, IrregList1.First().Date, IrregList1.Last().Date.AddDays(2),
-                        IrregList1, traceObject);
+                        IrregList1, traceObject, out compressionCode);
                 Assert.Fail("Should have thrown exception");
             }
             catch (TSLibraryException e)
@@ -551,6 +558,7 @@ namespace TimeSeriesLibrary_Test
             eDate1 = DateTime.Now;  // dummy
             TSLibrary tsLib = new TSLibrary();
             List<ITimeSeriesTrace> traceList = new List<ITimeSeriesTrace>();
+            int compressionCode;
 
             for (int t = 0; t < 3; t++)
             {
@@ -573,7 +581,7 @@ namespace TimeSeriesLibrary_Test
                 eDate1 = tsValues.Last().Date;
                 tsLib.ConvertListToBlobWithChecksum(
                         u1, q1, c1,
-                        sDate1, eDate1, tsValues, trace1);
+                        sDate1, eDate1, tsValues, trace1, out compressionCode);
 
                 traceList.Add(trace1);
             }
@@ -588,6 +596,7 @@ namespace TimeSeriesLibrary_Test
             eDate1 = DateTime.Now;  // dummy
             TSLibrary tsLib = new TSLibrary();
             List<ITimeSeriesTrace> traceList = new List<ITimeSeriesTrace>();
+            int compressionCode;
 
             for (int t = 0; t < 3; t++)
             {
@@ -610,7 +619,7 @@ namespace TimeSeriesLibrary_Test
                 eDate1 = tsValues.Last().Date;
                 tsLib.ConvertListToBlobWithChecksum(
                         TSDateCalculator.TimeStepUnitCode.Irregular, 0, c1,
-                        sDate1, eDate1, tsValues, trace1);
+                        sDate1, eDate1, tsValues, trace1, out compressionCode);
 
                 traceList.Add(trace1);
             }
