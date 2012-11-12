@@ -208,13 +208,12 @@ namespace TimeSeriesLibrary
         /// <param name="traceObject">an object which contains the a TraceNumber property that is used to 
         /// compute the checksum.  The computed BLOB and checksum are both saved to the appropriate properties
         /// of this object.</param>
-        /// <param name="compressionCode">a generation number that indicates what compression technique to use</param>
         /// <returns>The BLOB (byte array) of time series values that was created from dateValueList</returns>
         public byte[] ConvertListToBlobWithChecksum(
                     TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
                     int timeStepCount, DateTime blobStartDate, DateTime blobEndDate,
                     List<TimeSeriesValue> dateValueList,
-                    ITimeSeriesTrace traceObject)
+                    ITimeSeriesTrace traceObject, out int compressionCode)
         {
             // Error checks
             if (dateValueList.Count != timeStepCount)
@@ -223,7 +222,10 @@ namespace TimeSeriesLibrary
                 throw new TSLibraryException(ErrCode.Enum.Checksum_Improper_StartDate);
             if (dateValueList.Last().Date != blobEndDate)
                 throw new TSLibraryException(ErrCode.Enum.Checksum_Improper_EndDate);
-            
+
+            // When compressing, we always use the latest compression method
+            compressionCode = TSBlobCoder.currentCompressionCode;
+
             // Convert the List dateValueList into a BLOB.
             if (timeStepUnit == TSDateCalculator.TimeStepUnitCode.Irregular)
             {
@@ -234,7 +236,7 @@ namespace TimeSeriesLibrary
                 TSDateValueStruct[] dateValueArray = dateValueList.Select(tsv => (TSDateValueStruct)tsv).ToArray();
                 // Let the method in TSBlobCoder class do all the work
                 traceObject.ValueBlob = TSBlobCoder.ConvertArrayToBlobIrregular(timeStepCount, dateValueArray,
-                                    TSBlobCoder.currentCompressionCode, traceObject);
+                                                compressionCode, traceObject);
             }
             else
             {
@@ -245,7 +247,7 @@ namespace TimeSeriesLibrary
                 double[] valueArray = dateValueList.Select(dv => dv.Value).ToArray();
                 // Let the method in TSBlobCoder class do all the work
                 traceObject.ValueBlob = TSBlobCoder.ConvertArrayToBlobRegular(timeStepCount, valueArray,
-                                        TSBlobCoder.currentCompressionCode, traceObject);
+                                                compressionCode, traceObject);
             }
 
             return traceObject.ValueBlob;
