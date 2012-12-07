@@ -20,6 +20,8 @@ namespace TimeSeriesLibrary
     public unsafe interface _ComTSLibrary
     {
         [ComVisible(true)]
+        void ResetErrorHandler();
+        [ComVisible(true)]
         bool GetHasError();
         [ComVisible(true)]
         void GetErrorMessage(sbyte* pErrorMessage);
@@ -91,12 +93,18 @@ namespace TimeSeriesLibrary
 
         #region Error Handling
         private bool _hasError = false;
+        public void ResetErrorHandler()
+        {
+            _hasError = false;
+            _errorMessage = "";
+            _errorMessageByte = new byte[] { 0 };
+        }
         public bool GetHasError()
         {
             //GC.Collect();
             return _hasError;
         }
-        private byte[] _errorMessageSbyte;
+        private byte[] _errorMessageByte = new byte[] { 0 };
         private String _errorMessage;
         private String ErrorMessage
         {
@@ -105,13 +113,13 @@ namespace TimeSeriesLibrary
             {
                 _errorMessage = value;
                 _hasError = true;
-                _errorMessageSbyte = System.Text.Encoding.ASCII.GetBytes(_errorMessage);
+                _errorMessageByte = System.Text.Encoding.ASCII.GetBytes(_errorMessage);
             }
         }
         public void GetErrorMessage(sbyte* pErrorMessage)
         {
             sbyte* pNext = pErrorMessage;
-            foreach(byte b in _errorMessageSbyte)
+            foreach(byte b in _errorMessageByte)
             {
                 *pNext = (sbyte)b;
                 pNext++;

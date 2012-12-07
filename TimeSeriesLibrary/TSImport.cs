@@ -64,6 +64,7 @@ namespace TimeSeriesLibrary
         public int TimeStepCount;
         public DateTime BlobStartDate;
         public DateTime BlobEndDate;
+        public int CompressionCode;
         public byte[] Checksum;
 
         // This list contains an object for each trace of the time series.  Each object
@@ -174,6 +175,7 @@ namespace TimeSeriesLibrary
             BlobStartDate = tsp.BlobStartDate;
             BlobEndDate = tsp.BlobEndDate;
             TimeStepCount = tsp.TimeStepCount;
+            CompressionCode = tsp.CompressionCode;
         }
         #endregion
 

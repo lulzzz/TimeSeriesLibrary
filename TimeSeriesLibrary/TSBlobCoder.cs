@@ -12,8 +12,9 @@ namespace TimeSeriesLibrary
     /// a BLOB (byte array) and visa-versa.  All of this class's methods
     /// are static, so the class does not need to be instantiated.
     /// </summary>
-    public class TSBlobCoder
+    public static class TSBlobCoder
     {
+
         #region Method ConvertBlobToArrayRegular
         /// <summary>
         /// This method converts a BLOB (byte array) to an array of regular time step timeseries 
@@ -28,6 +29,7 @@ namespace TimeSeriesLibrary
         /// <param name="timeStepUnit">TSDateCalculator.TimeStepUnitCode value for Minute,Hour,Day,Week,Month, Year, or Irregular</param>
         /// <param name="timeStepQuantity">The number of the given unit that defines the time step.
         /// For instance, if the time step is 6 hours long, then this value is 6.</param>
+        /// <param name="timeStepCount">the number of time steps that are stored in the blob</param>
         /// <param name="blobStartDate">Date of the first time step in the BLOB</param>
         /// <param name="applyLimits">If true, then the method will convert only a portion of the BLOB,
         /// according to the parameter values nReqValues, reqStartDate, and reqEndDate.  If false, the method
@@ -40,15 +42,21 @@ namespace TimeSeriesLibrary
         /// If applyLimits==false, then this value is ignored.</param>
         /// <param name="blobData">the BLOB that will be converted</param>
         /// <param name="valueArray">the array of time series values that is produced from the BLOB</param>
+        /// <param name="compressionCode">a generation number that indicates what compression technique to use</param>
         /// <returns>The number of time steps that were actually written to valueArray</returns>
         public static unsafe int ConvertBlobToArrayRegular(
             TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
-            DateTime blobStartDate, bool applyLimits,
+            int timeStepCount, DateTime blobStartDate, bool applyLimits,
             int nReqValues, DateTime reqStartDate, DateTime reqEndDate,
-            Byte[] blobData, double[] valueArray)
+            Byte[] blobData, double[] valueArray, int compressionCode)
         {
+            // The BLOB is kept in a compressed form, so our first step is to decompress it before
+            // anything else can be done.
+            Byte[] decompressedBlobData
+                    = DecompressBlob(blobData, timeStepCount * sizeof(double), compressionCode);
+
             // MemoryStream and BinaryReader objects enable bulk copying of data from the BLOB
-            using (MemoryStream blobStream = new MemoryStream(blobData))
+            using (MemoryStream blobStream = new MemoryStream(decompressedBlobData))
             using (BinaryReader blobReader = new BinaryReader(blobStream))
             {
                 // How many elements of size 'double' are in the BLOB?
@@ -106,6 +114,7 @@ namespace TimeSeriesLibrary
         /// the given array of values.  The array of values must have been allocated 
         /// large enough prior to calling this method.
         /// </summary>
+        /// <param name="timeStepCount">the number of time steps that are stored in the blob</param>
         /// <param name="applyLimits">If true, then the method will convert only a portion of the BLOB,
         /// according to the parameter values nReqValues, reqStartDate, and reqEndDate.  If false, the method
         /// converts the entire BLOB into a value array.</param>
@@ -117,12 +126,18 @@ namespace TimeSeriesLibrary
         /// If applyLimits==false, then this value is ignored.</param>
         /// <param name="blobData">the BLOB that will be converted</param>
         /// <param name="dateValueArray">the array of time series values that is produced from the BLOB</param>
+        /// <param name="compressionCode">a generation number that indicates what compression technique to use</param>
         /// <returns>The number of time steps that were actually written to dateValueArray</returns>
-        public static unsafe int ConvertBlobToArrayIrregular(bool applyLimits,
+        public static unsafe int ConvertBlobToArrayIrregular(int timeStepCount, bool applyLimits,
             int nReqValues, DateTime reqStartDate, DateTime reqEndDate,
-            Byte[] blobData, TSDateValueStruct[] dateValueArray)
+            Byte[] blobData, TSDateValueStruct[] dateValueArray, int compressionCode)
         {
             int numReadValues = 0;
+
+            // The BLOB is kept in a compressed form, so our first step is to decompress it before
+            // anything else can be done.
+            Byte[] decompressedBlobData
+                    = DecompressBlob(blobData, timeStepCount * sizeof(TSDateValueStruct), compressionCode);
 
             // MemoryStream and BinaryReader objects enable bulk copying of data from the BLOB
             using (MemoryStream blobStream = new MemoryStream(blobData))
@@ -168,13 +183,18 @@ namespace TimeSeriesLibrary
         #region Method ConvertArrayToBlobRegular
         /// <summary>
         /// This method converts the given array of time series values (array of double precision
-        /// floats) to a BLOB (byte array).
+        /// floats) to a BLOB (byte array).  It also sets the computes the MD5 checksum
+        /// from the resultant BLOB, and sets the Checksum property of the given ITimeSeriesTrace
+        /// object accordingly.
         /// </summary>
         /// <param name="TimeStepCount">The number of time steps in the given array of time series values</param>
         /// <param name="valueArray">The array of time series values to convert into a BLOB</param>
+        /// <param name="compressionCode">a generation number that indicates what compression technique to use</param>
+        /// <param name="traceObject">object whose TraceNumber property will be used to compute the checksum,
+        /// and whose Checksum property will be set accordingly</param>
         /// <returns>The BLOB that is created from valueArray</returns>
         public static unsafe byte[] ConvertArrayToBlobRegular(
-            int TimeStepCount, double[] valueArray)
+            int TimeStepCount, double[] valueArray, int compressionCode, ITimeSeriesTrace traceObject)
         {
             // The number of bytes required for the BLOB
             int nBin = TimeStepCount * sizeof(double);
@@ -185,7 +205,15 @@ namespace TimeSeriesLibrary
             // byte array (without the padding for Checksum) becomes the BLOB.
             Buffer.BlockCopy(valueArray, 0, blobData, 0, nBin);
 
-            return blobData;
+            // Compute the checksum using the uncompressed BLOB.  During development, it was 
+            // demonstrated that the checksum would be computed faster on the compressed BLOB.
+            // However, this could make it difficult to upgrade the compression algorithm in the
+            // future, because the checksum value would be dependent on the compression algorithm.
+            traceObject.Checksum = ComputeTraceChecksum(traceObject.TraceNumber, blobData);
+
+            // the BLOB is stored in a compressed form, so our last step is to compress it
+            Byte[] compressedBlobData = CompressBlob(blobData, compressionCode);
+            return compressedBlobData;
         } 
         #endregion
 
@@ -193,13 +221,18 @@ namespace TimeSeriesLibrary
         #region Method ConvertArrayToBlobIrregular
         /// <summary>
         /// This method converts the given array of time series values (date/value pairs stored in 
-        /// TSDateValueStruct) to a BLOB (byte array).
+        /// TSDateValueStruct) to a BLOB (byte array).  It also sets the computes the MD5 checksum
+        /// from the resultant BLOB, and sets the Checksum property of the given ITimeSeriesTrace
+        /// object accordingly.
         /// </summary>
         /// <param name="TimeStepCount">The number of time steps in the given array of time series values</param>
         /// <param name="dateValueArray">The array of time series values to convert into a BLOB</param>
+        /// <param name="compressionCode">a generation number that indicates what compression technique to use</param>
+        /// <param name="traceObject">object whose TraceNumber property will be used to compute the checksum,
+        /// and whose Checksum property will be set accordingly</param>
         /// <returns>The BLOB that is created from dateValueArray</returns>
         public static unsafe byte[] ConvertArrayToBlobIrregular(
-            int TimeStepCount, TSDateValueStruct[] dateValueArray)
+            int TimeStepCount, TSDateValueStruct[] dateValueArray, int compressionCode, ITimeSeriesTrace traceObject)
         {
             // The number of bytes required for the BLOB
             int nBin = TimeStepCount * sizeof(TSDateValueStruct);
@@ -217,8 +250,17 @@ namespace TimeSeriesLibrary
                     blobWriter.Write(dateValueArray[i].Date.ToBinary());
                     blobWriter.Write(dateValueArray[i].Value);
                 }
-                return blobData;
             }
+
+            // Compute the checksum using the uncompressed BLOB.  During development, it was 
+            // demonstrated that the checksum would be computed faster on the compressed BLOB.
+            // However, this could make it difficult to upgrade the compression algorithm in the
+            // future, because the checksum value would be dependent on the compression algorithm.
+            traceObject.Checksum = ComputeTraceChecksum(traceObject.TraceNumber, blobData);
+
+            // the BLOB is stored in a compressed form, so our last step is to compress it
+            Byte[] compressedBlobData = CompressBlob(blobData, compressionCode);
+            return blobData;
         } 
         #endregion
 
@@ -229,9 +271,9 @@ namespace TimeSeriesLibrary
         /// timeseries' BLOB of values, plus a TSParameters object that contains a short string of 
         /// numbers that TimeSeriesLibrary is responsible for keeping in accord with the BLOB.
         /// </summary>
-        /// <param name="tsp"></param>
-        /// <param name="blobData"></param>
-        /// <returns></returns>
+        /// <param name="tsp">TSParameters object that contains the parameters of the time series</param>
+        /// <param name="traceList">collection of trace objects for the time series</param>
+        /// <returns>the Checksum as a byte[16] array</returns>
         public static byte[] ComputeChecksum(TSParameters tsp, List<ITimeSeriesTrace> traceList)
         {
             // simply unpack the TSParameters object and call the overload of this method
@@ -325,11 +367,8 @@ namespace TimeSeriesLibrary
         /// computed from the trace number and from the BLOB that contains the values for each time 
         /// step of the time series.
         /// </summary>
-        /// <param name="traceObject">an ITimeSeriesTrace object that contains the trace number and the 
-        /// BLOB for this trace.  The BLOB must be computed before calling this method, as the method will
-        /// not compute it.</param>
         /// <returns>the Checksum as a byte[16] array</returns>
-        public static byte[] ComputeTraceChecksum(ITimeSeriesTrace traceObject)
+        public static byte[] ComputeTraceChecksum(int traceNumber, byte[] valueBlob)
         {
             // The MD5 Checksum will be computed from two byte arrays.  The first byte array contains
             // the trace number and the second byte array is the time series array itself.
@@ -343,7 +382,7 @@ namespace TimeSeriesLibrary
                 // Write relevant parameters (not including the BLOB itself) into a short byte array
 
                 // Trace Number
-                binWriter.Write(traceObject.TraceNumber);
+                binWriter.Write(traceNumber);
 
                 // MD5CryptoServiceProvider object has methods to compute the Checksum
                 using (MD5CryptoServiceProvider md5Hasher = new MD5CryptoServiceProvider())
@@ -351,7 +390,7 @@ namespace TimeSeriesLibrary
                     // feed the short byte array into the MD5 hash computer
                     md5Hasher.TransformBlock(binArray, 0, sizeof(Int32), binArray, 0);
                     // feed the BLOB of timeseries values into the MD5 hash computer
-                    md5Hasher.TransformFinalBlock(traceObject.ValueBlob, 0, traceObject.ValueBlob.Length);
+                    md5Hasher.TransformFinalBlock(valueBlob, 0, valueBlob.Length);
                     // return the hash (Checksum) value
                     return md5Hasher.Hash;
                 }
@@ -359,5 +398,73 @@ namespace TimeSeriesLibrary
         }
         #endregion
 
+
+        #region Compression Methods
+        /// <summary>
+        /// This constant tells us what the current value is for the generation number of
+        /// compression approach.  In case the compression methods of this class ever change
+        /// the previous algorithm for decompressing the data should not be deleted, but can
+        /// still be used by invoking the compression code that was current at the time that
+        /// an old time series was compressed.
+        /// </summary>
+        public const int currentCompressionCode = 1;
+
+        /// <summary>
+        /// This returns a compressed version of the given byte array
+        /// </summary>
+        /// <param name="uncompressedBlob">the uncompressed byte array</param>
+        /// <param name="compressionCode">a generation number that indicates what compression technique to use</param>
+        /// <returns>the compressed byte array</returns>
+        public static unsafe Byte[] CompressBlob(Byte[] uncompressedBlob, int compressionCode)
+        {
+            if (compressionCode == 1)
+            {
+                Byte[] compressedBlob;
+                // the byte-array length of the input blob
+                int inputLength = uncompressedBlob.Length;
+                // The byte array that will be created by the first compression.
+                // Note that some incompressible BLOBs will actually be made larger by LZFX
+                // compression.  We have observed about 1% increase over the original BLOB,
+                // to the factor of 1.05 is expected to be safe.
+                compressedBlob = new Byte[(int)(inputLength * 1.05)];
+
+                // Compress using LZFX algorithm.
+                // This method resizes the compressed byte array for us.
+                LZFX.Compress(uncompressedBlob, ref compressedBlob);
+                return compressedBlob;
+            }
+            else
+            {   // return without doing any compression
+                return uncompressedBlob;
+            }
+
+        }
+        /// <summary>
+        /// This method returns an uncompressed version of the given compressed byte array
+        /// </summary>
+        /// <param name="inputBlob">the byte array to be decompressed</param>
+        /// <param name="decompressedLength">the known length of the decompressed byte array</param>
+        /// <param name="compressionCode">a generation number that indicates what compression technique to use</param>
+        /// <returns>the decompressed byte array</returns>
+        public static unsafe Byte[] DecompressBlob(Byte[] inputBlob, int decompressedLength,
+                                                    int compressionCode)
+        {
+            if (compressionCode == 1)
+            {
+                // the byte array of the output blob
+                Byte[] decompressedBlob = new Byte[decompressedLength];
+                // Decompress using LZFX algorithm.
+                // This method will throw an exception if the decompressed data does not
+                // exactly fit into the allocated array size.
+                LZFX.Decompress(inputBlob, decompressedBlob);
+
+                return decompressedBlob;
+            }
+            else
+            {   // return without doing any compression
+                return inputBlob;
+            }
+        }
+        #endregion
     }
 }

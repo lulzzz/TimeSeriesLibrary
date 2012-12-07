@@ -63,8 +63,11 @@ namespace TimeSeriesLibrary
             /// </summary>
             Record_Not_Irregular = -106,
 
-            // not used?
-            Array_Length_Less_Than_One = -300,
+            /// <summary>
+            /// This error code indicates that there was an error when compressing or decompressing a
+            /// time series byte array.
+            /// </summary>
+            Compression_Error = -300,
             // not used?
             End_Date_Precedes_Start_Date = -301,
             /// <summary>

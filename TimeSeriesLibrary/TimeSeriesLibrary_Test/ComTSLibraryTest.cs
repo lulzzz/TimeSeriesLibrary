@@ -13,14 +13,34 @@ namespace TimeSeriesLibrary_Test
     ///to contain all ComTSLibraryTest Unit Tests
     ///</summary>
     [TestClass()]
-    public class ComTSLibraryTest
+    [DeploymentItem("lzfx.dll")]
+    public unsafe class ComTSLibraryTest
     {
-        /*
         static ComTSLibrary _lib;
         static int _connxNumber;
         static SqlConnection _connx;
-        const String _paramTableName = "RunOutputTimeSeries";
+        const String _paramTableName = "OutputTimeSeries";
         const String _traceTableName = "OutputTimeSeriesTraces";
+
+        #region GetSbyte helper method
+        /// <summary>
+        /// This method converts the given string to a byte array, which is equivalent
+        /// to a char[] array used in native C++ code.
+        /// </summary>
+        private static sbyte* GetSbyte(String s)
+        {
+            byte[] b = System.Text.Encoding.ASCII.GetBytes(s);
+            
+            fixed (sbyte* sb = new sbyte[b.Length])
+            {
+                for (int i = 0; i < b.Length; i++)
+                {
+                    sb[i] = (sbyte)b[i];
+                }
+                return sb;
+            }
+        }
+        #endregion
 
         #region TestContext
         private TestContext testContextInstance;
@@ -50,7 +70,7 @@ namespace TimeSeriesLibrary_Test
         public static void MyClassInitialize(TestContext testContext)
         {
             _lib = new ComTSLibrary();
-            _connxNumber = _lib.OpenConnection("Data Source=.; Database=ObjectModel; Trusted_Connection=yes;");
+            _connxNumber = _lib.OpenConnection(GetSbyte("Data Source=.; Database=ObjectModel; Trusted_Connection=yes;"));
             _connx = _lib.GetConnectionFromId(_connxNumber);
         }
         
@@ -78,7 +98,7 @@ namespace TimeSeriesLibrary_Test
 
 
         #region Test WriteParameters methods
-        // WriteParametersRegularUnsafe
+        // WriteParametersRegular
         [TestMethod()]
         public void WriteParametersRegular()
         {
@@ -88,11 +108,12 @@ namespace TimeSeriesLibrary_Test
             short timeStepQuantity = 2;
             int id;
 
-            String[] extraParamNames = new String[] { "TimeSeriesType", "Unit_Id", "RunGUID", "VariableType", "VariableId" };
-            String[] extraParamValues = new String[] { "0", "1", "'A9974079-884E-4FE4-B752-65AF2245E978'", "0", "0" };
+            String extraParamNames = "TimeSeriesType, Unit_Id, RunGUID, VariableType, VariableName, RunElementGUID";
+            String extraParamValues = "0, 1, 'A0101010-AAAA-BBBB-2222-3E3E3E3E3E3E', 0, 'eraseme', '00000000-0000-0000-0000-000000000000'";
             // The method being tested
-            id = _lib.WriteParametersRegularUnsafe(_connxNumber, _paramTableName, _traceTableName,
-                    timeStepUnit, timeStepQuantity, timeStepCount, startDate, extraParamNames, extraParamValues);
+            id = _lib.WriteParametersRegular(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
+                    timeStepUnit, timeStepQuantity, timeStepCount, startDate, 
+                    GetSbyte(extraParamNames), GetSbyte(extraParamValues));
 
             String comm = String.Format("select * from {0} where Id={1}", _paramTableName, id);
             // SqlDataAdapter object will use the query to fill the DataTable
@@ -105,14 +126,14 @@ namespace TimeSeriesLibrary_Test
                 // 
                 Assert.AreEqual(timeStepQuantity, row.Field<int>("TimeStepQuantity"));
                 Assert.AreEqual(timeStepUnit, row.Field<int>("TimeStepUnit"));
-                Assert.AreEqual(timeStepCount, row.Field<int>("RecordCount"));
+                Assert.AreEqual(timeStepCount, row.Field<int>("TimeStepCount"));
                 Assert.AreEqual(startDate, row.Field<DateTime>("StartDate"));
                 Assert.AreEqual(0, row.Field<int>("TimeSeriesType"));
                 Assert.AreEqual(1, row.Field<int>("Unit_Id"));
             }
 
         }
-        // WriteParametersIrregularUnsafe
+        // WriteParametersIrregular
         [TestMethod()]
         public void WriteParametersIrregular()
         {
@@ -123,11 +144,11 @@ namespace TimeSeriesLibrary_Test
             short timeStepQuantity = 0;
             int id;
 
-            String[] extraParamNames = new String[] { "TimeSeriesType", "Unit_Id", "RunGUID", "VariableType", "VariableId" };
-            String[] extraParamValues = new String[] { "1", "3", "'A9974079-884E-4FE4-B752-65AF2245E978'", "0", "0" };
+            String extraParamNames = "TimeSeriesType, Unit_Id, RunGUID, VariableType, VariableName, RunElementGUID";
+            String extraParamValues = "1, 3, 'A0101010-AAAA-BBBB-2222-3E3E3E3E3E3E', 0, 'eraseme', '00000000-0000-0000-0000-000000000000'";
             // The method being tested
-            id = _lib.WriteParametersIrregularUnsafe(_connxNumber, _paramTableName, _traceTableName,
-                    timeStepCount, startDate, endDate, extraParamNames, extraParamValues);
+            id = _lib.WriteParametersIrregular(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
+                    timeStepCount, startDate, endDate, GetSbyte(extraParamNames), GetSbyte(extraParamValues));
 
             String comm = String.Format("select * from {0} where Id={1}", _paramTableName, id);
             // SqlDataAdapter object will use the query to fill the DataTable
@@ -140,7 +161,7 @@ namespace TimeSeriesLibrary_Test
                 // 
                 Assert.AreEqual(timeStepQuantity, row.Field<int>("TimeStepQuantity"));
                 Assert.AreEqual(timeStepUnit, row.Field<int>("TimeStepUnit"));
-                Assert.AreEqual(timeStepCount, row.Field<int>("RecordCount"));
+                Assert.AreEqual(timeStepCount, row.Field<int>("TimeStepCount"));
                 Assert.AreEqual(startDate, row.Field<DateTime>("StartDate"));
                 Assert.AreEqual(endDate, row.Field<DateTime>("EndDate"));
                 Assert.AreEqual(1, row.Field<int>("TimeSeriesType"));
@@ -151,7 +172,7 @@ namespace TimeSeriesLibrary_Test
         #endregion
 
         #region Test WriteTrace methods
-        // WriteTraceRegularUnsafe
+        // WriteTraceRegular
         [TestMethod()]
         public void WriteTraceRegular()
         {
@@ -161,10 +182,11 @@ namespace TimeSeriesLibrary_Test
             short timeStepQuantity = 2;
             int id, traceNumber = 27;
 
-            String[] extraParamNames = new String[] { "TimeSeriesType", "Unit_Id", "RunGUID", "VariableType", "VariableId" };
-            String[] extraParamValues = new String[] { "0", "1", "'A9974079-884E-4FE4-B752-65AF2245E978'", "0", "0" };
-            id = _lib.WriteParametersRegularUnsafe(_connxNumber, _paramTableName, _traceTableName,
-                    timeStepUnit, timeStepQuantity, timeStepCount, startDate, extraParamNames, extraParamValues);
+            String extraParamNames = "TimeSeriesType, Unit_Id, RunGUID, VariableType, VariableName, RunElementGUID";
+            String extraParamValues = "0, 1, 'A0101010-AAAA-BBBB-2222-3E3E3E3E3E3E', 0, 'eraseme', '00000000-0000-0000-0000-000000000000'";
+            id = _lib.WriteParametersRegular(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
+                    timeStepUnit, timeStepQuantity, timeStepCount, startDate, 
+                    GetSbyte(extraParamNames), GetSbyte(extraParamValues));
 
             double[] valArray = new double[timeStepCount], testValArray = new double[timeStepCount];
             double x = 10.0;
@@ -174,7 +196,7 @@ namespace TimeSeriesLibrary_Test
                 x *= 1.2;
             }
             // The method being tested
-            _lib.WriteTraceRegularUnsafe(_connxNumber, _paramTableName, _traceTableName,
+            _lib.WriteTraceRegular(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
                         id, traceNumber, valArray);
 
             String comm = String.Format("select * from {0} where TimeSeries_Id={1} and TraceNumber={2}",
@@ -188,14 +210,15 @@ namespace TimeSeriesLibrary_Test
                 DataRow row = dTable.Rows[0];
                 byte[] blob = row.Field<byte[]>("ValueBlob");
                 TSBlobCoder.ConvertBlobToArrayRegular((TSDateCalculator.TimeStepUnitCode)timeStepUnit, timeStepQuantity,
-                        startDate, false, 0, startDate, startDate, blob, testValArray);
+                        timeStepCount, startDate, false, 0, startDate, startDate, blob,
+                        testValArray, TSBlobCoder.currentCompressionCode);
                 // 
                 for (int i = 0; i < timeStepCount; i++)
                     Assert.AreEqual(valArray[i], testValArray[i]);
             }
 
         }
-        // WriteTraceIrregularUnsafe
+        // WriteTraceIrregular
         [TestMethod()]
         public void WriteTraceIrregular()
         {
@@ -204,10 +227,10 @@ namespace TimeSeriesLibrary_Test
             int timeStepCount = 40;
             int id, traceNumber = 27;
 
-            String[] extraParamNames = new String[] { "TimeSeriesType", "Unit_Id", "RunGUID", "VariableType", "VariableId" };
-            String[] extraParamValues = new String[] { "0", "1", "'A9974079-884E-4FE4-B752-65AF2245E978'", "0", "0" };
-            id = _lib.WriteParametersIrregularUnsafe(_connxNumber, _paramTableName, _traceTableName,
-                    timeStepCount, startDate, endDate, extraParamNames, extraParamValues);
+            String extraParamNames = "TimeSeriesType, Unit_Id, RunGUID, VariableType, VariableName, RunElementGUID";
+            String extraParamValues = "0, 1, 'A0101010-AAAA-BBBB-2222-3E3E3E3E3E3E', 0, 'eraseme', '00000000-0000-0000-0000-000000000000'";
+            id = _lib.WriteParametersIrregular(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
+                    timeStepCount, startDate, endDate, GetSbyte(extraParamNames), GetSbyte(extraParamValues));
 
             TSDateValueStruct[] dateValArray = new TSDateValueStruct[timeStepCount],
                                 testDateValArray = new TSDateValueStruct[timeStepCount];
@@ -223,7 +246,7 @@ namespace TimeSeriesLibrary_Test
                 curDate = curDate.AddDays(y);
             }
             // The method being tested
-            _lib.WriteTraceIrregularUnsafe(_connxNumber, _paramTableName, _traceTableName,
+            _lib.WriteTraceIrregular(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
                         id, traceNumber, dateValArray);
 
             String comm = String.Format("select * from {0} where TimeSeries_Id={1} and TraceNumber={2}",
@@ -236,8 +259,8 @@ namespace TimeSeriesLibrary_Test
                 adp.Fill(dTable);
                 DataRow row = dTable.Rows[0];
                 byte[] blob = row.Field<byte[]>("ValueBlob");
-                TSBlobCoder.ConvertBlobToArrayIrregular(
-                            false, 0, startDate, startDate, blob, testDateValArray);
+                TSBlobCoder.ConvertBlobToArrayIrregular(timeStepCount,
+                            false, 0, startDate, startDate, blob, testDateValArray, TSBlobCoder.currentCompressionCode);
                 // 
                 for (int i = 0; i < timeStepCount; i++)
                     Assert.AreEqual(dateValArray[i], testDateValArray[i]);
@@ -247,7 +270,7 @@ namespace TimeSeriesLibrary_Test
         #endregion    
 
         #region Test ReadValues methods
-        // ReadValuesRegularUnsafe
+        // ReadValuesRegular
         [TestMethod()]
         public void ReadValuesRegular()
         {
@@ -257,10 +280,10 @@ namespace TimeSeriesLibrary_Test
             short timeStepQuantity = 2;
             int id, traceNumber = 27;
 
-            String[] extraParamNames = new String[] { "TimeSeriesType", "Unit_Id", "RunGUID", "VariableType", "VariableId" };
-            String[] extraParamValues = new String[] { "0", "1", "'A9974079-884E-4FE4-B752-65AF2245E978'", "0", "0" };
-            id = _lib.WriteParametersRegularUnsafe(_connxNumber, _paramTableName, _traceTableName,
-                    timeStepUnit, timeStepQuantity, timeStepCount, startDate, extraParamNames, extraParamValues);
+            String extraParamNames = "TimeSeriesType, Unit_Id, RunGUID, VariableType, VariableName, RunElementGUID";
+            String extraParamValues = "0, 1, 'A0101010-AAAA-BBBB-2222-3E3E3E3E3E3E', 0, 'eraseme', '00000000-0000-0000-0000-000000000000'";
+            id = _lib.WriteParametersRegular(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
+                    timeStepUnit, timeStepQuantity, timeStepCount, startDate, GetSbyte(extraParamNames), GetSbyte(extraParamValues));
 
             double[] valArray = new double[timeStepCount], testValArray = new double[timeStepCount];
             double x = 10.0;
@@ -271,11 +294,11 @@ namespace TimeSeriesLibrary_Test
             }
             DateTime endDate = TSDateCalculator.IncrementDate(startDate, (TSDateCalculator.TimeStepUnitCode)timeStepUnit,
                                     timeStepQuantity, timeStepCount - 1);
-            _lib.WriteTraceRegularUnsafe(_connxNumber, _paramTableName, _traceTableName,
+            _lib.WriteTraceRegular(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
                         id, traceNumber, valArray);
 
             // The method being tested
-            _lib.ReadValuesRegularUnsafe(_connxNumber, _paramTableName, _traceTableName,
+            _lib.ReadValuesRegular(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
                         id, traceNumber, timeStepCount, testValArray, startDate, endDate);
 
             // 
@@ -283,7 +306,7 @@ namespace TimeSeriesLibrary_Test
                 Assert.AreEqual(valArray[i], testValArray[i]);
 
         }
-        // ReadDatesValuesUnsafe
+        // ReadDatesValues
         [TestMethod()]
         public void ReadDatesValuesRegular()
         {
@@ -294,10 +317,11 @@ namespace TimeSeriesLibrary_Test
             short timeStepQuantity = 6;
             int id, traceNumber = 13;
 
-            String[] extraParamNames = new String[] { "TimeSeriesType", "Unit_Id", "RunGUID", "VariableType", "VariableId" };
-            String[] extraParamValues = new String[] { "0", "1", "'A9974079-884E-4FE4-B752-65AF2245E978'", "0", "0" };
-            id = _lib.WriteParametersRegularUnsafe(_connxNumber, _paramTableName, _traceTableName,
-                    (short)timeStepUnit, timeStepQuantity, timeStepCount, startDate, extraParamNames, extraParamValues);
+            String extraParamNames = "TimeSeriesType, Unit_Id, RunGUID, VariableType, VariableName, RunElementGUID";
+            String extraParamValues = "0, 1, 'A0101010-AAAA-BBBB-2222-3E3E3E3E3E3E', 0, 'eraseme', '00000000-0000-0000-0000-000000000000'";
+            id = _lib.WriteParametersRegular(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
+                    (short)timeStepUnit, timeStepQuantity, timeStepCount, startDate, 
+                    GetSbyte(extraParamNames), GetSbyte(extraParamValues));
 
             double[] valArray = new double[timeStepCount];
             TSDateValueStruct[] dateValArray = new TSDateValueStruct[timeStepCount],
@@ -312,11 +336,11 @@ namespace TimeSeriesLibrary_Test
                 x += 1.75;
                 curDate = TSDateCalculator.IncrementDate(curDate, timeStepUnit, timeStepQuantity, 1);
             }
-            _lib.WriteTraceRegularUnsafe(_connxNumber, _paramTableName, _traceTableName,
+            _lib.WriteTraceRegular(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
                         id, traceNumber, valArray);
 
             // The method being tested
-            _lib.ReadDatesValuesUnsafe(_connxNumber, _paramTableName, _traceTableName,
+            _lib.ReadDatesValues(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
                         id, traceNumber, timeStepCount, ref testDateValArray, startDate, endDate);
 
             // 
@@ -324,7 +348,7 @@ namespace TimeSeriesLibrary_Test
                 Assert.AreEqual(dateValArray[i], testDateValArray[i]);
 
         }
-        // ReadDatesValuesUnsafe
+        // ReadDatesValues
         [TestMethod()]
         public void ReadDatesValuesIrregular()
         {
@@ -333,10 +357,10 @@ namespace TimeSeriesLibrary_Test
             int timeStepCount = 40;
             int id, traceNumber = 4;
 
-            String[] extraParamNames = new String[] { "TimeSeriesType", "Unit_Id", "RunGUID", "VariableType", "VariableId" };
-            String[] extraParamValues = new String[] { "0", "1", "'A9974079-884E-4FE4-B752-65AF2245E978'", "0", "0" };
-            id = _lib.WriteParametersIrregularUnsafe(_connxNumber, _paramTableName, _traceTableName,
-                    timeStepCount, startDate, endDate, extraParamNames, extraParamValues);
+            String extraParamNames = "TimeSeriesType, Unit_Id, RunGUID, VariableType, VariableName, RunElementGUID";
+            String extraParamValues = "0, 1, 'A0101010-AAAA-BBBB-2222-3E3E3E3E3E3E', 0, 'eraseme', '00000000-0000-0000-0000-000000000000'";
+            id = _lib.WriteParametersIrregular(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
+                    timeStepCount, startDate, endDate, GetSbyte(extraParamNames), GetSbyte(extraParamValues));
 
             TSDateValueStruct[] dateValArray = new TSDateValueStruct[timeStepCount],
                                 testDateValArray = new TSDateValueStruct[timeStepCount];
@@ -351,11 +375,11 @@ namespace TimeSeriesLibrary_Test
                 y += 0.25;
                 curDate = curDate.AddDays(y);
             }
-            _lib.WriteTraceIrregularUnsafe(_connxNumber, _paramTableName, _traceTableName,
+            _lib.WriteTraceIrregular(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
                         id, traceNumber, dateValArray);
 
             // The method being tested
-            _lib.ReadDatesValuesUnsafe(_connxNumber, _paramTableName, _traceTableName,
+            _lib.ReadDatesValues(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
                         id, traceNumber, timeStepCount, ref testDateValArray, startDate, endDate);
 
             // 
@@ -365,9 +389,10 @@ namespace TimeSeriesLibrary_Test
         }
         #endregion
 
-        // ReadDatesValuesUnsafe
+        #region Test Delete methods
+        // DeleteSeries method
         [TestMethod()]
-        public void Delete()
+        public void DeleteSeries()
         {
             DateTime startDate = DateTime.Parse("1/10/1996");
             DateTime endDate = DateTime.Parse("2/10/2002");
@@ -376,10 +401,11 @@ namespace TimeSeriesLibrary_Test
             short timeStepQuantity = 6;
             int id;
 
-            String[] extraParamNames = new String[] { "TimeSeriesType", "Unit_Id", "RunGUID", "VariableType", "VariableId" };
-            String[] extraParamValues = new String[] { "0", "1", "'A9974079-884E-4FE4-B752-65AF2245E978'", "0", "0" };
-            id = _lib.WriteParametersRegularUnsafe(_connxNumber, _paramTableName, _traceTableName,
-                    (short)timeStepUnit, timeStepQuantity, timeStepCount, startDate, extraParamNames, extraParamValues);
+            String extraParamNames = "TimeSeriesType, Unit_Id, RunGUID, VariableType, VariableName, RunElementGUID";
+            String extraParamValues = "0, 1, 'A0101010-AAAA-BBBB-2222-3E3E3E3E3E3E', 0, 'eraseme', '00000000-0000-0000-0000-000000000000'";
+            id = _lib.WriteParametersRegular(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
+                    (short)timeStepUnit, timeStepQuantity, timeStepCount, startDate,
+                    GetSbyte(extraParamNames), GetSbyte(extraParamValues));
 
             double[] valArray = new double[timeStepCount];
             double x = 5.25;
@@ -388,9 +414,9 @@ namespace TimeSeriesLibrary_Test
                 valArray[i] = x;
                 x += 1.75;
             }
-            _lib.WriteTraceRegularUnsafe(_connxNumber, _paramTableName, _traceTableName,
+            _lib.WriteTraceRegular(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
                         id, 5, valArray);
-            _lib.WriteTraceRegularUnsafe(_connxNumber, _paramTableName, _traceTableName,
+            _lib.WriteTraceRegular(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
                         id, 6, valArray);
 
             String comm = String.Format("select count(1) from {0} where TimeSeries_Id={1}", _traceTableName, id);
@@ -399,7 +425,7 @@ namespace TimeSeriesLibrary_Test
             Assert.AreEqual(rowCount, 2);
 
             // The method being tested
-            _lib.DeleteSeries(_connxNumber, _paramTableName, _traceTableName, id);
+            _lib.DeleteSeries(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName), id);
 
             rowCount = (int)sqlCommand.ExecuteScalar();
             Assert.AreEqual(rowCount, 0);
@@ -408,7 +434,112 @@ namespace TimeSeriesLibrary_Test
             rowCount = (int)sqlCommand.ExecuteScalar();
             Assert.AreEqual(rowCount, 0);
 
+        } 
+        // DeleteMatchingSeries method
+        [TestMethod()]
+        public void DeleteMatchingSeries()
+        {
+            DateTime startDate = DateTime.Parse("1/10/1996");
+            DateTime endDate = DateTime.Parse("2/10/2002");
+            int timeStepCount = 70;
+            TSDateCalculator.TimeStepUnitCode timeStepUnit = TSDateCalculator.TimeStepUnitCode.Hour;
+            short timeStepQuantity = 6;
+            int id;
+
+            String extraParamNames = "TimeSeriesType, Unit_Id, RunGUID, VariableType, VariableName, RunElementGUID";
+            String extraParamValues = "0, 1, 'A0101010-AAAA-BBBB-2222-3E3E3E3E3E3E', 0, 'eraseme', '0000000E-000E-000E-000E-00000000000E'";
+            id = _lib.WriteParametersRegular(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
+                    (short)timeStepUnit, timeStepQuantity, timeStepCount, startDate,
+                    GetSbyte(extraParamNames), GetSbyte(extraParamValues));
+
+            double[] valArray = new double[timeStepCount];
+            double x = 5.25;
+            for (int i = 0; i < timeStepCount; i++)
+            {
+                valArray[i] = x;
+                x += 1.75;
+            }
+            _lib.WriteTraceRegular(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
+                        id, 5, valArray);
+            _lib.WriteTraceRegular(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
+                        id, 6, valArray);
+
+            String comm = String.Format("select count(1) from {0} where TimeSeries_Id={1}", _traceTableName, id);
+            SqlCommand sqlCommand = new SqlCommand(comm, _connx);
+            int rowCount = (int)sqlCommand.ExecuteScalar();
+            Assert.AreEqual(rowCount, 2);
+
+            // The method being tested
+            bool ret = _lib.DeleteMatchingSeries(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
+                    GetSbyte("RunGUID='A0101010-AAAA-BBBB-2222-3E3E3E3E3E3E'"));
+
+            Assert.AreEqual(ret, true);
+
+            rowCount = (int)sqlCommand.ExecuteScalar();
+            Assert.AreEqual(rowCount, 0);
+
+            comm = String.Format("select count(1) from {0} where Id={1}", _paramTableName, id);
+            rowCount = (int)sqlCommand.ExecuteScalar();
+            Assert.AreEqual(rowCount, 0);
+
+        } 
+        #endregion 
+
+        // Test Error Handling
+        [TestMethod()]
+        public void ResetErrorHandler()
+        {
+            _lib.ResetErrorHandler();
+            Assert.IsFalse(_lib.GetHasError(), "GetHasError should have returned False after calling the reset method");
+
+            sbyte[] errorMessage = new sbyte[4096];
+            String errorString;
+            fixed (sbyte* pErrorMessage = &errorMessage[0])
+            {
+                _lib.GetErrorMessage(pErrorMessage);
+                errorString = new String(pErrorMessage);
+            }
+            Assert.IsTrue(errorString.Length == 0, "GetErrorMessage should not return any message after calling the reset method");
         }
-        */
+        [TestMethod()]
+        public void ErrorHandling1()
+        {
+            _lib.ResetErrorHandler();
+            // This should cause an error
+            _lib.DeleteSeries(_connxNumber, GetSbyte("TableThatDoesNotExist"), GetSbyte("TableThatWillNeverExist"), 3);
+
+            Assert.IsTrue(_lib.GetHasError(), "GetHasError should have returned True after an error was triggered");
+
+            sbyte[] errorMessage = new sbyte[4096];
+            String errorString;
+            fixed (sbyte* pErrorMessage = &errorMessage[0])
+            {
+                _lib.GetErrorMessage(pErrorMessage);
+                errorString = new String(pErrorMessage);
+            }
+            Assert.IsTrue(errorString.Length > 0);
+        }
+        [TestMethod()]
+        public void ErrorHandling2()
+        {
+            _lib.ResetErrorHandler();
+
+            TSDateValueStruct[] dateValStructArray = new TSDateValueStruct[10];
+            // This should cause an error
+            _lib.ReadDatesValues(_connxNumber, GetSbyte("TableThatDoesNotExist"), GetSbyte("TableThatWillNeverExist"), 3,
+                                    -33, 10, ref dateValStructArray, DateTime.Parse("1/10/1996"), DateTime.Parse("1/10/1996"));
+
+            Assert.IsTrue(_lib.GetHasError(), "GetHasError should have returned True after an error was triggered");
+
+            sbyte[] errorMessage = new sbyte[4096];
+            String errorString;
+            fixed (sbyte* pErrorMessage = &errorMessage[0])
+            {
+                _lib.GetErrorMessage(pErrorMessage);
+                errorString = new String(pErrorMessage);
+            }
+            Assert.IsTrue(errorString.Length > 0);
+        } 
+
     }
 }

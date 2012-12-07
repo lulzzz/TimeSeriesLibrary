@@ -22,6 +22,8 @@ namespace TimeSeriesLibrary
         public DateTime BlobEndDate;
         // The number of time steps stored in the database
         public int TimeStepCount;
+        // The compression code that indicates what compression algorithm is used to compress the BLOB
+        public int CompressionCode;
 
 
         /// <summary>
@@ -32,13 +34,14 @@ namespace TimeSeriesLibrary
         /// </summary>
         public void SetParametersRegular(
                     TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
-                    int timeStepCount, DateTime blobStartDate)
+                    int timeStepCount, DateTime blobStartDate, int compressionCode)
         {
             // Most of the parameters are straightforward
             TimeStepUnit = timeStepUnit;
             TimeStepQuantity = timeStepQuantity;
             TimeStepCount = timeStepCount;
             BlobStartDate = blobStartDate;
+            CompressionCode = compressionCode;
             // We must calculate the date of the last time step
             BlobEndDate = TSDateCalculator.IncrementDate(BlobStartDate, TimeStepUnit, TimeStepQuantity, TimeStepCount - 1);
         }
@@ -50,7 +53,7 @@ namespace TimeSeriesLibrary
         /// TSParameters object, using the input parameters given to the method.
         /// </summary>
         public void SetParametersIrregular(
-                    int timeStepCount, DateTime blobStartDate, DateTime blobEndDate)
+                    int timeStepCount, DateTime blobStartDate, DateTime blobEndDate, int compressionCode)
         {
             // Most of the parameters are straightforward
             TimeStepUnit = TSDateCalculator.TimeStepUnitCode.Irregular;
@@ -58,6 +61,7 @@ namespace TimeSeriesLibrary
             TimeStepCount = timeStepCount;
             BlobStartDate = blobStartDate;
             BlobEndDate = blobEndDate;
+            CompressionCode = compressionCode;
         }
     
     
