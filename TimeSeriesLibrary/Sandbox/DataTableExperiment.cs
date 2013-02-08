@@ -12,7 +12,7 @@ namespace Sandbox
     {
         public String TableName = "OutputTimeSeriesTraces";
         public SqlConnection Connx;
-        const int nVals = 30000, nIter = 1200;
+        const int nVals = 400, nIter = 1200;
 
 
         public void Test(Boolean inBulk, Boolean doParam)
@@ -57,13 +57,28 @@ namespace Sandbox
                 cmd.Parameters.Add("@Checksum", SqlDbType.Binary, 16);
                 cmd.Prepare();
 
+                SqlCommand selectCmd = new SqlCommand("SELECT  TraceNumber, Checksum from "
+                            + TableName + " where TimeSeries_Id=@TimeSeries_Id order by TraceNumber", Connx);
+                selectCmd.Parameters.Add("@TimeSeries_Id", SqlDbType.Int);
+                selectCmd.Prepare();
+
+                SqlCommand updateCmd = new SqlCommand("UPDATE " + "OutputTimeSeries"
+                                        + " SET Checksum=@Checksum WHERE Id=@Id", Connx);
+                updateCmd.Parameters.Add("@Checksum", SqlDbType.Binary, 16);
+                updateCmd.Parameters.Add("@Id", SqlDbType.Int);
+                updateCmd.Prepare();
+
+
                 for (int i = 0; i < nIter; i++)
                 {
                     ITimeSeriesTrace traceObject = new TSTrace { TraceNumber = 1 };
                     // Convert the array of double values into a byte array...a BLOB
                     traceObject.ValueBlob = TSBlobCoder.ConvertArrayToBlobRegular
                                 (nVals, valList[i], TSBlobCoder.currentCompressionCode, traceObject);
-                    WriteOneTraceParam(traceObject, cmd);
+                    WriteOneTraceParam(i + 1, traceObject, cmd);
+
+                    // update the checksum in the parameters table
+                    UpdateParametersChecksum(i + 1, selectCmd, updateCmd);
                 }
             }
             else
@@ -165,14 +180,90 @@ namespace Sandbox
                 }
             }
         }
-        private unsafe void WriteOneTraceParam(ITimeSeriesTrace traceObject, SqlCommand cmd)
+        private unsafe void WriteOneTraceParam(int id, ITimeSeriesTrace traceObject, SqlCommand cmd)
         {
-            cmd.Parameters["@TimeSeries_Id"].Value = 1;
+            cmd.Parameters["@TimeSeries_Id"].Value = id;
             cmd.Parameters["@TraceNumber"].Value = 26;
             cmd.Parameters["@ValueBlob"].Value = traceObject.ValueBlob;
             cmd.Parameters["@Checksum"].Value = traceObject.ValueBlob;
             cmd.ExecuteNonQuery();
         }
+        /// <summary>
+        /// This method updates the value in the Checksum field of the parameters table.
+        /// It does not modify any other fields.
+        /// </summary>
+        /// <param name="doWriteToDB">true if the method should actually save the timeseries to the database</param>
+        /// <param name="tsImport">TSImport object into which the method will record values that it has computed.
+        /// If this parameter is null, then the method will skip the recording of such paramters to an object.</param>
+        private void UpdateParametersChecksum(int id, SqlCommand selectCmd, SqlCommand updateCmd)
+        {
+            //// This List will contain one item for each trace for this time series.  The primary
+            //// purpose of the list is to store the checksum for each trace, since the checksum
+            //// of the timeseries is computed from the list of checksums from each of its traces.
+            //List<ITimeSeriesTrace> traceObjects = new List<ITimeSeriesTrace>();
+
+            ////
+            //// Query the Trace table to get all traces for this time series
+            //selectCmd.Parameters["@TimeSeries_Id"].Value = id;
+
+            //// SqlDataAdapter object will use the query to fill the DataTable
+            //using (SqlDataAdapter adp = new SqlDataAdapter(selectCmd))
+            //// SqlCommandBuilder object must be instantiated in order for us to call
+            //// the Fill method of the SqlDataAdapter.  Interestingly, we only need to
+            //// instantiate this object--we don't need to use it in any other way.
+            //using (SqlCommandBuilder bld = new SqlCommandBuilder(adp))
+            //using (DataTable dTable = new DataTable())
+            //{
+            //    // Execute the query to fill the DataTable object
+            //    try
+            //    {
+            //        adp.Fill(dTable);
+            //    }
+            //    catch (Exception e)
+            //    {   // The query failed
+            //        throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
+            //                        "Failed to execute query:\n\n"
+            //                        + selectCmd.CommandText, e);
+            //    }
+            //    // Loop through all traces, and record the values that will be needed to compute the
+            //    // checksum of the ensemble time series.  Note that this does not include the BLOB 
+            //    // of the trace.
+            //    foreach (DataRow row in dTable.Rows)
+            //    {
+            //        ITimeSeriesTrace traceObject = new TSTrace();
+            //        traceObject.TraceNumber = (int)row["TraceNumber"];
+            //        traceObject.Checksum = (byte[])row["Checksum"];
+            //        traceObjects.Add(traceObject);
+            //    }
+            //}
+            //// Compute the new checksum of the ensemble
+            //byte[] checksum = TSBlobCoder.ComputeChecksum(TSDateCalculator.TimeStepUnitCode.Day, 3, nVals,
+            //                         DateTime.Now, DateTime.Now, traceObjects);
+
+
+            // dummy!
+            var random = new Random(DateTime.Now.Millisecond);
+            byte[] checksum = new byte[16];
+            random.NextBytes(checksum);
+
+            // 
+            // Write the new value to the parameters table
+            // Supply parameter values for the SqlCommand
+            updateCmd.Parameters["@Id"].Value = id;
+            updateCmd.Parameters["@Checksum"].Value = checksum;
+            updateCmd.ExecuteNonQuery();
+        }
+
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         /// <summary>
         /// Method returns a string for querying the database table and returning an empty result set.
         /// The subsequent query can be used to create an empty DataTable object, with the necessary
