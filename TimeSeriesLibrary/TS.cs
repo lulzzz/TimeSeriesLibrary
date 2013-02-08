@@ -540,7 +540,7 @@ namespace TimeSeriesLibrary
             if(doWriteToDB)
                 WriteTrace(traceObject);
             // update the checksum in the parameters table
-            UpdateParametersChecksum(doWriteToDB, tsImport);
+            //UpdateParametersChecksum(doWriteToDB, tsImport);
         }
         /// <summary>
         /// This method writes a new record to the trace table for an irregular time step series.
@@ -582,7 +582,7 @@ namespace TimeSeriesLibrary
             if (doWriteToDB)
                 WriteTrace(traceObject);
             // update the checksum in the parameters table
-            UpdateParametersChecksum(doWriteToDB, tsImport);
+            //UpdateParametersChecksum(doWriteToDB, tsImport);
         }
         /// <summary>
         /// This method writes the data contained in the traceObject parameter into a single
