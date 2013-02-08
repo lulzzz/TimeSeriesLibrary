@@ -20,6 +20,10 @@ namespace TimeSeriesLibrary
         /// </summary>
         private SqlConnection Connx;
         /// <summary>
+        /// Object that manages connection objects for TimeSeriesLibrary
+        /// </summary>
+        private TSConnection TSConnection;
+        /// <summary>
         /// name of the database table that stores parameters of this time series
         /// </summary>
         private String ParametersTableName;
@@ -109,12 +113,14 @@ namespace TimeSeriesLibrary
         /// Class constructor that should be used if the TS object will read or write to database
         /// </summary>
         /// <param name="connx">SqlConnection object that this object will use</param>
+        /// <param name="tsConnection">Object that manages connection objects for TimeSeriesLibrary</param>
         /// <param name="paramTableName">Name of the table in the database that stores this object's record</param>
         /// <param name="traceTableName">The name of the database table that stores the BLOB for a single trace</param>
-        public TS(SqlConnection connx, String paramTableName, String traceTableName)
+        public TS(SqlConnection connx, TSConnection tsConnection, String paramTableName, String traceTableName)
         {
             // Store the method parameters in class fields
             Connx = connx;
+            TSConnection = tsConnection;
             ParametersTableName = paramTableName;
             TraceTableName = traceTableName;
             // Mark this time series as uninitialized
@@ -198,25 +204,12 @@ namespace TimeSeriesLibrary
         /// subsequent query will raise an exception if any fields are missing.
         /// </summary>
         /// <returns>The SQL command that returns an empty resultset</returns>
-        String BuildStringForEmptyParametersDataTable()
+        private String BuildStringForEmptyParametersDataTable()
         {
             // note: by including 'where 1=0', we ensure that an empty resultset will be returned.
             return String.Format("select" +
                                  "  Id, TimeStepUnit, TimeStepQuantity, TimeStepCount, StartDate, EndDate, Checksum" +
                                  "  from {0} where 1=0", ParametersTableName);
-        }
-        /// <summary>
-        /// Method returns a string for querying the database table and returning an empty result set.
-        /// The subsequent query can be used to create an empty DataTable object, with the necessary
-        /// columns defined.  Because the query names all required fields of the database table, the
-        /// subsequent query will raise an exception if any fields are missing.
-        /// </summary>
-        /// <returns>The SQL command that returns an empty resultset</returns>
-        String BuildStringForEmptyTraceDataTable()
-        {
-            // note: by including 'where 1=0', we ensure that an empty resultset will be returned.
-            return String.Format("select TraceNumber, ValueBlob, TimeSeries_Id, Checksum" +
-                                 "  from {0} where 1=0", TraceTableName);
         }
         #endregion
 
@@ -599,43 +592,35 @@ namespace TimeSeriesLibrary
         /// <param name="traceObject"></param>
         private unsafe void WriteTrace(ITimeSeriesTrace traceObject)
         {
-            // SQL statement that gives us a resultset for the DataTable object.  Note that
-            // this query is rigged so that it will always return 0 records.  This is because
-            // we only want the resultset to define the fields of the DataTable object.
-            String comm = BuildStringForEmptyTraceDataTable();
-            // SqlDataAdapter object will use the query to fill the DataTable
-            using (SqlDataAdapter adp = new SqlDataAdapter(comm, Connx))
-            {
-                // SqlCommandBuilder object must be instantiated in order for us to call
-                // the Update method of the SqlDataAdapter.  Interestingly, we only need to
-                // instantiate this object--we don't need to use it in any other way.
-                using (SqlCommandBuilder bld = new SqlCommandBuilder(adp))
-                {
-                    DataTable dTable = new DataTable();
-                    // Execute the query to fill the DataTable object
-                    try
-                    {
-                        adp.Fill(dTable);
-                    }
-                    catch (Exception e)
-                    {   // The query failed
-                        throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
-                                        "Table '" + TraceTableName + "' could not be opened using query:\n\n" + comm, e);
-                    }
-                    // DataRow object represents the current row of the DataTable object, which in turn
-                    // represents a record that we will add to the database table.
-                    DataRow currentRow = dTable.NewRow();
+            String keyString = "WriTrc";
+            SqlCommand sqlCommand;
+            // Find a SqlCommand that was previously cached for this purpose
+            var commandContainer = TSConnection.PreparedSqlCommands
+                    .Where(o => o.TableName == TraceTableName 
+                                && o.KeyString == keyString 
+                                && o.SqlConnection == Connx).FirstOrDefault();
+            // If no SqlCommand has been created yet
+            if (commandContainer == null)
+                // Then create one.
+                sqlCommand = CreateWriteTraceSqlCommand(keyString);
+            else
+                sqlCommand = commandContainer.SqlCommand;
 
-                    // transfer all of the data into the DataRow object
-                    currentRow["TimeSeries_Id"] = Id;
-                    currentRow["TraceNumber"] = traceObject.TraceNumber;
-                    currentRow["ValueBlob"] = traceObject.ValueBlob;
-                    currentRow["Checksum"] = traceObject.Checksum;
-                    dTable.Rows.Add(currentRow);
-                    // Save the DataRow object to the database
-                    adp.Update(dTable);
-                    dTable.Dispose();
-                }
+            // Supply parameter values for the SqlCommand
+            sqlCommand.Parameters["@TimeSeries_Id"].Value = Id;
+            sqlCommand.Parameters["@TraceNumber"].Value = traceObject.TraceNumber;
+            sqlCommand.Parameters["@ValueBlob"].Value = traceObject.ValueBlob;
+            sqlCommand.Parameters["@Checksum"].Value = traceObject.Checksum;
+            // Execute the SQL command
+            try
+            {
+                sqlCommand.ExecuteNonQuery();
+            }
+            catch (Exception e)
+            {   // The query failed
+                throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
+                                "Table '" + TraceTableName + "' could not be opened using query:\n\n"
+                                + sqlCommand.CommandText, e);
             }
         }
         /// <summary>
@@ -661,40 +646,50 @@ namespace TimeSeriesLibrary
             {
                 //
                 // Query the Trace table to get all traces for this time series
+                String keyString = "SelTrcChk";
+                SqlCommand sqlCommand;
+                // Find a SqlCommand that was previously cached for this purpose
+                var commandContainer = TSConnection.PreparedSqlCommands
+                        .Where(o => o.TableName == TraceTableName
+                                    && o.KeyString == keyString
+                                    && o.SqlConnection == Connx).FirstOrDefault();
+                // If no SqlCommand has been created yet
+                if (commandContainer == null)
+                    // Then create one.
+                    sqlCommand = CreateSelectTraceChecksumSqlCommand(keyString);
+                else
+                    sqlCommand = commandContainer.SqlCommand;
+                // Supply parameter values for the SqlCommand
+                sqlCommand.Parameters["@TimeSeries_Id"].Value = Id;
 
-                // SQL statement that gives us a resultset for the DataTable object.
-                comm = String.Format("select TraceNumber, Checksum" +
-                                     "  from {0} where TimeSeries_Id={1} order by TraceNumber", TraceTableName, Id);
                 // SqlDataAdapter object will use the query to fill the DataTable
-                using (SqlDataAdapter adp = new SqlDataAdapter(comm, Connx))
+                using (SqlDataAdapter adp = new SqlDataAdapter(sqlCommand))
+                // SqlCommandBuilder object must be instantiated in order for us to call
+                // the Fill method of the SqlDataAdapter.  Interestingly, we only need to
+                // instantiate this object--we don't need to use it in any other way.
+                using (SqlCommandBuilder bld = new SqlCommandBuilder(adp))
+                using (DataTable dTable = new DataTable())
                 {
-                    // SqlCommandBuilder object must be instantiated in order for us to call
-                    // the Update method of the SqlDataAdapter.  Interestingly, we only need to
-                    // instantiate this object--we don't need to use it in any other way.
-                    using (SqlCommandBuilder bld = new SqlCommandBuilder(adp))
+                    // Execute the query to fill the DataTable object
+                    try
                     {
-                        DataTable dTable = new DataTable();
-                        // Execute the query to fill the DataTable object
-                        try
-                        {
-                            adp.Fill(dTable);
-                        }
-                        catch (Exception e)
-                        {   // The query failed
-                            throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
-                                            "Table '" + ParametersTableName + "' could not be opened using query:\n\n" + comm, e);
-                        }
-                        // Loop through all traces, and record the values that will be needed to compute the
-                        // checksum of the ensemble time series.  Note that this does not include the BLOB 
-                        // of the trace.
-                        foreach (DataRow row in dTable.Rows)
-                        {
-                            ITimeSeriesTrace traceObject = new TSTrace();
-                            traceObject.TraceNumber = (int)row["TraceNumber"];
-                            traceObject.Checksum = (byte[])row["Checksum"];
-                            traceObjects.Add(traceObject);
-                        }
-                        dTable.Dispose();
+                        adp.Fill(dTable);
+                    }
+                    catch (Exception e)
+                    {   // The query failed
+                        throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
+                                        "Table '" + TraceTableName + "' could not be opened using query:\n\n"
+                                        + sqlCommand.CommandText, e);
+                    }
+                    // Loop through all traces, and record the values that will be needed to compute the
+                    // checksum of the ensemble time series.  Note that this does not include the BLOB 
+                    // of the trace.
+                    foreach (DataRow row in dTable.Rows)
+                    {
+                        ITimeSeriesTrace traceObject = new TSTrace();
+                        traceObject.TraceNumber = (int)row["TraceNumber"];
+                        traceObject.Checksum = (byte[])row["Checksum"];
+                        traceObjects.Add(traceObject);
                     }
                 }
             }
@@ -703,14 +698,97 @@ namespace TimeSeriesLibrary
                                      BlobStartDate, BlobEndDate, traceObjects);
             if (doWriteToDB)
             {
-                // write the new checksum to the parameters table
-                comm = String.Format("update {0} set Checksum={1} where Id={2}",
-                                ParametersTableName, ByteArrayToString(Checksum), Id);
-                using (SqlCommand sqlCommand = new SqlCommand(comm, Connx))
-                {
-                    sqlCommand.ExecuteNonQuery();
-                }
+                // 
+                // Write the new value to the parameters table
+                String keyString = "UpdChk";
+                SqlCommand sqlCommand;
+                // Find a SqlCommand that was previously cached for this purpose
+                var commandContainer = TSConnection.PreparedSqlCommands
+                        .Where(o => o.TableName == TraceTableName
+                                    && o.KeyString == keyString
+                                    && o.SqlConnection == Connx).FirstOrDefault();
+                // If no SqlCommand has been created yet
+                if (commandContainer == null)
+                    // Then create one.
+                    sqlCommand = CreateUpdateChecksumSqlCommand(keyString);
+                else
+                    sqlCommand = commandContainer.SqlCommand;
+                // Supply parameter values for the SqlCommand
+                sqlCommand.Parameters["@Id"].Value = Id;
+                sqlCommand.Parameters["@Checksum"].Value = Checksum;
+                sqlCommand.ExecuteNonQuery();
             }
+        }
+        /// <summary>
+        /// Create a new SqlCommand object for the WriteTrace method, so that the
+        /// SqlCommand can be cached and reused by the database system.
+        /// </summary>
+        private SqlCommand CreateWriteTraceSqlCommand(String keyString)
+        {
+            // Instantiate the SqlCommand object using a SQL INSERT command
+            SqlCommand command = new SqlCommand("INSERT INTO " + TraceTableName
+                                + "(TimeSeries_Id, TraceNumber, ValueBlob, Checksum) "
+                                + "VALUES (@TimeSeries_Id, @TraceNumber, @ValueBlob, @Checksum)", Connx);
+
+            // Add parameters to the command
+            command.Parameters.Add("@TimeSeries_Id", SqlDbType.Int);
+            command.Parameters.Add("@TraceNumber", SqlDbType.Int);
+            command.Parameters.Add("@ValueBlob", SqlDbType.VarBinary, -1);
+            command.Parameters.Add("@Checksum", SqlDbType.Binary, 16);
+
+            // add the new command to a container that keeps the command object wrapped together
+            // with identifying information.  Note that the container's constructor will call
+            // the command's Prepare method.
+            var container = new TSSqlCommandContainer(0, Connx, TraceTableName, keyString, command);
+            // The TSConnection manager object will keep this container in a collection
+            TSConnection.PreparedSqlCommands.Add(container);
+
+            return command;
+        }
+        /// <summary>
+        /// Create a new SqlCommand object for the UpdateParametersChecksum method, so that the
+        /// SqlCommand can be cached and reused by the database system.
+        /// </summary>
+        private SqlCommand CreateSelectTraceChecksumSqlCommand(String keyString)
+        {
+            // Instantiate the SqlCommand object using a SQL INSERT command
+            SqlCommand command = new SqlCommand("SELECT  TraceNumber, Checksum from "
+                        + TraceTableName+" where TimeSeries_Id=@TimeSeries_Id order by TraceNumber", Connx);
+
+            // Add parameters to the command
+            command.Parameters.Add("@TimeSeries_Id", SqlDbType.Int);
+
+            // add the new command to a container that keeps the command object wrapped together
+            // with identifying information.  Note that the container's constructor will call
+            // the command's Prepare method.
+            var container = new TSSqlCommandContainer(0, Connx, TraceTableName, keyString, command);
+            // The TSConnection manager object will keep this container in a collection
+            TSConnection.PreparedSqlCommands.Add(container);
+
+            return command;
+        }
+        /// <summary>
+        /// Create a new SqlCommand object for the UpdateParametersChecksum method, so that the
+        /// SqlCommand can be cached and reused by the database system.
+        /// </summary>
+        private SqlCommand CreateUpdateChecksumSqlCommand(String keyString)
+        {
+            // Instantiate the SqlCommand object using a SQL INSERT command
+            SqlCommand command = new SqlCommand("UPDATE " + ParametersTableName
+                                    + " SET Checksum=@Checksum WHERE Id=@Id", Connx);
+
+            // Add parameters to the command
+            command.Parameters.Add("@Checksum", SqlDbType.Binary, 16);
+            command.Parameters.Add("@Id", SqlDbType.Int);
+
+            // add the new command to a container that keeps the command object wrapped together
+            // with identifying information.  Note that the container's constructor will call
+            // the command's Prepare method.
+            var container = new TSSqlCommandContainer(0, Connx, TraceTableName, keyString, command);
+            // The TSConnection manager object will keep this container in a collection
+            TSConnection.PreparedSqlCommands.Add(container);
+
+            return command;
         }
         #endregion
 

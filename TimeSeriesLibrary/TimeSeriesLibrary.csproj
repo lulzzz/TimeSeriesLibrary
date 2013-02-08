@@ -64,6 +64,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TSDateCalculator.cs" />
     <Compile Include="TSParameters.cs" />
+    <Compile Include="TSSqlCommandContainer.cs" />
     <Compile Include="TSTrace.cs" />
     <Compile Include="TSXml.cs" />
   </ItemGroup>

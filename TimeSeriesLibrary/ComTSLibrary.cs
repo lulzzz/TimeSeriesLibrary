@@ -248,7 +248,7 @@ namespace TimeSeriesLibrary
                 // Get the connection that we'll pass along.
                 SqlConnection connx = GetConnectionFromId(connectionNumber);
                 // Construct new TS object with SqlConnection object and table name
-                TS ts = new TS(connx, paramTableName, traceTableName);
+                TS ts = new TS(connx, TSLib.ConnxObject, paramTableName, traceTableName);
 
                 return ts.ReadValuesRegular(id, traceNumber, nReqValues, valueArray, reqStartDate, reqEndDate);
             }
@@ -292,7 +292,7 @@ namespace TimeSeriesLibrary
                 // Get the connection that we'll pass along.
                 SqlConnection connx = GetConnectionFromId(connectionNumber);
                 // Construct new TS object with SqlConnection object and table name
-                TS ts = new TS(connx, paramTableName, traceTableName);
+                TS ts = new TS(connx, TSLib.ConnxObject, paramTableName, traceTableName);
 
                 int nValuesRead = 0;
                 // Read the parameters of the time series so that we'll know if it's regular or irregular
@@ -387,7 +387,7 @@ namespace TimeSeriesLibrary
                 // Get the connection that we'll pass along.
                 SqlConnection connx = GetConnectionFromId(connectionNumber);
                 // Construct new TS object with SqlConnection object and table name
-                TS ts = new TS(connx, paramTableName, traceTableName);
+                TS ts = new TS(connx, TSLib.ConnxObject, paramTableName, traceTableName);
 
                 return ts.WriteParametersRegular(true, null, timeStepUnit, timeStepQuantity,
                                 nOutValues, outStartDate,
@@ -428,7 +428,7 @@ namespace TimeSeriesLibrary
                 // Get the connection that we'll pass along.
                 SqlConnection connx = GetConnectionFromId(connectionNumber);
                 // Construct new TS object with SqlConnection object and table name
-                TS ts = new TS(connx, paramTableName, traceTableName);
+                TS ts = new TS(connx, TSLib.ConnxObject, paramTableName, traceTableName);
 
                 ts.WriteTraceRegular(id, true, null, traceNumber, valueArray);
             }
@@ -473,7 +473,7 @@ namespace TimeSeriesLibrary
                 // Get the connection that we'll pass along.
                 SqlConnection connx = GetConnectionFromId(connectionNumber);
                 // Construct new TS object with SqlConnection object and table name
-                TS ts = new TS(connx, paramTableName, traceTableName);
+                TS ts = new TS(connx, TSLib.ConnxObject, paramTableName, traceTableName);
 
                 return ts.WriteParametersIrregular(true, null, nOutValues, outStartDate, outEndDate,
                                 extraParamNames, extraParamValues);
@@ -513,7 +513,7 @@ namespace TimeSeriesLibrary
                 // Get the connection that we'll pass along.
                 SqlConnection connx = GetConnectionFromId(connectionNumber);
                 // Construct new TS object with SqlConnection object and table name
-                TS ts = new TS(connx, paramTableName, traceTableName);
+                TS ts = new TS(connx, TSLib.ConnxObject, paramTableName, traceTableName);
 
                 ts.WriteTraceIrregular(id, true, null, traceNumber, dateValueArray);
             }
@@ -547,7 +547,7 @@ namespace TimeSeriesLibrary
                 // Get the connection that we'll pass along.
                 SqlConnection connx = GetConnectionFromId(connectionNumber);
                 // Construct new TS object with SqlConnection object and table name
-                TS ts = new TS(connx, paramTableName, traceTableName);
+                TS ts = new TS(connx, TSLib.ConnxObject, paramTableName, traceTableName);
 
                 return ts.DeleteSeries(id);
             }
@@ -581,7 +581,7 @@ namespace TimeSeriesLibrary
                 // Get the connection that we'll pass along.
                 SqlConnection connx = GetConnectionFromId(connectionNumber);
                 // Construct new TS object with SqlConnection object and table name
-                TS ts = new TS(connx, paramTableName, traceTableName);
+                TS ts = new TS(connx, TSLib.ConnxObject, paramTableName, traceTableName);
 
                 return ts.DeleteMatchingSeries(whereClause);
             }
@@ -619,7 +619,7 @@ namespace TimeSeriesLibrary
             // Get the connection that we'll pass along.
             SqlConnection connx = GetConnectionFromId(connectionNumber);
             // Construct new TSXml object with SqlConnection object and table name
-            TSXml tsXml = new TSXml(connx, paramTableName, traceTableName);
+            TSXml tsXml = new TSXml(connx, TSLib.ConnxObject, paramTableName, traceTableName);
 
             return tsXml.ReadAndStore(xmlFileName, null, tsImportList, true, false);
         }
@@ -666,7 +666,7 @@ namespace TimeSeriesLibrary
             // Get the connection that we'll pass along.
             SqlConnection connx = GetConnectionFromId(connectionNumber);
             // Construct new TS object with SqlConnection object and table name
-            TS ts = new TS(connx, paramTableName, traceTableName);
+            TS ts = new TS(connx, TSLib.ConnxObject, paramTableName, traceTableName);
 
             ts.FillDateArray(id, nReqValues, dateArray, reqStartDate);
         }

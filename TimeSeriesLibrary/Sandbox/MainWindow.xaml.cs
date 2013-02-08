@@ -321,7 +321,7 @@ namespace Sandbox
             for (i = 0; i < nIter; i++)
             {
                 TimeLabelBlob.Content = String.Format("Iteration {0}", i);
-                TS ts = new TS(tsLib.GetConnectionFromId(connNumber),
+                TS ts = new TS(tsLib.GetConnectionFromId(connNumber), tsLib.ConnxObject,
                         "OutputTimeSeries", "OutputTimeSeriesTraces");
                 int id = ts.WriteParametersRegular(true, null, (short)TSDateCalculator.TimeStepUnitCode.Day, 1, nVals, StartDate,
                         extraParamNames, extraParamValues);

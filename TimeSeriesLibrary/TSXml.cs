@@ -18,6 +18,7 @@ namespace TimeSeriesLibrary
         private String TableName;
         private String TraceTableName;
         private SqlConnection Connx;
+        private TSConnection TSConnection;
 
         private String reportedFileName;
         public String ReportedFileName
@@ -38,9 +39,10 @@ namespace TimeSeriesLibrary
         /// <param name="connx">SqlConnection object that this object will use</param>
         /// <param name="tableName">Name of the table in the database that stores this object's records</param>
         /// <param name="traceTableName">The name of the database table that stores the BLOB for a single trace</param>
-        public TSXml(SqlConnection connx, String tableName, String traceTableName)
+        public TSXml(SqlConnection connx, TSConnection tsConnection, String tableName, String traceTableName)
         {
             Connx = connx;
+            TSConnection = tsConnection;
             TableName = tableName;
             TraceTableName = traceTableName;
         }
@@ -298,7 +300,7 @@ namespace TimeSeriesLibrary
                             // IRREGULAR TIME SERIES
 
                             // The TS object is used to save one record to the database table
-                            TS ts = new TS(Connx, TableName, TraceTableName);
+                            TS ts = new TS(Connx, TSConnection, TableName, TraceTableName);
                             foreach (KeyValuePair<int, String> keyValuePair in DataStrings)
                             {
                                 int traceNumber = keyValuePair.Key;
@@ -343,7 +345,7 @@ namespace TimeSeriesLibrary
                             // REGULAR TIME SERIES
 
                             // The TS object is used to save one record to the database table
-                            TS ts = new TS(Connx, TableName, TraceTableName);
+                            TS ts = new TS(Connx, TSConnection, TableName, TraceTableName);
                             foreach (KeyValuePair<int, String> keyValuePair in DataStrings)
                             {
                                 int traceNumber = keyValuePair.Key;
