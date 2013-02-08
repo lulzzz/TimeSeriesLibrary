@@ -620,7 +620,7 @@ namespace TimeSeriesLibrary
                     catch (Exception e)
                     {   // The query failed
                         throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
-                                        "Table '" + ParametersTableName + "' could not be opened using query:\n\n" + comm, e);
+                                        "Table '" + TraceTableName + "' could not be opened using query:\n\n" + comm, e);
                     }
                     // DataRow object represents the current row of the DataTable object, which in turn
                     // represents a record that we will add to the database table.
