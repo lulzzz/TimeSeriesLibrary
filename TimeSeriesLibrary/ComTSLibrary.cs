@@ -61,14 +61,14 @@ namespace TimeSeriesLibrary
         ////[ComVisible(true)]
         ////int XmlImportWithList(int connectionNumber, string paramTableName, string xmlFileName, System.Collections.Generic.List<TSImport> tsImportList);
 
-        //[ComVisible(true)]
-        //DateTime IncrementDate(DateTime startDate, short unit, short stepSize, int numSteps);
+        [ComVisible(true)]
+        DateTime IncrementDate(DateTime startDate, short unit, short stepSize, int numSteps);
         //[ComVisible(true)]
         //void FillDateArray(short timeStepUnit, short timeStepQuantity, int nReqValues, DateTime[] dateArray, DateTime reqStartDate);
         //[ComVisible(true)]
         //void FillSeriesDateArray(int connectionNumber, string paramTableName, String traceTableName, int id, int nReqValues, DateTime[] dateArray, DateTime reqStartDate);
-        //[ComVisible(true)]
-        //int CountTimeSteps(DateTime startDate, DateTime endDate, short unit, short stepSize);
+        [ComVisible(true)]
+        int CountTimeSteps(DateTime startDate, DateTime endDate, short unit, short stepSize);
     } 
     
     /// <summary>
