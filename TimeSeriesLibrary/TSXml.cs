@@ -64,10 +64,6 @@ namespace TimeSeriesLibrary
         /// list 'tsImportList', which records metadata of the timeseries that is not processed
         /// directly by TimeSeriesLibrary.  Therefore, the process that calls TimeSeriesLibrary
         /// can process tsImportList to complete the importation of the timeseries.
-        /// 
-        /// NOTE: The method will currently not connect more than one trace to a time series.
-        /// It effectively assumes that every time series contains one trace.
-        /// 
         /// </summary>
         /// <param name="xmlFileName">Name of the file that will be read.  If xmlText is null,
         /// then this parameter must be non-null, and vice-versa.</param>
