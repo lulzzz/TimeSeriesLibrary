@@ -520,8 +520,7 @@ namespace TimeSeriesLibrary
             if (tsImport != null)
                 tsImport.TraceList.Add(traceObject);
             // Convert the array of double values into a byte array...a BLOB
-            traceObject.ValueBlob = TSBlobCoder.ConvertArrayToBlobRegular
-                                        (valueArray, CompressionCode, traceObject);
+            TSBlobCoder.ConvertArrayToBlobRegular(valueArray, CompressionCode, traceObject);
 
             // Write a new record to the trace table
             if(doWriteToDB)
@@ -567,8 +566,7 @@ namespace TimeSeriesLibrary
             if (tsImport != null)
                 tsImport.TraceList.Add(traceObject);
             // Convert the array of double values into a byte array...a BLOB
-            traceObject.ValueBlob = TSBlobCoder.ConvertArrayToBlobIrregular
-                                        (dateValueArray, CompressionCode, traceObject);
+            TSBlobCoder.ConvertArrayToBlobIrregular(dateValueArray, CompressionCode, traceObject);
 
             // Write a new record to the trace table
             if (doWriteToDB)
@@ -929,96 +927,6 @@ namespace TimeSeriesLibrary
         {
             string1 += ", " + append1;
             string2 += ", " + append2;
-        }
-        #endregion
-
-
-
-
-    // DELETE THE METHODS BELOW!!
-
-        #region WriteValuesRegular() Method
-        // DELETEME ERASEME
-        /// <summary>
-        /// Method writes the given array of values as a timeseries to the database with the given
-        /// start date and time step descriptors.
-        /// </summary>
-        /// <param name="doWriteToDB">true if the method should actually save the timeseries to the database</param>
-        /// <param name="tsImport">TSImport object into which the method will record values that it has computed.
-        /// If this parameter is null, then the method will skip the recording of such paramters to an object.</param>
-        /// <param name="timeStepUnit">TSDateCalculator.TimeStepUnitCode value for Minute,Hour,Day,Week,Month, or Year</param>
-        /// <param name="timeStepQuantity">The number of the given unit that defines the time step.
-        /// For instance, if the time step is 6 hours long, then this value is 6.</param>
-        /// <param name="nOutValues">The number of values in the array to be written to the database</param>
-        /// <param name="outStartDate">The date of the first time step</param>
-        /// <param name="valueArray">The array of values to be written to the database</param>
-        /// <returns>ID value identifying the database record that was created</returns>
-        public unsafe int WriteValuesRegular(
-                    bool doWriteToDB, TSImport tsImport,
-                    int traceNumber,
-                    short timeStepUnit, short timeStepQuantity,
-                    int nOutValues, DateTime outStartDate, double[] valueArray)
-        {
-            throw new NotImplementedException();
-            /*
-                        ErrorCheckWriteValues(doWriteToDB, tsImport);
-                        // The method's parameters are used to compute the meta-parameters of this time series
-                        TSParameters.SetParametersRegular(
-                                (TSDateCalculator.TimeStepUnitCode)timeStepUnit, timeStepQuantity, 
-                                nOutValues, outStartDate);
-
-                        ITimeSeriesTrace traceObject = new TSTrace();
-                        // Convert the array of double values into a byte array...a BLOB
-                        traceObject.ValueBlob = TSBlobCoder.ConvertArrayToBlobRegular(TimeStepCount, valueArray, traceObject);
-
-
-                        // WriteValues method will handle all of the database interaction
-                        if (doWriteToDB)
-                            WriteValues(blobData, traceNumber);
-                        // Save the information that this method has computed into a TSImport object
-                        if (tsImport != null)
-                            tsImport.RecordFromTS(this, blobData);
-
-                        return Id;*/
-        }
-        #endregion
-
-        #region WriteValuesIrregular() Method
-        // DELETEME ERASEME
-        /// <summary>
-        /// Method writes the given array of date/value pairs as an irregular timeseries to the database.
-        /// The method determines the start and end date of the timeseries using the given array of 
-        /// date/value pairs.  
-        /// </summary>
-        /// <param name="doWriteToDB">true if the method should actually save the timeseries to the database</param>
-        /// <param name="tsImport">TSImport object into which the method will record values that it has computed.
-        /// <param name="nOutValues">The number of values in the array to be written to the database</param>
-        /// <param name="dateValueArray">The array of values to be written to the database</param>
-        /// <returns>ID value identifying the database record that was created</returns>
-        public unsafe int WriteValuesIrregular(
-                    bool doWriteToDB, TSImport tsImport,
-                    int traceNumber,
-                    int nOutValues, TSDateValueStruct[] dateValueArray)
-        {
-            throw new NotImplementedException();
-            /*
-            ErrorCheckWriteValues(doWriteToDB, tsImport);
-            // The method's parameters are used to compute the meta-parameters of this time series
-            TSParameters.SetParametersIrregular(nOutValues, dateValueArray);
-
-            // Convert the array of double values into a byte array...a BLOB
-            Byte[] blobData = TSBlobCoder.ConvertArrayToBlobIrregular(TimeStepCount, dateValueArray);
-            // compute the Checksum
-            Checksum = TSBlobCoder.ComputeChecksum(TSParameters, blobData);
-
-            // WriteValues method will handle all of the database interaction
-            if (doWriteToDB)
-                return WriteValues(blobData, traceNumber);
-            // Save the information that this method has computed into a TSImport object
-            if (tsImport != null)
-                tsImport.RecordFromTS(this, blobData);
-
-            return Id;*/
         }
         #endregion
 

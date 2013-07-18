@@ -141,7 +141,7 @@ namespace TimeSeriesLibrary
                     = DecompressBlob(blobData, timeStepCount * sizeof(TSDateValueStruct), compressionCode);
 
             // MemoryStream and BinaryReader objects enable bulk copying of data from the BLOB
-            using (MemoryStream blobStream = new MemoryStream(blobData))
+            using (MemoryStream blobStream = new MemoryStream(decompressedBlobData))
             using (BinaryReader blobReader = new BinaryReader(blobStream))
             {
                 // How many elements of 'TSDateValueStruct' are in the BLOB?
@@ -184,14 +184,14 @@ namespace TimeSeriesLibrary
         #region Method ConvertArrayToBlobRegular
         /// <summary>
         /// This method converts the given array of time series values (array of double precision
-        /// floats) to a BLOB (byte array).  It also sets the computes the checksum
-        /// from the resultant BLOB, and sets the Checksum property of the given ITimeSeriesTrace
+        /// floats) to a BLOB (byte array).  It also sets the computes the checksum from the resultant
+        /// BLOB, and then sets the Checksum and ValueBlob properties of the given ITimeSeriesTrace
         /// object accordingly.
         /// </summary>
         /// <param name="valueArray">The array of time series values to convert into a BLOB</param>
         /// <param name="compressionCode">a generation number that indicates what compression technique to use</param>
         /// <param name="traceObject">object whose TraceNumber property will be used to compute the checksum,
-        /// and whose Checksum property will be set accordingly</param>
+        /// and whose properties will be assigned by this method</param>
         /// <returns>The BLOB that is created from valueArray</returns>
         public static unsafe byte[] ConvertArrayToBlobRegular(
                     double[] valueArray, int compressionCode, ITimeSeriesTrace traceObject)
@@ -208,11 +208,18 @@ namespace TimeSeriesLibrary
             // demonstrated that the checksum would be computed faster on the compressed BLOB.
             // However, this could make it difficult to upgrade the compression algorithm in the
             // future, because the checksum value would be dependent on the compression algorithm.
-            traceObject.Checksum = ComputeTraceChecksum(traceObject.TraceNumber, blobData);
-
-            // the BLOB is stored in a compressed form, so our last step is to compress it
-            Byte[] compressedBlobData = CompressBlob(blobData, compressionCode);
-            return compressedBlobData;
+            Byte[] checksum = ComputeTraceChecksum(traceObject.TraceNumber, blobData);
+            Boolean checksumChanged = (MurmurHash.ByteArraysAreEqual(traceObject.Checksum, checksum) == false);
+            // If the checksum did not change, then we will not assign any properties to the traceObject.
+            // The result will be that we will return the original ValueBlob.  If the checksum did change,
+            // then we compute a new compressed ValueBlob and assign the new values.
+            if (checksumChanged)
+            {
+                traceObject.Checksum = checksum;
+                // the BLOB is stored in a compressed form, so our last step is to compress it
+                traceObject.ValueBlob = CompressBlob(blobData, compressionCode);
+            }
+            return traceObject.ValueBlob;
         } 
         #endregion
 
@@ -220,14 +227,14 @@ namespace TimeSeriesLibrary
         #region Method ConvertArrayToBlobIrregular
         /// <summary>
         /// This method converts the given array of time series values (date/value pairs stored in 
-        /// TSDateValueStruct) to a BLOB (byte array).  It also sets the computes the checksum
-        /// from the resultant BLOB, and sets the Checksum property of the given ITimeSeriesTrace
-        /// object accordingly.
+        /// TSDateValueStruct) to a BLOB (byte array).  It also sets the computes the checksum from the 
+        /// resultant BLOB, and then sets the Checksum and ValueBlob properties of the given 
+        /// ITimeSeriesTrace object accordingly.
         /// </summary>
         /// <param name="dateValueArray">The array of time series values to convert into a BLOB</param>
         /// <param name="compressionCode">a generation number that indicates what compression technique to use</param>
         /// <param name="traceObject">object whose TraceNumber property will be used to compute the checksum,
-        /// and whose Checksum property will be set accordingly</param>
+        /// and whose properties will be assigned by this method</param>
         /// <returns>The BLOB that is created from dateValueArray</returns>
         public static unsafe byte[] ConvertArrayToBlobIrregular(
                     TSDateValueStruct[] dateValueArray, int compressionCode, ITimeSeriesTrace traceObject)
@@ -254,11 +261,18 @@ namespace TimeSeriesLibrary
             // demonstrated that the checksum would be computed faster on the compressed BLOB.
             // However, this could make it difficult to upgrade the compression algorithm in the
             // future, because the checksum value would be dependent on the compression algorithm.
-            traceObject.Checksum = ComputeTraceChecksum(traceObject.TraceNumber, blobData);
-
-            // the BLOB is stored in a compressed form, so our last step is to compress it
-            Byte[] compressedBlobData = CompressBlob(blobData, compressionCode);
-            return blobData;
+            Byte[] checksum = ComputeTraceChecksum(traceObject.TraceNumber, blobData);
+            Boolean checksumChanged = (MurmurHash.ByteArraysAreEqual(traceObject.Checksum, checksum) == false);
+            // If the checksum did not change, then we will not assign any properties to the traceObject.
+            // The result will be that we will return the original ValueBlob.  If the checksum did change,
+            // then we compute a new compressed ValueBlob and assign the new values.
+            if (checksumChanged)
+            {
+                traceObject.Checksum = checksum;
+                // the BLOB is stored in a compressed form, so our last step is to compress it
+                traceObject.ValueBlob = CompressBlob(blobData, compressionCode);
+            }
+            return traceObject.ValueBlob;
         } 
         #endregion
 

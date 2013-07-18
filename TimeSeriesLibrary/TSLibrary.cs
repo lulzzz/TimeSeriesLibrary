@@ -188,17 +188,19 @@ namespace TimeSeriesLibrary
 
         #region ConvertListToBlob() methods
         /// <summary>
-        /// This method converts a List of TimeSeriesValue objects into a BLOB (byte array) of
-        /// time series values and computes a checksum from the BLOB.  The BLOB and the checksum
-        /// are both stored in the ITimeSeriesTrace parameter.  The TraceNumber property of the
-        /// ITimeSeriesTrace parameter must be set before calling this method.
+        /// This method converts a List of TimeSeriesValue objects into a BLOB (byte array) of 
+        /// time series values and computes a checksum from the BLOB.  This method assigns the new values
+        /// of the ValueBlob, Checksum, EndDate, and TimeStepCount to the object given in the traceObject
+        /// parameter. The TraceNumber property of the traceObject parameter must be set before calling 
+        /// this method.
         /// 
         /// The entire List is converted into the BLOB--i.e., the method does not take any 
         /// parameters for limiting the size of the List that is created.  This method will
         /// throw exceptions if the meta-parameters that are passed in are not consistent
         /// with the List of TimeSeriesValue objects.
         /// </summary>
-        /// <param name="timeStepUnit">TSDateCalculator.TimeStepUnitCode value for Minute,Hour,Day,Week,Month, Year, or Irregular</param>
+        /// <param name="timeStepUnit">TSDateCalculator.TimeStepUnitCode value for 
+        /// Minute, Hour, Day, Week, Month, Year, or Irregular</param>
         /// <param name="timeStepQuantity">The number of the given unit that defines the time step.
         /// For instance, if the time step is 6 hours long, then this value is 6.</param>
         /// <param name="timeStepCount">The number of time steps stored in the BLOB</param>
@@ -227,8 +229,10 @@ namespace TimeSeriesLibrary
             // When compressing, we always use the latest compression method
             compressionCode = TSBlobCoder.currentCompressionCode;
             // Assign properties to the Trace object
-            traceObject.EndDate = blobEndDate;
-            traceObject.TimeStepCount = timeStepCount;
+            if (traceObject.EndDate != blobEndDate)
+                traceObject.EndDate = blobEndDate;
+            if (traceObject.TimeStepCount != timeStepCount)
+                traceObject.TimeStepCount = timeStepCount;
 
             // Convert the List dateValueList into a BLOB.
             if (timeStepUnit == TSDateCalculator.TimeStepUnitCode.Irregular)
@@ -239,8 +243,7 @@ namespace TimeSeriesLibrary
                 // we convert the List of objects to an Array of struct instances.
                 TSDateValueStruct[] dateValueArray = dateValueList.Select(tsv => (TSDateValueStruct)tsv).ToArray();
                 // Let the method in TSBlobCoder class do all the work
-                traceObject.ValueBlob = TSBlobCoder.ConvertArrayToBlobIrregular(dateValueArray,
-                                                compressionCode, traceObject);
+                TSBlobCoder.ConvertArrayToBlobIrregular(dateValueArray, compressionCode, traceObject);
             }
             else
             {
@@ -250,8 +253,7 @@ namespace TimeSeriesLibrary
                 // we convert the List of date/value objects to an Array values.
                 double[] valueArray = dateValueList.Select(dv => dv.Value).ToArray();
                 // Let the method in TSBlobCoder class do all the work
-                traceObject.ValueBlob = TSBlobCoder.ConvertArrayToBlobRegular(valueArray,
-                                                compressionCode, traceObject);
+                TSBlobCoder.ConvertArrayToBlobRegular(valueArray, compressionCode, traceObject);
             }
 
             return traceObject.ValueBlob;
@@ -263,7 +265,8 @@ namespace TimeSeriesLibrary
         /// This method computes a Checksum for the timeseries.  The input to the hash includes
         /// the list of parameters of the time series, and the list of checksums for each of the traces in
         /// the time series ensemble.  The list of the traces' checksums are passed to this method within 
-        /// a list of ITimeSeriesTrace objects.
+        /// a list of ITimeSeriesTrace objects.  This method does not modify the object given in the traceList
+        /// parameter or assign any property values to any of its items.
         /// </summary>
         /// <param name="timeStepUnit">TSDateCalculator.TimeStepUnitCode value for Minute,Hour,Day,Week,Month, Year, or Irregular</param>
         /// <param name="timeStepQuantity">The number of the given unit that defines the time step.
