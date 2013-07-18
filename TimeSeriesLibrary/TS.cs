@@ -45,7 +45,7 @@ namespace TimeSeriesLibrary
         /// </summary>
         public TSParameters TSParameters = new TSParameters();
         /// <summary>
-        /// MD5 Checksum computed from the BLOB and meta-parameters when the timeseries is saved to database.
+        /// Checksum computed from the BLOB and meta-parameters when the timeseries is saved to database.
         /// </summary>
         public Byte[] Checksum;
         #endregion

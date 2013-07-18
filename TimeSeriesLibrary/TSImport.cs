@@ -182,7 +182,7 @@ namespace TimeSeriesLibrary
         /// <summary>
         /// This method copies into this TSImport object:
         ///      the parameters of the time series
-        ///      the MD5 checksum for the entire time series
+        ///      the checksum for the entire time series
         ///      the ID of the database record for the time series.
         /// </summary>
         /// <param name="tsp">The TS object that values will be copied from</param>

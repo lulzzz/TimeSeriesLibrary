@@ -38,7 +38,7 @@ namespace Sandbox
                     ITimeSeriesTrace traceObject = new TSTrace { TraceNumber = 1 };
                     // Convert the array of double values into a byte array...a BLOB
                     traceObject.ValueBlob = TSBlobCoder.ConvertArrayToBlobRegular
-                                (nVals, valList[i], TSBlobCoder.currentCompressionCode, traceObject);
+                                (valList[i], TSBlobCoder.currentCompressionCode, traceObject);
                     traceObjects.Add(traceObject);
                 }
                 WriteBulkTraces(traceObjects);
@@ -74,7 +74,7 @@ namespace Sandbox
                     ITimeSeriesTrace traceObject = new TSTrace { TraceNumber = 1 };
                     // Convert the array of double values into a byte array...a BLOB
                     traceObject.ValueBlob = TSBlobCoder.ConvertArrayToBlobRegular
-                                (nVals, valList[i], TSBlobCoder.currentCompressionCode, traceObject);
+                                (valList[i], TSBlobCoder.currentCompressionCode, traceObject);
                     WriteOneTraceParam(i + 1, traceObject, cmd);
 
                     // update the checksum in the parameters table
@@ -88,7 +88,7 @@ namespace Sandbox
                     ITimeSeriesTrace traceObject = new TSTrace { TraceNumber = 1 };
                     // Convert the array of double values into a byte array...a BLOB
                     traceObject.ValueBlob = TSBlobCoder.ConvertArrayToBlobRegular
-                                (nVals, valList[i], TSBlobCoder.currentCompressionCode, traceObject);
+                                (valList[i], TSBlobCoder.currentCompressionCode, traceObject);
                     WriteOneTrace(traceObject);
                 }
             }

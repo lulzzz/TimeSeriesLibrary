@@ -29,7 +29,7 @@ namespace Sandbox
     /// </summary>
     public partial class MainWindow : Window
     {
-        const int nVals = 30000, nIter = 400;
+        const int nVals = 30000, nIter = 10000;
 
         int connNumber;
         TSLibrary tsLib = new TSLibrary();
@@ -69,7 +69,7 @@ namespace Sandbox
                 //ReadArrayTest();
                 //ReadListTest(true, true);
                 //WriteArrayTest();
-                RunDataTableExp();
+                ChecksumTimer();
                 //DeleteTest();
                 //HashTimer();
                 //CompressionTimeTrial(true, true);
@@ -79,6 +79,53 @@ namespace Sandbox
                 MessageBox.Show(exc.Message);
             }
 
+        }
+
+        void ChecksumTimer()
+        {
+            int i;
+
+            var ts = new TSParameters
+            {
+                BlobStartDate = DateTime.Parse("1/1/2000"),
+                CompressionCode = TSBlobCoder.currentCompressionCode,
+                TimeStepQuantity = 2,
+                TimeStepUnit = TSDateCalculator.TimeStepUnitCode.Day
+            };
+            var traces = new List<ITimeSeriesTrace>();
+
+            for (int traceIndex = 0; traceIndex < 80; traceIndex++)
+            {
+                var iterList = new List<double>();
+                for (int stepIndex = 0; stepIndex < nVals; stepIndex++)
+                {
+                    iterList.Add(1.5 * stepIndex + 0.3373);
+                }
+                var trace = new TSTrace { TraceNumber = traceIndex + 1 };
+                trace.ValueBlob = TSBlobCoder.ConvertArrayToBlobRegular(iterList.ToArray(),
+                                            TSBlobCoder.currentCompressionCode, trace);
+                //trace.Checksum = new Guid().ToByteArray();
+                traces.Add(trace);
+            }
+
+
+            // Start the timer
+            DateTime timerStart = DateTime.Now;
+
+            // Create dummy time series that we can write to the database
+            for (i = 0; i < nIter; i++)
+            {
+                foreach(var trace in traces)
+                {
+                    TSBlobCoder.ComputeTraceChecksum(trace.TraceNumber, trace.ValueBlob);
+                }
+                TSBlobCoder.ComputeChecksum(ts, traces);
+            }
+
+            // Stop the timer
+            DateTime timerEnd = DateTime.Now;
+            TimeSpan timerDiff = timerEnd - timerStart;
+            TimeLabelBlob.Content = String.Format("BLOBWRI --- Iterations: {0};  Duration: {1:hh\\:mm\\:ss\\.f}", i, timerDiff);
         }
 
         void RunDataTableExp()

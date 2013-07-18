@@ -29,7 +29,7 @@ namespace TimeSeriesLibrary
         /// </summary>
         Byte[] ValueBlob { get; set; }
         /// <summary>
-        /// The MD5 checksum computed from the BLOB and trace number
+        /// The checksum computed from the BLOB and trace number
         /// </summary>
         Byte[] Checksum { get; set; }
     }
@@ -58,7 +58,7 @@ namespace TimeSeriesLibrary
         /// </summary>
         public Byte[] ValueBlob { get; set; }
         /// <summary>
-        /// The MD5 checksum computed from the BLOB and trace number
+        /// The checksum computed from the BLOB and trace number
         /// </summary>
         public Byte[] Checksum { get; set; }
     }

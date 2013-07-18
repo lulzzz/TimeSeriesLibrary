@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.IO;
 using System.Security.Cryptography;
+using Oasis.Foundation.Infrastructure;
 
 namespace TimeSeriesLibrary
 {
@@ -183,7 +184,7 @@ namespace TimeSeriesLibrary
         #region Method ConvertArrayToBlobRegular
         /// <summary>
         /// This method converts the given array of time series values (array of double precision
-        /// floats) to a BLOB (byte array).  It also sets the computes the MD5 checksum
+        /// floats) to a BLOB (byte array).  It also sets the computes the checksum
         /// from the resultant BLOB, and sets the Checksum property of the given ITimeSeriesTrace
         /// object accordingly.
         /// </summary>
@@ -219,7 +220,7 @@ namespace TimeSeriesLibrary
         #region Method ConvertArrayToBlobIrregular
         /// <summary>
         /// This method converts the given array of time series values (date/value pairs stored in 
-        /// TSDateValueStruct) to a BLOB (byte array).  It also sets the computes the MD5 checksum
+        /// TSDateValueStruct) to a BLOB (byte array).  It also sets the computes the checksum
         /// from the resultant BLOB, and sets the Checksum property of the given ITimeSeriesTrace
         /// object accordingly.
         /// </summary>
@@ -264,7 +265,7 @@ namespace TimeSeriesLibrary
 
         #region ComputeChecksum() Methods
         /// <summary>
-        /// Method computes an MD5 Checksum for the timeseries.  The input to the MD5 hash includes the 
+        /// Method computes a Checksum for the timeseries.  The input to the hash includes the 
         /// timeseries' BLOB of values, plus a TSParameters object that contains a short string of 
         /// numbers that TimeSeriesLibrary is responsible for keeping in accord with the BLOB.
         /// </summary>
@@ -278,7 +279,7 @@ namespace TimeSeriesLibrary
         }
 
         /// <summary>
-        /// This method computes an MD5 Checksum for the timeseries.  The input to the MD5 hash includes
+        /// This method computes a Checksum for the timeseries.  The input to the hash includes
         /// the list of parameters of the time series, and the list of checksums for each of the traces in
         /// the time series ensemble.  The list of the traces' checksums are passed to this method within 
         /// a list of ITimeSeriesTrace objects.
@@ -293,61 +294,24 @@ namespace TimeSeriesLibrary
                     TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
                     DateTime blobStartDate, List<ITimeSeriesTrace> traceList)
         {
-            // The MD5 Checksum will be computed from two basic parts.  The first part is
-            // the list of the checksums of each trace in the time series.  The second is
-            // the list of parameters that define the time series.  The Checksum will be
-            // computed from these inputs expressed as byte arrays.  The first part--the
-            // checksums of the individual traces--is already stored as a set of byte arrays.
-            // For the second part we must take some extra measures to express the list of
-            // parameters as a byte array.
-
-            // This constant expresses the length of the byte array of parameters.  The
-            // calculation of the constant must be in accord with the parameters that are 
-            // actually assigned into the byte array below.
-            const int LengthOfParamInputForChecksum =
-                sizeof(TSDateCalculator.TimeStepUnitCode) +  // TimeStepUnit
-                sizeof(short) +              // TimeStepQuantity
-                sizeof(int) +                // TimeStepCount
-                8 + 8;                       // StartDate and EndDate
-
             // Error check
             if (timeStepUnit == TSDateCalculator.TimeStepUnitCode.Irregular
                         && timeStepQuantity != 0)
-            {
                 throw new TSLibraryException(ErrCode.Enum.Checksum_Quantity_Nonzero,
                                 "When the time step is irregular, the TimeStepQuantity must equal " +
-                                "zero in order to ensure consistency in the checksum." );
-            }
+                                "zero in order to ensure consistency in the checksum.");
 
-            // Byte array for the series of parameters that are fed into the MD5 algorithm
-            byte[] binArray = new byte[LengthOfParamInputForChecksum];
-            // MemoryStream and BinaryWriter objects allow us to write data into the byte array
+            byte[] binArray = new byte[sizeof(short) * 2 + sizeof(Double) + 16 * traceList.Count];
             using (MemoryStream binStream = new MemoryStream(binArray))
             using (BinaryWriter binWriter = new BinaryWriter(binStream))
             {
-                // Write relevant parameters (not including the BLOB itself) into a short byte array
-
-                // TimeStepUnit
                 binWriter.Write((short)timeStepUnit);
-                // TimeStepQuantity
                 binWriter.Write(timeStepQuantity);
-                // StartDate
                 binWriter.Write(blobStartDate.ToBinary());
+                foreach (var t in traceList.OrderBy(t => t.TraceNumber))
+                    binWriter.Write(t.Checksum);
 
-                // MD5CryptoServiceProvider object has methods to compute the Checksum
-                using (MD5CryptoServiceProvider md5Hasher = new MD5CryptoServiceProvider())
-                {
-                    // make sure that we have a list of traces that is ordered by trace number
-                    List<ITimeSeriesTrace> orderedTraceList = traceList.OrderBy(t => t.TraceNumber).ToList();
-                    // loop through all traces
-                    foreach (ITimeSeriesTrace traceObject in orderedTraceList)
-                        // feed the checksum of the trace into the MD5 hash computer
-                        md5Hasher.TransformBlock(traceObject.Checksum, 0, 16, null, 0);
-                    // feed the short byte array of parameters into the MD5 hash computer
-                    md5Hasher.TransformFinalBlock(binArray, 0, LengthOfParamInputForChecksum);
-                    // return the hash (Checksum) value
-                    return md5Hasher.Hash;
-                }
+                return new MurmurHash().ComputeHash(binArray);
             }
         }
         /// <summary>
@@ -359,30 +323,13 @@ namespace TimeSeriesLibrary
         /// <returns>the Checksum as a byte[16] array</returns>
         public static byte[] ComputeTraceChecksum(int traceNumber, byte[] valueBlob)
         {
-            // The MD5 Checksum will be computed from two byte arrays.  The first byte array contains
-            // the trace number and the second byte array is the time series array itself.
-
-            // Byte array for the series of parameters that are fed into the MD5 algorithm first.
-            byte[] binArray = new byte[sizeof(Int32)];
-            // MemoryStream and BinaryWriter objects allow us to write data into the byte array
+            byte[] binArray = new byte[sizeof(Int32) + valueBlob.Length];
             using (MemoryStream binStream = new MemoryStream(binArray))
             using (BinaryWriter binWriter = new BinaryWriter(binStream))
             {
-                // Write relevant parameters (not including the BLOB itself) into a short byte array
-
-                // Trace Number
                 binWriter.Write(traceNumber);
-
-                // MD5CryptoServiceProvider object has methods to compute the Checksum
-                using (MD5CryptoServiceProvider md5Hasher = new MD5CryptoServiceProvider())
-                {
-                    // feed the short byte array into the MD5 hash computer
-                    md5Hasher.TransformBlock(binArray, 0, sizeof(Int32), binArray, 0);
-                    // feed the BLOB of timeseries values into the MD5 hash computer
-                    md5Hasher.TransformFinalBlock(valueBlob, 0, valueBlob.Length);
-                    // return the hash (Checksum) value
-                    return md5Hasher.Hash;
-                }
+                binWriter.Write(valueBlob);
+                return new MurmurHash().ComputeHash(binArray);
             }
         }
         #endregion

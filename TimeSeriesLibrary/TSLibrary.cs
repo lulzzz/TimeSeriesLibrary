@@ -260,7 +260,7 @@ namespace TimeSeriesLibrary
 
         #region ComputeChecksum method
         /// <summary>
-        /// This method computes an MD5 Checksum for the timeseries.  The input to the MD5 hash includes
+        /// This method computes a Checksum for the timeseries.  The input to the hash includes
         /// the list of parameters of the time series, and the list of checksums for each of the traces in
         /// the time series ensemble.  The list of the traces' checksums are passed to this method within 
         /// a list of ITimeSeriesTrace objects.
