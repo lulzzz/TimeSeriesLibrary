@@ -1,8 +1,11 @@
-﻿using TimeSeriesLibrary;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
-using System.Data.SqlClient;
+﻿using System;
+using System.Linq;
 using System.Data;
+using System.Data.SqlClient;
+using System.Transactions;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Oasis.TestFoundation;
+using TimeSeriesLibrary;
 
 namespace TimeSeriesLibrary_Test
 {
@@ -16,6 +19,7 @@ namespace TimeSeriesLibrary_Test
     [DeploymentItem("lzfx.dll")]
     public unsafe class ComTSLibraryTest
     {
+        TransactionScope _transactionScope;
         static ComTSLibrary _lib;
         static int _connxNumber;
         static SqlConnection _connx;
@@ -84,16 +88,18 @@ namespace TimeSeriesLibrary_Test
         
         //Use TestInitialize to run code before running each test
         //[TestInitialize()]
-        //public void MyTestInitialize()
-        //{
-        //}
-        //
+        [TestInitialize()]
+        public void MyTestInitialize()
+        {
+            _transactionScope = TestHelper.GetNewTransactionScope();
+        }
         //Use TestCleanup to run code after each test has run
-        //[TestCleanup()]
-        //public void MyTestCleanup()
-        //{
-        //}
-        //
+        [TestCleanup()]
+        public void MyTestCleanup()
+        {
+            if (_transactionScope != null)
+                _transactionScope.Dispose();
+        }
         #endregion
 
 
@@ -125,8 +131,6 @@ namespace TimeSeriesLibrary_Test
                 DataRow row = dTable.Rows[0];
                 // 
                 Assert.AreEqual(timeStepQuantity, row.Field<int>("TimeStepQuantity"));
-                Assert.AreEqual(timeStepUnit, row.Field<int>("TimeStepUnit"));
-                Assert.AreEqual(timeStepCount, row.Field<int>("TimeStepCount"));
                 Assert.AreEqual(startDate, row.Field<DateTime>("StartDate"));
                 Assert.AreEqual(0, row.Field<int>("TimeSeriesType"));
                 Assert.AreEqual(1, row.Field<int>("Unit_Id"));
@@ -160,10 +164,7 @@ namespace TimeSeriesLibrary_Test
                 DataRow row = dTable.Rows[0];
                 // 
                 Assert.AreEqual(timeStepQuantity, row.Field<int>("TimeStepQuantity"));
-                Assert.AreEqual(timeStepUnit, row.Field<int>("TimeStepUnit"));
-                Assert.AreEqual(timeStepCount, row.Field<int>("TimeStepCount"));
                 Assert.AreEqual(startDate, row.Field<DateTime>("StartDate"));
-                Assert.AreEqual(endDate, row.Field<DateTime>("EndDate"));
                 Assert.AreEqual(1, row.Field<int>("TimeSeriesType"));
                 Assert.AreEqual(3, row.Field<int>("Unit_Id"));
             }

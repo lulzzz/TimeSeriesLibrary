@@ -97,15 +97,18 @@ namespace TimeSeriesLibrary_Test.Properties {
         
         /// <summary>
         ///   Looks up a localized string similar to &lt;Import&gt;
+        ///  &lt;!--For testing multitrace import--&gt;
+        ///  
         ///	&lt;TimeSeries&gt;
-        ///		&lt;Name&gt;JOEBLOW&lt;/Name&gt;
+        ///		&lt;Name&gt;ManyTrace&lt;/Name&gt;
         ///		&lt;Units&gt;CFS&lt;/Units&gt;
         ///		&lt;TimeSeriesType&gt;PER-CUM&lt;/TimeSeriesType&gt;
         ///		&lt;TraceNumber&gt;2&lt;/TraceNumber&gt;
         ///		&lt;StartDate&gt;10/01/1927 03:09:00&lt;/StartDate&gt;
         ///		&lt;TimeStepUnit&gt;Hour&lt;/TimeStepUnit&gt;
         ///		&lt;TimeStepQuantity&gt;1&lt;/TimeStepQuantity&gt;
-        ///		&lt;Data&gt;
+        ///        &lt;Random&gt;^!@  #()?&lt;/Random&gt;
+        ///      &lt;Data Trace=&quot;1&quot;&gt;
         ///12.3
         ///21.5
         ///32.7
@@ -113,20 +116,60 @@ namespace TimeSeriesLibrary_Test.Properties {
         ///90.1
         ///60.7
         ///50.0
+        ///50.0
         ///20.1
         ///12.4
-        ///		&lt;/Data&gt;
-        ///	&lt;/TimeSeries&gt;
-        ///	&lt;TimeSeries&gt;
-        ///		&lt;Name&gt;BILLBLOW&lt;/Name&gt;
-        ///		&lt;Units&gt;CFS&lt;/Units&gt;
-        ///		&lt;TimeSeriesType&gt;INST-VAL&lt;/TimeSeriesType&gt;
-        ///		&lt;TraceNumber&gt;5&lt;/TraceNumber&gt;
-        ///		&lt;StartDa [rest of string was truncated]&quot;;.
+        ///        &lt;/Data&gt;
+        ///      &lt;Data Trace=&quot;3&quot;&gt;
+        ///32.3
+        ///51.5
+        ///52.7
+        ///99.6
+        ///90.1
+        ///60. [rest of string was truncated]&quot;;.
         /// </summary>
         internal static string test2 {
             get {
                 return ResourceManager.GetString("test2", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to &lt;Import&gt;
+        ///  &lt;!--For testing multitrace import--&gt;
+        ///  
+        ///	&lt;TimeSeries&gt;
+        ///		&lt;Name&gt;ManyTrace&lt;/Name&gt;
+        ///		&lt;Units&gt;CFS&lt;/Units&gt;
+        ///		&lt;TimeSeriesType&gt;PER-CUM&lt;/TimeSeriesType&gt;
+        ///		&lt;TraceNumber&gt;2&lt;/TraceNumber&gt;
+        ///		&lt;StartDate&gt;10/01/1927 03:09:00&lt;/StartDate&gt;
+        ///		&lt;TimeStepUnit&gt;Hour&lt;/TimeStepUnit&gt;
+        ///		&lt;TimeStepQuantity&gt;1&lt;/TimeStepQuantity&gt;
+        ///        &lt;Random&gt;^!@  #()?&lt;/Random&gt;
+        ///      &lt;Data Trace=&quot;1&quot;&gt;
+        ///12.3
+        ///21.5
+        ///32.7
+        ///99.6
+        ///90.1
+        ///60.7
+        ///50.0
+        ///50.0
+        ///20.1
+        ///12.4
+        ///        &lt;/Data&gt;
+        ///      &lt;Data Trace=&quot;3&quot;&gt;
+        ///32.3
+        ///51.5
+        ///52.7
+        ///99.6
+        ///90.1
+        ///60. [rest of string was truncated]&quot;;.
+        /// </summary>
+        internal static string test3 {
+            get {
+                return ResourceManager.GetString("test3", resourceCulture);
             }
         }
     }

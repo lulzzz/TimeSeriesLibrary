@@ -321,11 +321,12 @@ namespace TimeSeriesLibrary
                                 {
                                     // Write parameters to the database and record values in the TSImport object
                                     ts.WriteParametersIrregular(shouldStoreToDatabase, tsImport,
-                                            dateValueArray.Count(), StartDate, dateValueArray.Last().Date, null, null);
+                                            dateValueArray.Count(), StartDate, dateValueArray.Last().Date,
+                                            null, null);
                                 }
                                 else
                                 {
-                                    if(dateValueArray.Count() != ts.TimeStepCount || StartDate != ts.BlobStartDate)
+                                    if(StartDate != ts.BlobStartDate)
                                         throw new TSLibraryException(ErrCode.Enum.Xml_File_Inconsistent,
                                             ReportedFileName + "contains a time series with traces that do not overlay each other.");
                                 }
@@ -354,12 +355,6 @@ namespace TimeSeriesLibrary
                                     // Write to the database and record values in the TSImport object
                                     ts.WriteParametersRegular(shouldStoreToDatabase, tsImport,
                                             (short)TimeStepUnit, TimeStepQuantity, valueArray.Count(), StartDate, null, null);
-                                }
-                                else
-                                {
-                                    if (valueArray.Count() != ts.TimeStepCount)
-                                        throw new TSLibraryException(ErrCode.Enum.Xml_File_Inconsistent, ReportedFileName +
-                                            "contains a regular time series whose traces do not all have the same number of time steps.");
                                 }
                                 ts.WriteTraceRegular(0, shouldStoreToDatabase, tsImport,
                                         traceNumber, valueArray);

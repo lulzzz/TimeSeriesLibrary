@@ -12,17 +12,21 @@ namespace TimeSeriesLibrary
     /// </summary>
     public class TSParameters
     {
-        // code for the units that measure the regular time step (e.g. hour, day, month)
+        /// <summary>
+        /// code for the units that measure the regular time step (e.g. hour, day, month)
+        /// </summary>
         public TSDateCalculator.TimeStepUnitCode TimeStepUnit;
-        // number of units per time step (e.g. Quantity=6 for 6-hour time steps)
+        /// <summary>
+        /// number of units per time step (e.g. Quantity=6 for 6-hour time steps)
+        /// </summary>
         public short TimeStepQuantity;
-        // Date of the first time step stored in the database
+        /// <summary>
+        /// Date of the first time step stored in the database
+        /// </summary>
         public DateTime BlobStartDate;
-        // Date of the last time step stored in the database
-        public DateTime BlobEndDate;
-        // The number of time steps stored in the database
-        public int TimeStepCount;
-        // The compression code that indicates what compression algorithm is used to compress the BLOB
+        /// <summary>
+        /// The compression code that indicates what compression algorithm is used to compress the BLOB
+        /// </summary>
         public int CompressionCode;
 
 
@@ -39,11 +43,8 @@ namespace TimeSeriesLibrary
             // Most of the parameters are straightforward
             TimeStepUnit = timeStepUnit;
             TimeStepQuantity = timeStepQuantity;
-            TimeStepCount = timeStepCount;
             BlobStartDate = blobStartDate;
             CompressionCode = compressionCode;
-            // We must calculate the date of the last time step
-            BlobEndDate = TSDateCalculator.IncrementDate(BlobStartDate, TimeStepUnit, TimeStepQuantity, TimeStepCount - 1);
         }
 
         /// <summary>
@@ -58,9 +59,7 @@ namespace TimeSeriesLibrary
             // Most of the parameters are straightforward
             TimeStepUnit = TSDateCalculator.TimeStepUnitCode.Irregular;
             TimeStepQuantity = 0;
-            TimeStepCount = timeStepCount;
             BlobStartDate = blobStartDate;
-            BlobEndDate = blobEndDate;
             CompressionCode = compressionCode;
         }
     

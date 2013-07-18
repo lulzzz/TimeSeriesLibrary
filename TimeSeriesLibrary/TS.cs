@@ -79,24 +79,6 @@ namespace TimeSeriesLibrary
             set { TSParameters.BlobStartDate = value; }
         }
         /// <summary>
-        /// Date of the last time step stored in the database
-        /// </summary>
-        // This property simply refers to a field of the TSParameters object
-        public DateTime BlobEndDate
-        {
-            get { return TSParameters.BlobEndDate; }
-            set { TSParameters.BlobEndDate = value; }
-        }
-        /// <summary>
-        /// The number of time steps stored in the database
-        /// </summary>
-        // This property simply refers to a field of the TSParameters object
-        public int TimeStepCount
-        {
-            get { return TSParameters.TimeStepCount; }
-            set { TSParameters.TimeStepCount = value; }
-        }
-        /// <summary>
         /// The compression code that indicates what compression algorithm is used to compress the BLOB
         /// </summary>
         // This property simply refers to a field of the TSParameters object
@@ -160,7 +142,7 @@ namespace TimeSeriesLibrary
             // Define the SQL query
 
             String comm = String.Format("select TimeStepUnit,TimeStepQuantity," +
-                                        "TimeStepCount,StartDate,EndDate,CompressionCode " +
+                                        "StartDate,CompressionCode " +
                                         "from {0} where Id='{1}'", ParametersTableName, Id);
             // SqlDataAdapter object will use the query to fill the DataTable
             using (SqlDataAdapter adp = new SqlDataAdapter(comm, Connx))
@@ -185,9 +167,7 @@ namespace TimeSeriesLibrary
                 // Assign properties from table to this object
                 TimeStepUnit = (TSDateCalculator.TimeStepUnitCode)dTable.Rows[0].Field<int>("TimeStepUnit");
                 TimeStepQuantity = (short)dTable.Rows[0].Field<int>("TimeStepQuantity");
-                TimeStepCount = dTable.Rows[0].Field<int>("TimeStepCount");
                 BlobStartDate = dTable.Rows[0].Field<DateTime>("StartDate");
-                BlobEndDate = dTable.Rows[0].Field<DateTime>("EndDate");
                 CompressionCode = dTable.Rows[0].Field<int>("CompressionCode");
                 dTable.Dispose();
             }
@@ -240,18 +220,18 @@ namespace TimeSeriesLibrary
                                 String.Format("The method can only process regular time series, but" +
                                 "the record with Id {0} is irregular.", id));
             }
-            // If the start or end date requested by the caller are such that the stored time series
+            // If the end date requested by the caller is such that the stored time series
             // does not overlap, then we don't need to go any further.
-            if (reqStartDate > BlobEndDate || reqEndDate < BlobStartDate)
+            if (reqEndDate < BlobStartDate)
                 return 0;
 
             // byte array (the BLOB) that will be read from the database.
             Byte[] blobData = null;
             // method ReadValues reads data from the database into the byte array
-            ReadValues(id, traceNumber, ref blobData);
+            int timeStepCount = ReadValues(id, traceNumber, ref blobData);
             // Convert the BLOB into an array of double values (valueArray)
             return TSBlobCoder.ConvertBlobToArrayRegular(TimeStepUnit, TimeStepQuantity,
-                                TimeStepCount, BlobStartDate, true,
+                                timeStepCount, BlobStartDate, true,
                                 nReqValues, reqStartDate, reqEndDate, 
                                 blobData, valueArray,
                                 CompressionCode);
@@ -285,17 +265,18 @@ namespace TimeSeriesLibrary
                                 String.Format("The method can only process irregular time series, but" +
                                 "the record with Id {0} is regular.", id));
             }
-            // If the start or end date requested by the caller are such that the stored time series
+            // If the end date requested by the caller is such that the stored time series
             // does not overlap, then we don't need to go any further.
-            if (reqStartDate > BlobEndDate || reqEndDate < BlobStartDate)
+            if (reqEndDate < BlobStartDate)
                 return 0;
 
             // byte array (the BLOB) that will be read from the database.
             Byte[] blobData = null;
             // method ReadValues reads data from the database into the byte array
-            ReadValues(id, traceNumber, ref blobData);
+            int timeStepCount = ReadValues(id, traceNumber, ref blobData);
             // convert the byte array into date/value pairs
-            return TSBlobCoder.ConvertBlobToArrayIrregular(TimeStepCount, true, nReqValues, reqStartDate, reqEndDate,
+            return TSBlobCoder.ConvertBlobToArrayIrregular(timeStepCount, true, nReqValues,
+                            reqStartDate, reqEndDate,
                             blobData, dateValueArray, CompressionCode);
 
         }
@@ -309,21 +290,22 @@ namespace TimeSeriesLibrary
         /// <param name="id">ID identifying the time series record to read</param>
         /// <param name="traceNumber">number of the trace to read</param>
         /// <param name="blobData">the byte array that is populated from the database BLOB</param>
-        private unsafe void ReadValues(int id, int traceNumber, ref byte[] blobData)
+        private unsafe int ReadValues(int id, int traceNumber, ref byte[] blobData)
         {
             // SQL statement that will only give us the BLOB of data values
-            String comm = String.Format("select ValueBlob from {0} where TimeSeries_Id='{1}' and TraceNumber='{2}' ",
+            String comm = String.Format("select ValueBlob,TimeStepCount "
+                            + "from {0} where TimeSeries_Id='{1}' and TraceNumber='{2}' ",
                                     TraceTableName, Id, traceNumber);
             // SqlDataAdapter object will use the query to fill the DataTable
             using (SqlDataAdapter adp = new SqlDataAdapter(comm, Connx))
+            using (DataTable dTable = new DataTable())
             {
-                DataTable dTable = new DataTable();
                 // Execute the query to fill the DataTable object
                 try
                 {
                     adp.Fill(dTable);
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {   // The query failed
                     throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
                                     "Table '" + TraceTableName + "' could not be opened using query:\n\n" + comm, e);
@@ -339,7 +321,7 @@ namespace TimeSeriesLibrary
                 DataRow currentRow = dTable.Rows[0];
                 // Cast the BLOB as an array of bytes
                 blobData = (Byte[])currentRow["ValueBlob"];
-                dTable.Dispose();
+                return (int)currentRow["TimeStepCount"];
             }
         }
         #endregion
@@ -454,9 +436,7 @@ namespace TimeSeriesLibrary
             String valString = ((short)TimeStepUnit).ToString();
             // Add the rest of the column names and column values such that each is preceded by a comma
             AppendStringPair(ref colString, ref valString, "TimeStepQuantity", TimeStepQuantity.ToString());
-            AppendStringPair(ref colString, ref valString, "TimeStepCount", TimeStepCount.ToString());
             AppendStringPair(ref colString, ref valString, "StartDate", "'" + BlobStartDate.ToString() + "'");
-            AppendStringPair(ref colString, ref valString, "EndDate", "'" + BlobEndDate.ToString() + "'");
             AppendStringPair(ref colString, ref valString, "Checksum", ByteArrayToString(Checksum));
             AppendStringPair(ref colString, ref valString, "CompressionCode", CompressionCode.ToString());
             // Now our strings contain all of the columns that TimeSeriesLibrary is responsible for
@@ -529,12 +509,19 @@ namespace TimeSeriesLibrary
                                 "the record with Id {0} is irregular.", id));
             }
             // Create a trace object
-            ITimeSeriesTrace traceObject = new TSTrace { TraceNumber = traceNumber };
+            int timeStepCount = valueArray.Count();
+            ITimeSeriesTrace traceObject = new TSTrace
+            {
+                TraceNumber = traceNumber,
+                TimeStepCount = timeStepCount,
+                EndDate = TSDateCalculator.IncrementDate(BlobStartDate, 
+                                TimeStepUnit, TimeStepQuantity, timeStepCount - 1)
+            };
             if (tsImport != null)
                 tsImport.TraceList.Add(traceObject);
             // Convert the array of double values into a byte array...a BLOB
             traceObject.ValueBlob = TSBlobCoder.ConvertArrayToBlobRegular
-                                        (TimeStepCount, valueArray, CompressionCode, traceObject);
+                                        (valueArray, CompressionCode, traceObject);
 
             // Write a new record to the trace table
             if(doWriteToDB)
@@ -571,12 +558,17 @@ namespace TimeSeriesLibrary
                                 "the record with Id {0} is regular.", id));
             }
             // Create a trace object
-            ITimeSeriesTrace traceObject = new TSTrace { TraceNumber = traceNumber };
+            ITimeSeriesTrace traceObject = new TSTrace
+            {
+                TraceNumber = traceNumber,
+                TimeStepCount = dateValueArray.Count(),
+                EndDate = dateValueArray.Any() ? dateValueArray.Last().Date : BlobStartDate
+            };
             if (tsImport != null)
                 tsImport.TraceList.Add(traceObject);
             // Convert the array of double values into a byte array...a BLOB
             traceObject.ValueBlob = TSBlobCoder.ConvertArrayToBlobIrregular
-                                        (TimeStepCount, dateValueArray, CompressionCode, traceObject);
+                                        (dateValueArray, CompressionCode, traceObject);
 
             // Write a new record to the trace table
             if (doWriteToDB)
@@ -609,6 +601,8 @@ namespace TimeSeriesLibrary
             // Supply parameter values for the SqlCommand
             sqlCommand.Parameters["@TimeSeries_Id"].Value = Id;
             sqlCommand.Parameters["@TraceNumber"].Value = traceObject.TraceNumber;
+            sqlCommand.Parameters["@TimeStepCount"].Value = traceObject.TimeStepCount;
+            sqlCommand.Parameters["@EndDate"].Value = traceObject.EndDate;
             sqlCommand.Parameters["@ValueBlob"].Value = traceObject.ValueBlob;
             sqlCommand.Parameters["@Checksum"].Value = traceObject.Checksum;
             // Execute the SQL command
@@ -694,8 +688,8 @@ namespace TimeSeriesLibrary
                 }
             }
             // Compute the new checksum of the ensemble
-            Checksum = TSBlobCoder.ComputeChecksum(TimeStepUnit, TimeStepQuantity, TimeStepCount,
-                                     BlobStartDate, BlobEndDate, traceObjects);
+            Checksum = TSBlobCoder.ComputeChecksum(TimeStepUnit, TimeStepQuantity,
+                                     BlobStartDate, traceObjects);
             if (doWriteToDB)
             {
                 // 
@@ -727,12 +721,16 @@ namespace TimeSeriesLibrary
         {
             // Instantiate the SqlCommand object using a SQL INSERT command
             SqlCommand command = new SqlCommand("INSERT INTO " + TraceTableName
-                                + "(TimeSeries_Id, TraceNumber, ValueBlob, Checksum) "
-                                + "VALUES (@TimeSeries_Id, @TraceNumber, @ValueBlob, @Checksum)", Connx);
+                                + "(TimeSeries_Id, TraceNumber, TimeStepCount, EndDate, "
+                                                    + "ValueBlob, Checksum) "
+                                + "VALUES (@TimeSeries_Id, @TraceNumber, @TimeStepCount, @EndDate, "
+                                                    + "@ValueBlob, @Checksum)", Connx);
 
             // Add parameters to the command
             command.Parameters.Add("@TimeSeries_Id", SqlDbType.Int);
             command.Parameters.Add("@TraceNumber", SqlDbType.Int);
+            command.Parameters.Add("@TimeStepCount", SqlDbType.Int);
+            command.Parameters.Add("@EndDate", SqlDbType.DateTime);
             command.Parameters.Add("@ValueBlob", SqlDbType.VarBinary, -1);
             command.Parameters.Add("@Checksum", SqlDbType.Binary, 16);
 

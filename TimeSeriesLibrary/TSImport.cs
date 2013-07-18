@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Xml;
+using System.Xml.Linq;
 
 namespace TimeSeriesLibrary
 {
@@ -61,9 +62,7 @@ namespace TimeSeriesLibrary
         // regardless of the value of IsDetailed.
         public TSDateCalculator.TimeStepUnitCode TimeStepUnit;
         public short TimeStepQuantity;
-        public int TimeStepCount;
         public DateTime BlobStartDate;
-        public DateTime BlobEndDate;
         public int CompressionCode;
         public byte[] Checksum;
 
@@ -104,16 +103,17 @@ namespace TimeSeriesLibrary
         public void SetUnits(XmlReader xmlReader) { SetDetailFieldString(ref Units, xmlReader); }
         public void SetTimeSeriesType(XmlReader xmlReader) { SetDetailFieldString(ref TimeSeriesType, xmlReader); }
 
-        public int GetTraceNumber(XmlReader xmlReader) 
+        public int GetTraceNumber(XmlReader xmlReader)
         {
-            String tagName = xmlReader.Name;
-            String s = xmlReader.ReadElementContentAsString();
+            String elementString = xmlReader.ReadOuterXml();
+            if (IsDetailed == false)
+                AddUnprocessedElement(elementString);
+
+            var xElement = XElement.Parse(elementString);
+            String s = xElement.Value;
             int traceNumber;
             if (int.TryParse(s, out traceNumber) == false)
                 traceNumber = 1;
-
-            if (IsDetailed == false)
-                AddUnprocessedElement(xmlReader.ReadOuterXml());
 
             return traceNumber;
         }
@@ -173,8 +173,6 @@ namespace TimeSeriesLibrary
             TimeStepUnit = tsp.TimeStepUnit;
             TimeStepQuantity = tsp.TimeStepQuantity;
             BlobStartDate = tsp.BlobStartDate;
-            BlobEndDate = tsp.BlobEndDate;
-            TimeStepCount = tsp.TimeStepCount;
             CompressionCode = tsp.CompressionCode;
         }
         #endregion

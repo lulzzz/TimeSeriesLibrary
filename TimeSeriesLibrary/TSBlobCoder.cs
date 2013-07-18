@@ -187,22 +187,20 @@ namespace TimeSeriesLibrary
         /// from the resultant BLOB, and sets the Checksum property of the given ITimeSeriesTrace
         /// object accordingly.
         /// </summary>
-        /// <param name="TimeStepCount">The number of time steps in the given array of time series values</param>
         /// <param name="valueArray">The array of time series values to convert into a BLOB</param>
         /// <param name="compressionCode">a generation number that indicates what compression technique to use</param>
         /// <param name="traceObject">object whose TraceNumber property will be used to compute the checksum,
         /// and whose Checksum property will be set accordingly</param>
         /// <returns>The BLOB that is created from valueArray</returns>
         public static unsafe byte[] ConvertArrayToBlobRegular(
-            int TimeStepCount, double[] valueArray, int compressionCode, ITimeSeriesTrace traceObject)
+                    double[] valueArray, int compressionCode, ITimeSeriesTrace traceObject)
         {
             // The number of bytes required for the BLOB
-            int nBin = TimeStepCount * sizeof(double);
+            int nBin = traceObject.TimeStepCount * sizeof(double);
             // Allocate an array for the BLOB
             Byte[] blobData = new Byte[nBin];
-            // Copy the array of doubles that was passed to the method into the byte array.  We skip
-            // a bit of padding at the beginning that is used to compute the Checksum.  Thus, the
-            // byte array (without the padding for Checksum) becomes the BLOB.
+            // Copy the array of doubles that was passed to the method into the byte array.  
+            // The byte array becomes the BLOB.
             Buffer.BlockCopy(valueArray, 0, blobData, 0, nBin);
 
             // Compute the checksum using the uncompressed BLOB.  During development, it was 
@@ -225,17 +223,16 @@ namespace TimeSeriesLibrary
         /// from the resultant BLOB, and sets the Checksum property of the given ITimeSeriesTrace
         /// object accordingly.
         /// </summary>
-        /// <param name="TimeStepCount">The number of time steps in the given array of time series values</param>
         /// <param name="dateValueArray">The array of time series values to convert into a BLOB</param>
         /// <param name="compressionCode">a generation number that indicates what compression technique to use</param>
         /// <param name="traceObject">object whose TraceNumber property will be used to compute the checksum,
         /// and whose Checksum property will be set accordingly</param>
         /// <returns>The BLOB that is created from dateValueArray</returns>
         public static unsafe byte[] ConvertArrayToBlobIrregular(
-            int TimeStepCount, TSDateValueStruct[] dateValueArray, int compressionCode, ITimeSeriesTrace traceObject)
+                    TSDateValueStruct[] dateValueArray, int compressionCode, ITimeSeriesTrace traceObject)
         {
             // The number of bytes required for the BLOB
-            int nBin = TimeStepCount * sizeof(TSDateValueStruct);
+            int nBin = traceObject.TimeStepCount * sizeof(TSDateValueStruct);
             // Allocate an array for the BLOB
             Byte[] blobData = new Byte[nBin];
 
@@ -244,7 +241,7 @@ namespace TimeSeriesLibrary
             using (BinaryWriter blobWriter = new BinaryWriter(blobStream))
             {
                 // Loop through the entire array
-                for (int i = 0; i < TimeStepCount; i++)
+                for (int i = 0; i < traceObject.TimeStepCount; i++)
                 {
                     // write the value to the BLOB as DATE followed by VALUE
                     blobWriter.Write(dateValueArray[i].Date.ToBinary());
@@ -277,9 +274,7 @@ namespace TimeSeriesLibrary
         public static byte[] ComputeChecksum(TSParameters tsp, List<ITimeSeriesTrace> traceList)
         {
             // simply unpack the TSParameters object and call the overload of this method
-            return ComputeChecksum(tsp.TimeStepUnit, tsp.TimeStepQuantity,
-                        tsp.TimeStepCount, tsp.BlobStartDate, tsp.BlobEndDate,
-                        traceList);
+            return ComputeChecksum(tsp.TimeStepUnit, tsp.TimeStepQuantity, tsp.BlobStartDate, traceList);
         }
 
         /// <summary>
@@ -291,15 +286,12 @@ namespace TimeSeriesLibrary
         /// <param name="timeStepUnit">TSDateCalculator.TimeStepUnitCode value for Minute,Hour,Day,Week,Month, Year, or Irregular</param>
         /// <param name="timeStepQuantity">The number of the given unit that defines the time step.
         /// For instance, if the time step is 6 hours long, then this value is 6.</param>
-        /// <param name="timeStepCount">The number of time steps stored in the BLOB</param>
         /// <param name="blobStartDate">Date of the first time step in the BLOB</param>
-        /// <param name="blobEndDate">Date of the last time step in the BLOB</param>
         /// <param name="traceList">a list of trace object whose checksums have already been computed.</param>
         /// <returns>the Checksum as a byte[16] array</returns>
         public static byte[] ComputeChecksum(
                     TSDateCalculator.TimeStepUnitCode timeStepUnit, short timeStepQuantity,
-                    int timeStepCount, DateTime blobStartDate, DateTime blobEndDate,
-                    List<ITimeSeriesTrace> traceList)
+                    DateTime blobStartDate, List<ITimeSeriesTrace> traceList)
         {
             // The MD5 Checksum will be computed from two basic parts.  The first part is
             // the list of the checksums of each trace in the time series.  The second is
@@ -339,11 +331,8 @@ namespace TimeSeriesLibrary
                 binWriter.Write((short)timeStepUnit);
                 // TimeStepQuantity
                 binWriter.Write(timeStepQuantity);
-                // TimeStepCount
-                binWriter.Write(timeStepCount);
-                // StartDate and EndDate
+                // StartDate
                 binWriter.Write(blobStartDate.ToBinary());
-                binWriter.Write(blobEndDate.ToBinary());
 
                 // MD5CryptoServiceProvider object has methods to compute the Checksum
                 using (MD5CryptoServiceProvider md5Hasher = new MD5CryptoServiceProvider())
