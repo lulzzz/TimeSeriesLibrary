@@ -19,7 +19,7 @@ namespace TimeSeriesLibrary
         // Because the DLL is accessed using the DllImport attribute on these functions, if any
         // test classes depend on the LZFX class, then those classes will need to have the 
         // 'DeploymentItem' attribute.  This is because when Visual Studio runs tests, it copies
-        // the assembly to a temporary folder, but it does not recognized that the unmanaged
+        // the assembly to a temporary folder, but it does not recognize that the unmanaged
         // lzfx.dll is a dependency that needs to be copied into this temporary folder.
         // For more information, see:
         // http://social.msdn.microsoft.com/forums/en-US/vststest/thread/9ffe18d4-e1fa-4de4-845f-634843802bb9/

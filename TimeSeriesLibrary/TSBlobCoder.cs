@@ -375,8 +375,9 @@ namespace TimeSeriesLibrary
                 // The byte array that will be created by the first compression.
                 // Note that some incompressible BLOBs will actually be made larger by LZFX
                 // compression.  We have observed about 1% increase over the original BLOB,
-                // to the factor of 1.05 is expected to be safe.
-                compressedBlob = new Byte[(int)(inputLength * 1.05)];
+                // so the factor of 1.05 is expected to be safe.  We add 16 since the factor
+                // of 1.05 is insufficient when the BLOB is very small.
+                compressedBlob = new Byte[(int)(inputLength * 1.05) + 16];
 
                 // Compress using LZFX algorithm.
                 // This method resizes the compressed byte array for us.
