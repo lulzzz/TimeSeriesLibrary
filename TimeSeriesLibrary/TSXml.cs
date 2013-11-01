@@ -402,7 +402,7 @@ namespace TimeSeriesLibrary
             {   // First assume that the string is the name of a TimeStepUnitCode enum.
                 // If that fails then we'll try some more complicated assumptions.
                 return (TSDateCalculator.TimeStepUnitCode)
-                                    Enum.Parse(typeof(TSDateCalculator.TimeStepUnitCode), s);
+                             Enum.Parse(typeof(TSDateCalculator.TimeStepUnitCode), s, true);
             }
             catch { }
 
@@ -424,7 +424,7 @@ namespace TimeSeriesLibrary
 
                 // Now assume that the extracted string is the name of a TimeStepUnitCode enum.
                 return (TSDateCalculator.TimeStepUnitCode)
-                                    Enum.Parse(typeof(TSDateCalculator.TimeStepUnitCode), substring);
+                             Enum.Parse(typeof(TSDateCalculator.TimeStepUnitCode), substring, true);
             }
             catch
             {
