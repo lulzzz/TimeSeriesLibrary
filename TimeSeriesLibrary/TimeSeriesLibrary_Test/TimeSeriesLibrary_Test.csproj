@@ -37,6 +37,10 @@
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
+    <Reference Include="Oasis.Foundation, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\OasisLibs\Oasis.Foundation.dll</HintPath>
+    </Reference>
     <Reference Include="Oasis.TestFoundation">
       <HintPath>..\..\..\Oasis.Base\Oasis.TestFoundation\bin\Debug\Oasis.TestFoundation.dll</HintPath>
     </Reference>
@@ -84,6 +88,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="test3.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="test4.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="test5.xml" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

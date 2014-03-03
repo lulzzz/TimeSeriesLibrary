@@ -3,6 +3,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Oasis.Foundation.Infrastructure;
 
 namespace TimeSeriesLibrary_Test
 {
@@ -28,14 +29,8 @@ namespace TimeSeriesLibrary_Test
         ///</summary>
         public TestContext TestContext
         {
-            get
-            {
-                return testContextInstance;
-            }
-            set
-            {
-                testContextInstance = value;
-            }
+            get { return testContextInstance; }
+            set { testContextInstance = value; }
         }
         #endregion
 
@@ -96,6 +91,9 @@ namespace TimeSeriesLibrary_Test
             Assert.AreEqual(TsImportList[0].Name, "JOEBLOW");
             Assert.AreEqual(TsImportList[1].Name, "BILLBLOW");
             Assert.AreEqual(TsImportList[2].Name, "IRREGULARCLARENCE");
+
+            // Verify IsPattern in import list
+            Assert.IsFalse(TsImportList.Any(o => o.IsPattern));
 
             // Verify TimeStepUnit in import list
             Assert.AreEqual(TsImportList[0].TimeStepUnit, TSDateCalculator.TimeStepUnitCode.Hour);
@@ -437,6 +435,175 @@ namespace TimeSeriesLibrary_Test
             Assert.AreEqual(tsvList[1].Value, 332.8); Assert.AreEqual(tsvList[5].Date, DateTime.Parse("01/04/1930 11:59:00"));
             Assert.AreEqual(tsvList[3].Value, 390.8); Assert.AreEqual(tsvList[14].Date, DateTime.Parse("01/12/1930 23:59:00"));
             Assert.AreEqual(tsvList[13].Value, 2312.2); Assert.AreEqual(tsvList[15].Date, DateTime.Parse("01/15/1930 23:59:00"));
+        }
+        #endregion
+
+        #region Test Method for ReadAndStore() single-trace pattern without errors
+        [TestMethod()]
+        public void ReadAndStoreSingleTracePattern()
+        {
+            string xmlText = Properties.Resources.test4;
+            bool storeToDatabase = false;
+            bool recordDetails = true;
+
+            int ret = TsXml.ReadAndStore(null, xmlText, TsImportList, storeToDatabase, recordDetails);
+
+            // Correct return value from method?
+            Assert.AreEqual(ret, 3);
+            // Correct number of items added to import list?
+            Assert.AreEqual(TsImportList.Count, 3);
+
+            // Verify IsDetailed property
+            Assert.AreEqual(TsImportList[1].IsDetailed, true);
+
+            // Verify names in import list
+            Assert.AreEqual(TsImportList[0].Name, "JOEBLOW");
+            Assert.AreEqual(TsImportList[1].Name, "BILLBLOW");
+            Assert.AreEqual(TsImportList[2].Name, "IRREGULARCLARENCE");
+
+            // Verify IsPattern in import list
+            Assert.IsTrue(TsImportList.All(o => o.IsPattern));
+
+            // Verify TimeStepUnit in import list
+            Assert.AreEqual(TsImportList[0].TimeStepUnit, TSDateCalculator.TimeStepUnitCode.Hour);
+            Assert.AreEqual(TsImportList[1].TimeStepUnit, TSDateCalculator.TimeStepUnitCode.Day);
+            Assert.AreEqual(TsImportList[2].TimeStepUnit, TSDateCalculator.TimeStepUnitCode.Irregular);
+
+            // Verify TimeStepQuantity in import list
+            Assert.AreEqual(TsImportList[0].TimeStepQuantity, 1);
+            Assert.AreEqual(TsImportList[1].TimeStepQuantity, 2);
+            // A dummy nonzero value was put into the XML file, but the library must ensure that
+            // the output is zero in order to ensure consistency in the checksums.
+            Assert.AreEqual(TsImportList[2].TimeStepQuantity, 0);
+
+            // Verify TimeStepCount in import list
+            Assert.AreEqual(TsImportList[0].TraceList[0].TimeStepCount, 9);
+            Assert.AreEqual(TsImportList[1].TraceList[0].TimeStepCount, 11);
+            Assert.AreEqual(TsImportList[2].TraceList[0].TimeStepCount, 17);
+
+            // Verify BlobStartDate in import list
+            Assert.AreEqual(TsImportList[0].BlobStartDate, DateTime.Parse("10/01/1927 03:09:00"));
+            Assert.AreEqual(TsImportList[1].BlobStartDate, DateTime.Parse("10/01/1927 23:59:00"));
+            Assert.AreEqual(TsImportList[2].BlobStartDate, DateTime.Parse("1/01/1930 11:59:00"));
+
+            // Verify BlobEndDate in import list
+            Assert.AreEqual(TsImportList[0].TraceList[0].EndDate, DateTime.Parse("10/01/1927 11:09:00"));
+            Assert.AreEqual(TsImportList[1].TraceList[0].EndDate, DateTime.Parse("10/21/1927 23:59:00"));
+            Assert.AreEqual(TsImportList[2].TraceList[0].EndDate, DateTime.Parse("01/15/1930 23:59:00"));
+
+            // Verify trace count in import list
+            Assert.AreEqual(TsImportList[0].TraceList.Count, 1);
+            Assert.AreEqual(TsImportList[1].TraceList.Count, 1);
+            Assert.AreEqual(TsImportList[2].TraceList.Count, 1);
+
+            // Verify CompressionCode in import list
+            Assert.AreEqual(TsImportList[0].CompressionCode, TSBlobCoder.currentCompressionCode);
+            Assert.AreEqual(TsImportList[1].CompressionCode, TSBlobCoder.currentCompressionCode);
+            Assert.AreEqual(TsImportList[2].CompressionCode, TSBlobCoder.currentCompressionCode);
+
+            // Verify Checksum in import list
+            // The checksums are verified against previous values, so the test is only as good as the
+            // original trial.  However, it is good if the test flags any change, to ensure that the
+            // developer can account for any change.  E.g., if the original value was incorrect, then
+            // that should be documented and the new output should be scrutinized.
+            Assert.AreEqual(BitConverter.ToString(TsImportList[0].Checksum), "A1-6D-B1-9F-C8-0B-3B-4E-D6-5E-58-FD-55-58-44-40");
+            Assert.AreEqual(BitConverter.ToString(TsImportList[1].Checksum), "71-E9-06-BD-1F-7B-F3-26-A3-7A-D8-E9-D1-D3-DF-B5");
+            Assert.AreEqual(BitConverter.ToString(TsImportList[2].Checksum), "B5-72-A6-D7-D9-C9-45-A3-ED-A6-D7-16-C6-69-58-55");
+
+            List<TimeSeriesValue> tsvList = null;
+            // Verify BLOB # 1 in import list
+            TsLib.ConvertBlobToListAll(TsImportList[0].TimeStepUnit, TsImportList[0].TimeStepQuantity,
+                        TsImportList[0].TraceList[0].TimeStepCount, TsImportList[0].BlobStartDate,
+                        TsImportList[0].TraceList[0].ValueBlob,
+                        ref tsvList, TSBlobCoder.currentCompressionCode);
+            Assert.AreEqual(tsvList.Count, 9);
+            Assert.AreEqual(tsvList[0].Value, 12.3);
+            Assert.AreEqual(tsvList[1].Value, 21.5);
+            Assert.AreEqual(tsvList[7].Value, 20.1);
+            Assert.AreEqual(tsvList[8].Value, 12.4);
+            // Verify BLOB # 2 in import list
+            TsLib.ConvertBlobToListAll(TsImportList[1].TimeStepUnit, TsImportList[1].TimeStepQuantity,
+                        TsImportList[1].TraceList[0].TimeStepCount, TsImportList[1].BlobStartDate,
+                        TsImportList[1].TraceList[0].ValueBlob,
+                        ref tsvList, TSBlobCoder.currentCompressionCode);
+            Assert.AreEqual(tsvList.Count, 11);
+            Assert.AreEqual(tsvList[0].Value, 12.5);
+            Assert.AreEqual(tsvList[1].Value, 21.7);
+            Assert.AreEqual(tsvList[9].Value, 12.2);
+            Assert.AreEqual(tsvList[10].Value, 12.6);
+            // Verify BLOB # 3 in import list
+            TsLib.ConvertBlobToListAll(TsImportList[2].TimeStepUnit, TsImportList[2].TimeStepQuantity,
+                        TsImportList[2].TraceList[0].TimeStepCount, TsImportList[2].BlobStartDate,
+                        TsImportList[2].TraceList[0].ValueBlob,
+                        ref tsvList, TSBlobCoder.currentCompressionCode);
+            Assert.AreEqual(tsvList.Count, 17);
+            Assert.AreEqual(tsvList[0].Value, 312.5); Assert.AreEqual(tsvList[0].Date, DateTime.Parse("01/01/1930 11:59:00"));
+            Assert.AreEqual(tsvList[5].Value, 360.8); Assert.AreEqual(tsvList[5].Date, DateTime.Parse("01/03/1930 23:59:00"));
+            Assert.AreEqual(tsvList[14].Value, 2312.2); Assert.AreEqual(tsvList[14].Date, DateTime.Parse("01/11/1930 23:59:00"));
+            Assert.AreEqual(tsvList[16].Value, 312.2); Assert.AreEqual(tsvList[16].Date, DateTime.Parse("01/15/1930 23:59:00"));
+
+
+
+            // Verify APart in import list
+            Assert.AreEqual(TsImportList[0].APart, null);
+            Assert.AreEqual(TsImportList[1].APart, "QQ");
+            // Verify BPart in import list
+            Assert.AreEqual(TsImportList[0].BPart, null);
+            Assert.AreEqual(TsImportList[1].BPart, "RR");
+            // Verify CPart in import list
+            Assert.AreEqual(TsImportList[0].CPart, null);
+            Assert.AreEqual(TsImportList[1].CPart, "SS");
+            // Verify EPart in import list
+            Assert.AreEqual(TsImportList[0].EPart, null);
+            Assert.AreEqual(TsImportList[1].EPart, "TT");
+            // Verify Units in import list
+            Assert.AreEqual(TsImportList[0].Units, "CFS");
+            Assert.AreEqual(TsImportList[1].Units, "CFS");
+            Assert.AreEqual(TsImportList[2].Units, "AFD");
+            // Verify TimeSeriesType in import list
+            Assert.AreEqual(TsImportList[0].TimeSeriesType, "PER-CUM");
+            Assert.AreEqual(TsImportList[1].TimeSeriesType, "INST-VAL");
+            Assert.AreEqual(TsImportList[2].TimeSeriesType, "INST-VAL");
+            // Verify TraceNumber in import list
+            Assert.AreEqual(TsImportList[0].TraceList[0].TraceNumber, 2);
+            Assert.AreEqual(TsImportList[1].TraceList[0].TraceNumber, 5);
+            Assert.AreEqual(TsImportList[2].TraceList[0].TraceNumber, 22);
+            // Verify UnprocessedElements in import list
+            Assert.AreEqual(TsImportList[1].UnprocessedElements, null);
+            Assert.AreEqual(TsImportList[2].UnprocessedElements, " <OldManTag></OldManTag> <Schlap>Spoing-oing-oing</Schlap>");
+
+        }
+        #endregion
+
+        #region Test Method for ReadAndStore() single-trace without errors for mixed pattern & timeseries
+        [TestMethod()]
+        public void ReadAndStoreSingleTracePatternTimeseriesMix()
+        {
+            string xmlText = Properties.Resources.test5;
+            bool storeToDatabase = false;
+            bool recordDetails = true;
+
+            int ret = TsXml.ReadAndStore(null, xmlText, TsImportList, storeToDatabase, recordDetails);
+
+            // Correct return value from method?
+            Assert.AreEqual(ret, 4);
+            // Correct number of items added to import list?
+            Assert.AreEqual(TsImportList.Count, 4);
+
+            // Verify IsDetailed property
+            Assert.AreEqual(TsImportList[1].IsDetailed, true);
+
+            // Verify names in import list
+            Assert.IsTrue(TsImportList.Select(o => o.Name)
+                        .ContainsAll("JOEBLOW", "BILLBLOW", "IRREGULARCLARENCE", "OHNELLY"));
+
+            // Verify IsPattern in import list
+            Assert.AreEqual(TsImportList.Where(o => o.Name == "JOEBLOW").First().IsPattern, false);
+            Assert.AreEqual(TsImportList.Where(o => o.Name == "BILLBLOW").First().IsPattern, true);
+            Assert.AreEqual(TsImportList.Where(o => o.Name == "IRREGULARCLARENCE").First().IsPattern, true);
+            Assert.AreEqual(TsImportList.Where(o => o.Name == "OHNELLY").First().IsPattern, false);
+
+
         }
         #endregion
 

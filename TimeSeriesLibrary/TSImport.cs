@@ -47,6 +47,10 @@ namespace TimeSeriesLibrary
         /// according to its own logic.
         /// </summary>
         public String UnprocessedElements;
+        /// <summary>
+        /// If true, then this TSImport represents a cyclic Time Pattern
+        /// </summary>
+        public Boolean IsPattern = false;
 
 
         // These fields are only recorded in the TSImport object when IsDetailed==true.
