@@ -335,6 +335,9 @@ namespace TimeSeriesLibrary
                                     }
                                     if (tsImport.TraceList.Count == 0)
                                     {
+                                        // Ignore whatever was entered in the StartDate element, since it
+                                        // might conflict with the date/value entries
+                                        StartDate = dateValueArray[0].Date;
                                         // Write parameters to the database and record values in the TSImport object
                                         ts.WriteParametersIrregular(shouldStoreToDatabase, tsImport,
                                                 dateValueArray.Count(), StartDate, dateValueArray.Last().Date,

@@ -87,13 +87,18 @@
     <Shadow Include="Test References\TimeSeriesLibrary.accessor" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="test3.xml" />
+    <None Include="test3.xml">
+      <SubType>Designer</SubType>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <None Include="test4.xml" />
   </ItemGroup>
   <ItemGroup>
     <None Include="test5.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\test6.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

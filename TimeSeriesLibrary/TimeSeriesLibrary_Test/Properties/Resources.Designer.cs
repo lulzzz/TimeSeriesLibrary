@@ -242,5 +242,30 @@ namespace TimeSeriesLibrary_Test.Properties {
                 return ResourceManager.GetString("test5", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to &lt;Import&gt;
+        ///	&lt;TimeSeries&gt;
+        ///		&lt;Name&gt;aabbcc&lt;/Name&gt;
+        ///		&lt;Units&gt;AFD&lt;/Units&gt;
+        ///		&lt;TimeSeriesType&gt;INST-VAL&lt;/TimeSeriesType&gt;
+        ///		&lt;TraceNumber&gt;22&lt;/TraceNumber&gt;
+        ///		&lt;StartDate&gt;1/01/1930 11:59:00&lt;/StartDate&gt;
+        ///		&lt;TimeStepUnit&gt;Irregular&lt;/TimeStepUnit&gt;
+        ///		&lt;TimeStepQuantity&gt;337&lt;/TimeStepQuantity&gt;
+        ///                &lt;OldManTag&gt;&lt;/OldManTag&gt;
+        ///                &lt;Schlap&gt;Spoing-oing-oing&lt;/Schlap&gt;
+        ///		&lt;Data&gt;
+        ///01/01/1930 10:59:00 312.5
+        ///01/01/1930 23:59:00 321.7
+        ///01/02/1930 11:59:00 332.8
+        ///01/02/1930 23:59:00 399.8
+        ///01/03/1930 11:59:00 390 [rest of string was truncated]&quot;;.
+        /// </summary>
+        internal static string test6 {
+            get {
+                return ResourceManager.GetString("test6", resourceCulture);
+            }
+        }
     }
 }

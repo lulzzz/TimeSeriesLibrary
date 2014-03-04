@@ -203,7 +203,25 @@ namespace TimeSeriesLibrary_Test
             Assert.AreEqual(TsImportList[1].UnprocessedElements, null);
             Assert.AreEqual(TsImportList[2].UnprocessedElements, " <OldManTag></OldManTag> <Schlap>Spoing-oing-oing</Schlap>");
 
-        } 
+        }
+        [TestMethod()]
+        public void ReadAndStore_StartDate()
+        {
+            string xmlText = Properties.Resources.test6;
+            bool storeToDatabase = false;
+            bool recordDetails = true;
+
+            int ret = TsXml.ReadAndStore(null, xmlText, TsImportList, storeToDatabase, recordDetails);
+
+            // Correct return value from method?
+            Assert.AreEqual(ret, 1);
+            // Correct number of items added to import list?
+            Assert.AreEqual(TsImportList.Count, 1);
+
+            // The start date of the irregular time series should have been applied as the first date
+            // in the time series--not as the value of the <StartDate> tag.
+            Assert.AreEqual(TsImportList[0].BlobStartDate, new DateTime(1930, 1, 1, 10, 50, 30));
+        }
         #endregion
 
         #region Test Method for ReadAndStore() multi-trace without errors
