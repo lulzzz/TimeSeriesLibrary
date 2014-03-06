@@ -60,6 +60,7 @@ namespace TimeSeriesLibrary
         public String EPart;
         public String Units;
         public String TimeSeriesType;
+        public Double MultiplicationFactor = 1.0;
         
         // These fields are meta-parameters of the BLOB that must be recorded in a consistent
         // manner with the BLOB itself.  The fields are recorded to the TSImport object
@@ -106,6 +107,10 @@ namespace TimeSeriesLibrary
         public void SetEPart(XmlReader xmlReader) { SetDetailFieldString(ref EPart, xmlReader); }
         public void SetUnits(XmlReader xmlReader) { SetDetailFieldString(ref Units, xmlReader); }
         public void SetTimeSeriesType(XmlReader xmlReader) { SetDetailFieldString(ref TimeSeriesType, xmlReader); }
+        public void SetMultiplicationFactor(XmlReader xmlReader) 
+        { 
+            SetDetailFieldDouble(ref MultiplicationFactor, xmlReader, 1.0); 
+        }
 
         public int GetTraceNumber(XmlReader xmlReader)
         {
@@ -146,6 +151,24 @@ namespace TimeSeriesLibrary
                     i = defaultVal;
                 else
                     i = int.Parse(s);
+            }
+            else
+                AddUnprocessedElement(xmlReader.ReadOuterXml());
+        }
+        // The field that is passed as a parameter will be assigned from the current XML 
+        // element if IsDetailed is true.  Otherwise, the XML element is recorded in the 
+        // UnprocessedElements field.
+        private void SetDetailFieldDouble(ref Double x, XmlReader xmlReader, Double defaultVal)
+        {
+            String tagName = xmlReader.Name;
+            String s = xmlReader.ReadElementContentAsString();
+
+            if (IsDetailed)
+            {
+                if (s == String.Empty)
+                    x = defaultVal;
+                else
+                    x = Double.Parse(s);
             }
             else
                 AddUnprocessedElement(xmlReader.ReadOuterXml());

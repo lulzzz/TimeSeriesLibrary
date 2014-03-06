@@ -2,6 +2,7 @@
 	<Pattern>
 		<Name>JOEBLOW</Name>
 		<Units>CFS</Units>
+        <MultiplicationFactor>2.7</MultiplicationFactor>
 		<TimeSeriesType>PER-CUM</TimeSeriesType>
 		<TraceNumber>2</TraceNumber>
 		<StartDate>10/01/1927 03:09:00</StartDate>

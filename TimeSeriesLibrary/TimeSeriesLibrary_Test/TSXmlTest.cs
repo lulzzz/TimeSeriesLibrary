@@ -487,6 +487,11 @@ namespace TimeSeriesLibrary_Test
             Assert.AreEqual(TsImportList[1].TimeStepUnit, TSDateCalculator.TimeStepUnitCode.Day);
             Assert.AreEqual(TsImportList[2].TimeStepUnit, TSDateCalculator.TimeStepUnitCode.Irregular);
 
+            // Verify MultiplicationFactor in import list
+            Assert.AreEqual(TsImportList[0].MultiplicationFactor, 2.7);
+            Assert.AreEqual(TsImportList[1].MultiplicationFactor, 1.0);
+            Assert.AreEqual(TsImportList[2].MultiplicationFactor, 1.0);
+
             // Verify TimeStepQuantity in import list
             Assert.AreEqual(TsImportList[0].TimeStepQuantity, 1);
             Assert.AreEqual(TsImportList[1].TimeStepQuantity, 2);

@@ -274,6 +274,9 @@ namespace TimeSeriesLibrary
                                         case "TraceNumber": // <TraceNumber> contains the trace number for an ensemble
                                             defaultTraceNumber = tsImport.GetTraceNumber(oneSeriesXmlReader); break;
 
+                                        case "MultiplicationFactor":
+                                            tsImport.SetMultiplicationFactor(oneSeriesXmlReader); break;
+
                                         default:
                                             // Any other tags are simply copied to the String object 
                                             // 'UnprocessedElements'. Here they are stored with 
