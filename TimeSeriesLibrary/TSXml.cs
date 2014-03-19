@@ -300,7 +300,7 @@ namespace TimeSeriesLibrary
                                     nameString = "unnamed time series";
                                 else
                                     nameString = "time series named '" + tsImport.Name + "'";
-                                errorList = "Some required subelements were missing from " + nameString 
+                                errorList = "Some required subelements were missing from " + nameString
                                                 + " in " + ReportedFileName + "\n";
                                 if (!foundStartDate) errorList += "\n<StartDate> was not found";
                                 if (!foundTimeStepUnit) errorList += "\n<TimeStepUnit> was not found";
@@ -411,6 +411,13 @@ namespace TimeSeriesLibrary
                 // that we throw here, and the XmlException is included as an inner exception.
                 throw new TSLibraryException(ErrCode.Enum.Xml_File_Malformed,
                             ReportedFileName + "is malformed.\n\n" + e.Message, e);
+            }
+            finally
+            {
+                // Disposing the Stream object ensures that the file is closed, if applicable.
+                // This is put into the 'finally' clause so that we can ensure that the Stream
+                // is closed no matter how we exit this method.
+                xmlStream.Dispose();
             }
             
             return numTs;
