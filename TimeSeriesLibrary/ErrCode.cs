@@ -136,7 +136,12 @@ namespace TimeSeriesLibrary
             /// This error indicates that the TimeSeriesLibrary method can not reconcile conflicting
             /// information about a time series.
             /// </summary>
-            Xml_File_Inconsistent = -407
+            Xml_File_Inconsistent = -407,
+            /// <summary>
+            /// This error indicates that the TimeSeriesLibrary method can not parse the StartDate element
+            /// </summary>
+            Xml_File_StartDate_Unreadable = -408
+
         }
     }
 }

@@ -20,6 +20,7 @@ namespace TimeSeriesLibrary
         private String TraceTableName;
         private SqlConnection Connx;
         private TSConnection TSConnection;
+        private DateTime _defaultTime = new DateTime(2000, 1, 1, 23, 59, 59);
 
         private String reportedFileName;
         public String ReportedFileName
@@ -89,7 +90,7 @@ namespace TimeSeriesLibrary
             
             TSDateCalculator.TimeStepUnitCode TimeStepUnit = TSDateCalculator.TimeStepUnitCode.Day; // to be read from XML
             short TimeStepQuantity = 1;                       // to be read from XML
-            DateTime StartDate = DateTime.Parse("1/1/2000");  // to be read from XML
+            DateTime StartDate = _defaultTime;                // to be read from XML
             double[] valueArray = null;                       // to be read from XML
             var elementNames = new List<String> { "TimeSeries", "Pattern" };
 
@@ -198,7 +199,12 @@ namespace TimeSeriesLibrary
                                         case "StartDate":
                                             // TimeSeriesLibrary will store <StartDate> to the data table
                                             s = oneSeriesXmlReader.ReadElementContentAsString();
-                                            StartDate = DateTime.Parse(s);
+                                            if (!TimeExtensions.TryParse(s, out StartDate, _defaultTime))
+                                            {
+                                                throw new TSLibraryException(ErrCode.Enum.Xml_File_StartDate_Unreadable,
+                                                            ReportedFileName 
+                                                        + "contains unreadable StartDate element value " + s);
+                                            }
                                             foundStartDate = true;
                                             break;
 

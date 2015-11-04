@@ -832,6 +832,33 @@ namespace TimeSeriesLibrary_Test
                 Assert.AreEqual(ErrCode.Enum.Xml_File_Inconsistent, e.ErrCode);
             }
         }
+        // method should throw exception because StartDate is unreadable
+        [TestMethod()]
+        public void ReadAndStore_StartDateError()
+        {
+            string xmlText =
+                "<Import><TimeSeries>" +
+                " <StartDate>WHASSUP??</StartDate>" +
+                " <TimeStepUnit>Month</TimeStepUnit>" +
+                " <TimeStepQuantity>6</TimeStepQuantity>" +
+                " <Data Trace=\"2\">" +
+                "   77.7890" +
+                "   -5.5196" +
+                " </Data> " +
+                "</TimeSeries></Import>";
+            bool storeToDatabase = false;
+            bool recordDetails = true;
+
+            try
+            {
+                int ret = TsXml.ReadAndStore(null, xmlText, TsImportList, storeToDatabase, recordDetails);
+                Assert.Fail("Should have thrown exception");
+            }
+            catch (TSLibraryException e)
+            {
+                Assert.AreEqual(ErrCode.Enum.Xml_File_StartDate_Unreadable, e.ErrCode);
+            }
+        }
         #endregion
 
 
