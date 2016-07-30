@@ -71,24 +71,24 @@ namespace TimeSeriesLibrary
             // not used?
             End_Date_Precedes_Start_Date = -301,
             /// <summary>
-            /// This error code indicates that a TimeSeriesLibrary method was asked to compute an MD5
-            /// checksum using TimeStepUnit=Irregular and TimeStepQuantity!=0.  If TimeStepUnit=Irregular,
+            /// This error code indicates that a TimeSeriesLibrary method was asked to compute a checksum 
+            /// using TimeStepUnit=Irregular and TimeStepQuantity!=0.  If TimeStepUnit=Irregular,
             /// then the TimeStepQuantity must equal zero in order to ensure consistency in the checksum.
             /// </summary>
             Checksum_Quantity_Nonzero = -302,
             /// <summary>
-            /// This error code indicates that a TimeSeriesLibrary method was asked to compute an MD5
-            /// checksum where the TimeStepCount parameter did not match the length of the input list or array.
+            /// This error code indicates that a TimeSeriesLibrary method was asked to compute a checksum
+            /// where the TimeStepCount parameter did not match the length of the input list or array.
             /// </summary>
             Checksum_Improper_Count = -303,
             /// <summary>
-            /// This error code indicates that a TimeSeriesLibrary method was asked to compute an MD5
-            /// checksum where the StartDate parameter did not match the first date in the input list or array.
+            /// This error code indicates that a TimeSeriesLibrary method was asked to compute a checksum 
+            /// where the StartDate parameter did not match the first date in the input list or array.
             /// </summary>
             Checksum_Improper_StartDate = -304,
             /// <summary>
-            /// This error code indicates that a TimeSeriesLibrary method was asked to compute an MD5
-            /// checksum where the EndDate parameter did not match the last date in the input list or array.
+            /// This error code indicates that a TimeSeriesLibrary method was asked to compute a checksum 
+            /// where the EndDate parameter did not match the last date in the input list or array.
             /// </summary>
             Checksum_Improper_EndDate = -305,
 
@@ -136,7 +136,12 @@ namespace TimeSeriesLibrary
             /// This error indicates that the TimeSeriesLibrary method can not reconcile conflicting
             /// information about a time series.
             /// </summary>
-            Xml_File_Inconsistent = -407
+            Xml_File_Inconsistent = -407,
+            /// <summary>
+            /// This error indicates that the TimeSeriesLibrary method can not parse the StartDate element
+            /// </summary>
+            Xml_File_StartDate_Unreadable = -408
+
         }
     }
 }

@@ -19,17 +19,62 @@ namespace TimeSeriesLibrary
         // Because the DLL is accessed using the DllImport attribute on these functions, if any
         // test classes depend on the LZFX class, then those classes will need to have the 
         // 'DeploymentItem' attribute.  This is because when Visual Studio runs tests, it copies
-        // the assembly to a temporary folder, but it does not recognized that the unmanaged
+        // the assembly to a temporary folder, but it does not recognize that the unmanaged
         // lzfx.dll is a dependency that needs to be copied into this temporary folder.
         // For more information, see:
         // http://social.msdn.microsoft.com/forums/en-US/vststest/thread/9ffe18d4-e1fa-4de4-845f-634843802bb9/
 
-        [DllImport("lzfx.dll", CallingConvention = CallingConvention.Cdecl)]
-        private extern static int lzfx_compress(void* ibuf, uint ilen,
-                          void* obuf, uint *olen);
-        [DllImport("lzfx.dll", CallingConvention = CallingConvention.Cdecl)]
-        private extern static int lzfx_decompress(void* ibuf, uint ilen,
-                            void* obuf, uint *olen);
+        private static class LZFX32
+        {
+            [DllImport("lzfx.dll", CallingConvention = CallingConvention.Cdecl)]
+            public extern static int lzfx_compress(void* ibuf, uint ilen,
+                              void* obuf, uint* olen);
+            [DllImport("lzfx.dll", CallingConvention = CallingConvention.Cdecl)]
+            public extern static int lzfx_decompress(void* ibuf, uint ilen,
+                                void* obuf, uint* olen);
+        }
+        private static class LZFX64
+        {
+            [DllImport("lzfx64.dll", CallingConvention = CallingConvention.Cdecl)]
+            public extern static int lzfx_compress(void* ibuf, uint ilen,
+                              void* obuf, uint* olen);
+            [DllImport("lzfx64.dll", CallingConvention = CallingConvention.Cdecl)]
+            public extern static int lzfx_decompress(void* ibuf, uint ilen,
+                                void* obuf, uint* olen);
+        }
+        // delegate types for the delegates that will call either the 32-bit or 64-bit
+        // functions from DLL import that are declared above
+        private delegate int lzfx_compress_delegate_type(void* ibuf, uint ilen,
+                          void* obuf, uint* olen);
+        private delegate int lzfx_decompress_delegate_type(void* ibuf, uint ilen,
+                            void* obuf, uint* olen);
+
+        // Delegates for calling either the 32-bit or 64-bit functions from DLL import
+        private static lzfx_compress_delegate_type lzfx_compress;
+        private static lzfx_decompress_delegate_type lzfx_decompress;
+        #endregion
+
+        #region static constructor
+        /// <summary>
+        /// static constructor
+        /// </summary>
+        static LZFX()
+        {
+            // If this is a 64-bit process
+            if (Environment.Is64BitProcess)
+            {
+                // assign the delegates to call the functions in the 64-bit DLL
+                lzfx_compress = LZFX64.lzfx_compress;
+                lzfx_decompress = LZFX64.lzfx_decompress;
+            }
+            // If this is a 32-bit process
+            else
+            {
+                // assign the delegates to call the functions in the 32-bit DLL
+                lzfx_compress = LZFX32.lzfx_compress;
+                lzfx_decompress = LZFX32.lzfx_decompress;
+            }
+        }
         #endregion
 
         #region Methods

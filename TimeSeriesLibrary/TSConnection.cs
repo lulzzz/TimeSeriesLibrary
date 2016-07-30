@@ -40,6 +40,11 @@ namespace TimeSeriesLibrary
                 return tSConnectionsCollection;
             }
         }
+        /// <summary>
+        /// Collection of wrapper objects for SqlCommand objects that have been cached using
+        /// the SqlCommand.Prepare method.
+        /// </summary>
+        public List<TSSqlCommandContainer> PreparedSqlCommands = new List<TSSqlCommandContainer>();
         #endregion
 
 

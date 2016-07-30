@@ -6,7 +6,7 @@ ipch
 *.datasource
 *.sql
 *.orig
-TimeSeriesLibrary.suo
+TimeSeriesLibrary*.suo
 **/*.orig
 *.ipch
 *.obj

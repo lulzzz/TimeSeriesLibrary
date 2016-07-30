@@ -124,4 +124,16 @@
   <data name="test2" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\test2.xml;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
   </data>
+  <data name="test3" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\test3.xml;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="test4" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\test4.xml;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="test5" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\test5.xml;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="test6" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\test6.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
 </root>

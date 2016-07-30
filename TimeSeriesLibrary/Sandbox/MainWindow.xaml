@@ -5,6 +5,5 @@
     <StackPanel>
         <Button Name="GoButton" Click="GoButtonClick" Width="100">GO!</Button>
         <Label Name="TimeLabelBlob">WAITING</Label>
-        <Label Name="TimeLabelNoBlob">WAITING</Label>
     </StackPanel>
 </Window>

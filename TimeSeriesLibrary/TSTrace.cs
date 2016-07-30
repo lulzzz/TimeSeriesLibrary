@@ -16,12 +16,20 @@ namespace TimeSeriesLibrary
         /// </summary>
         Int32 TraceNumber { get; set; }
         /// <summary>
+        /// The number of time steps that are stored in the ValueBlob property
+        /// </summary>
+        Int32 TimeStepCount { get; set; }
+        /// <summary>
+        /// The date of the last time step that is stored in the ValueBlob property
+        /// </summary>
+        DateTime EndDate { get; set; }
+        /// <summary>
         /// The BLOB (byte array) that stores all the values (for regular time series) or the date/value 
         /// pairs (for irregular time series) of all the time steps in this time series trace.
         /// </summary>
         Byte[] ValueBlob { get; set; }
         /// <summary>
-        /// The MD5 checksum computed from the BLOB and trace number
+        /// The checksum computed from the BLOB and trace number
         /// </summary>
         Byte[] Checksum { get; set; }
     }
@@ -37,12 +45,20 @@ namespace TimeSeriesLibrary
         /// </summary>
         public Int32 TraceNumber { get; set; }
         /// <summary>
+        /// The number of time steps that are stored in the ValueBlob property
+        /// </summary>
+        public Int32 TimeStepCount { get; set; }
+        /// <summary>
+        /// The date of the last time step that is stored in the ValueBlob property
+        /// </summary>
+        public DateTime EndDate { get; set; }
+        /// <summary>
         /// The BLOB (byte array) that stores all the values (for regular time series) or the date/value 
         /// pairs (for irregular time series) of all the time steps in this time series trace.
         /// </summary>
         public Byte[] ValueBlob { get; set; }
         /// <summary>
-        /// The MD5 checksum computed from the BLOB and trace number
+        /// The checksum computed from the BLOB and trace number
         /// </summary>
         public Byte[] Checksum { get; set; }
     }

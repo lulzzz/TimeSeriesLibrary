@@ -160,12 +160,53 @@ namespace TimeSeriesLibrary
         {
             // Element zero of the array comes directly from the input parameter
             dateArray[0] = reqStartDate;
-            // Loop through the length of the array and fill in the date values
-            for (int i = 1; i < nReqValues; i++)
+
+            TimeSpan span;
+            // We will loop through the length of the array and fill in the date values. However, the action
+            // to be performed within the loop corresponds to the time step unit. In a previous version of
+            // the code, this method simply called IncrementDate, which provided satisfying encapsulation
+            // of code (avoiding duplication of effort). However, this method was found to be a performance
+            // problem, so the code now attempts to optimize by minimizing the calculations that occur
+            // within the loop. Where possible, it also calls the DateTime.Add method, using a TimeSpan
+            // parameter, which is faster than calling AddDays or other methods. This means that the
+            // method is noticeably slower for the Month and Year units, but this is mitigated by the
+            // fact that usually there are fewer time steps in a monthly or yearly series.
+            switch (timeStepUnit)
             {
-                // IncrementDate method determines the date value of the next time step
-                dateArray[i] = IncrementDate(dateArray[i - 1], timeStepUnit, timeStepQuantity, 1);
+                case TimeStepUnitCode.Minute:
+                    span = new TimeSpan(0, 0, timeStepQuantity, 0);
+                    for (int i = 1; i < nReqValues; i++)
+                        dateArray[i] = dateArray[i - 1].Add(span);
+                    break;
+                case TimeStepUnitCode.Hour:
+                    span = new TimeSpan(0, timeStepQuantity, 0, 0);
+                    for (int i = 1; i < nReqValues; i++)
+                        dateArray[i] = dateArray[i - 1].Add(span);
+                    break;
+                case TimeStepUnitCode.Day:
+                    span = new TimeSpan(timeStepQuantity, 0, 0, 0);
+                    for (int i = 1; i < nReqValues; i++)
+                        dateArray[i] = dateArray[i - 1].Add(span);
+                    break;
+                case TimeStepUnitCode.Week:
+                    span = new TimeSpan(timeStepQuantity * 7, 0, 0, 0);
+                    for (int i = 1; i < nReqValues; i++)
+                        dateArray[i] = dateArray[i - 1].Add(span);
+                    break;
+                case TimeStepUnitCode.Month:
+                    for (int i = 1; i < nReqValues; i++)
+                        dateArray[i] = dateArray[i - 1].AddMonths(timeStepQuantity);
+                    break;
+                case TimeStepUnitCode.Year:
+                    for (int i = 1; i < nReqValues; i++)
+                        dateArray[i] = dateArray[i - 1].AddYears(timeStepQuantity);
+                    break;
+                default:
+                    for (int i = 1; i < nReqValues; i++)
+                        dateArray[i] = dateArray[i - 1];
+                    break;
             }
+
         } 
         #endregion
 
