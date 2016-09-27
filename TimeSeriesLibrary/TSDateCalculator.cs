@@ -210,5 +210,18 @@ namespace TimeSeriesLibrary
         } 
         #endregion
 
+        public static DateTime AddMonthsByEnd(this DateTime when, int months)
+        {
+            if (months == 0) return when;
+            DateTime startOfNextMonth = when;
+            int month = when.Month;
+            while (startOfNextMonth.Month == month)
+            {
+                startOfNextMonth = startOfNextMonth.AddDays(1);
+            }
+            TimeSpan delta = startOfNextMonth - when;
+            return startOfNextMonth.AddMonths(1) - delta;
+        }
+
     }
 }
