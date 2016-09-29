@@ -13,7 +13,6 @@ namespace TimeSeriesLibrary_Test
     ///to contain all TSLibraryTest Unit Tests
     ///</summary>
     [TestClass()]
-    [DeploymentItem("lzfx.dll")]
     public class TSLibraryTest
     {
         static List<TimeSeriesValue> IrregList1 = new List<TimeSeriesValue>();
@@ -74,7 +73,7 @@ namespace TimeSeriesLibrary_Test
             }
 
             IrregList2.Add(new TimeSeriesValue { Date = BlobStartDate2, Value = 3.5 });
-            RegList2.Add(new TimeSeriesValue { Date = BlobStartDate2, Value = -20.0 });
+            RegList2.Add(new TimeSeriesValue { Date = BlobStartDate2.RoundMonthEnd(0), Value = -20.0 });
 
             for (i = 1; i < TimeStepCount2; i++)
             {
@@ -85,7 +84,7 @@ namespace TimeSeriesLibrary_Test
                 });
                 RegList2.Add(new TimeSeriesValue
                 {
-                    Date = RegList2[i-1].Date.AddMonths(1),
+                    Date = RegList2[i-1].Date.AddMonthsByEnd(0, 1),
                     Value = 3.0
                 });
             }

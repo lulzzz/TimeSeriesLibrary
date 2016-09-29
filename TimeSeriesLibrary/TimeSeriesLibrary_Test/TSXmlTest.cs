@@ -14,7 +14,6 @@ namespace TimeSeriesLibrary_Test
     ///to contain all TSXmlTest Unit Tests
     ///</summary>
     [TestClass()]
-    [DeploymentItem("lzfx.dll")]
     public class TSXmlTest
     {
         TSXml TsXml;
@@ -398,9 +397,9 @@ namespace TimeSeriesLibrary_Test
             Assert.AreEqual(TsImportList[1].TraceList[3].TimeStepCount, 17);
 
             // Verify BlobEndDate in import list
-            Assert.AreEqual(TsImportList[0].TraceList[0].EndDate, DateTime.Parse("7/01/1928 03:09:00"));
-            Assert.AreEqual(TsImportList[0].TraceList[1].EndDate, DateTime.Parse("6/01/1928 03:09:00"));
-            Assert.AreEqual(TsImportList[0].TraceList[2].EndDate, DateTime.Parse("4/01/1928 03:09:00"));
+            Assert.AreEqual(TsImportList[0].TraceList[0].EndDate, DateTime.Parse("7/31/1928 23:59:00"));
+            Assert.AreEqual(TsImportList[0].TraceList[1].EndDate, DateTime.Parse("6/30/1928 23:59:00"));
+            Assert.AreEqual(TsImportList[0].TraceList[2].EndDate, DateTime.Parse("4/30/1928 23:59:00"));
 
             Assert.AreEqual(TsImportList[1].TraceList[0].EndDate, DateTime.Parse("01/16/1930 23:59:00"));
             Assert.AreEqual(TsImportList[1].TraceList[1].EndDate, DateTime.Parse("01/20/1930 23:59:00"));

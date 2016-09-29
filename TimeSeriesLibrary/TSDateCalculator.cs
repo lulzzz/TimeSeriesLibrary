@@ -9,7 +9,7 @@ namespace TimeSeriesLibrary
     /// This class stores methods and enum for computations involving time step size.
     /// All of this class's methods are static, so the class does not need to be instantiated.
     /// </summary>
-    public class TSDateCalculator
+    public static class TSDateCalculator
     {
 
         #region enum TimeStepUnitCode
@@ -43,6 +43,7 @@ namespace TimeSeriesLibrary
             short stepSize, int numSteps)
         {
             DateTime calcDate;  // The end date of the calculation
+            DateTime date = startDate;
 
             // The DateTime class's various 'Add' methods lend themselves to
             // a switch statement so that whichever units the time step is measured in,
@@ -50,25 +51,31 @@ namespace TimeSeriesLibrary
             switch (unit)
             {
                 case TimeStepUnitCode.Minute:
-                    calcDate = startDate.AddMinutes(stepSize * numSteps);
+                    calcDate = date.AddMinutes(stepSize * numSteps);
                     break;
                 case TimeStepUnitCode.Hour:
-                    calcDate = startDate.AddHours(stepSize * numSteps);
+                    calcDate = date.AddHours(stepSize * numSteps);
                     break;
                 case TimeStepUnitCode.Day:
-                    calcDate = startDate.AddDays(stepSize * numSteps);
+                    calcDate = date.AddDays(stepSize * numSteps);
                     break;
                 case TimeStepUnitCode.Week:
-                    calcDate = startDate.AddDays(stepSize * numSteps * 7);
+                    calcDate = date.AddDays(stepSize * numSteps * 7);
                     break;
                 case TimeStepUnitCode.Month:
-                    calcDate = startDate.AddMonths(stepSize * numSteps);
+                    // For now, we only handle monthly time steps that end on regular calendar month
+                    // See https://github.com/hydrologics/Oasis/issues/163
+                    date = date.RoundMonthEnd(0);
+                    calcDate = date.AddMonthsByEnd(0, stepSize * numSteps);
                     break;
                 case TimeStepUnitCode.Year:
-                    calcDate = startDate.AddYears(stepSize * numSteps);
+                    // For now, we only handle yearly time steps that end on regular calendar year
+                    // See https://github.com/hydrologics/Oasis/issues/163
+                    date = new DateTime(date.Year + 1, 1, 1).AddMinutes(-1);
+                    calcDate = date.AddYears(stepSize * numSteps);
                     break;
                 default:
-                    calcDate = startDate;
+                    calcDate = date;
                     break;
             }
             return calcDate;
@@ -82,6 +89,9 @@ namespace TimeSeriesLibrary
         /// start date and end date, when given a regular time step size.
         /// The method does not care whether the input start date comes before the input end
         /// date.  It simply returns the absolute value of the number of steps between the given dates.
+        /// Please note that the returned value is not inclusive of the first time step. That is, if the
+        /// start date is 1/1 and the end date is 1/1, then the number of days between the given dates
+        /// is returned as zero.
         /// </summary>
         /// <param name="startDate">The date when the count begins</param>
         /// <param name="endDate">The date when the count ends</param>
@@ -128,10 +138,16 @@ namespace TimeSeriesLibrary
                         calcDate = calcDate.AddDays(stepSize * 7);
                     break;
                 case TimeStepUnitCode.Month:
+                    // For now, we only handle monthly time steps that end on regular calendar month
+                    // See https://github.com/hydrologics/Oasis/issues/163
+                    calcDate = RoundMonthEnd(calcDate, 0);
                     for (i = 0; calcDate < endDate; i++)
-                        calcDate = calcDate.AddMonths(stepSize);
+                        calcDate = calcDate.AddMonthsByEnd(0, stepSize);
                     break;
                 case TimeStepUnitCode.Year:
+                    // For now, we only handle yearly time steps that end on regular calendar year
+                    // See https://github.com/hydrologics/Oasis/issues/163
+                    calcDate = new DateTime(calcDate.Year + 1, 1, 1).AddMinutes(-1);
                     for (i = 0; calcDate < endDate; i++)
                         calcDate = calcDate.AddYears(stepSize);
                     break;
@@ -194,10 +210,22 @@ namespace TimeSeriesLibrary
                         dateArray[i] = dateArray[i - 1].Add(span);
                     break;
                 case TimeStepUnitCode.Month:
+                    // For now, we do not handle monthly time steps that are shifted.  That is, the
+                    // time steps must end on the end of the standard calendar months. Future work
+                    // should make it possible to create shifted months only once a *shift* parameter
+                    // is specified.  See https://github.com/hydrologics/Oasis/issues/163 . For now,
+                    // the shift parameter is always assumed zero.
+                    dateArray[0] = RoundMonthEnd(reqStartDate, 0);
                     for (int i = 1; i < nReqValues; i++)
-                        dateArray[i] = dateArray[i - 1].AddMonths(timeStepQuantity);
+                        dateArray[i] = dateArray[i - 1].AddMonthsByEnd(0, timeStepQuantity);
                     break;
                 case TimeStepUnitCode.Year:
+                    // For now, we do not handle yearly time steps that are shifted.  That is, the
+                    // time steps must end on the end of the standard calendar year. Future work
+                    // should make it possible to create shifted years only once a *shift* parameter
+                    // is specified.  See https://github.com/hydrologics/Oasis/issues/163 . For now,
+                    // the shift parameter is always assumed zero.
+                    dateArray[0] = new DateTime(reqStartDate.Year, 12, 31);
                     for (int i = 1; i < nReqValues; i++)
                         dateArray[i] = dateArray[i - 1].AddYears(timeStepQuantity);
                     break;
@@ -210,18 +238,63 @@ namespace TimeSeriesLibrary
         } 
         #endregion
 
-        public static DateTime AddMonthsByEnd(this DateTime when, int months)
+        // TODO %%%: an AddYearsByEnd method is also needed
+
+        #region AddMonthsByEnd method
+        /// <summary>
+        /// This method returns a new DateTime value that adds the specified number of months to the]
+        /// given value. The method assumes that months are identified by the date at the end of the month,
+        /// and it allows the months by be identified by a time shift (e.g. all months end on the 15th).
+        /// This method contrasts with the DateTime.AddMonths extension method, which assumes months are
+        /// identified by the start, and which would given inconsistent results for any shifted month
+        /// system.
+        /// </summary>
+        /// <param name="startDate">The date to which months are to be added</param>
+        /// <param name="dayShift">The shift (measured in days) in the definition of monthly time steps.
+        /// If the value is 0, then months are defined as ending on the last day of the standard calendar
+        /// month.  If the value is 1, then months are defined as ending on the 1st day of the standard
+        /// calendar month.  If the value is -1, then months are defined as ending on the day before the
+        /// last day of the standard calendar month.</param>
+        /// <param name="count">the number of months to add to the given date</param>
+        public static DateTime AddMonthsByEnd(this DateTime startDate, int dayShift, int count)
         {
-            if (months == 0) return when;
-            DateTime startOfNextMonth = when;
-            int month = when.Month;
-            while (startOfNextMonth.Month == month)
-            {
-                startOfNextMonth = startOfNextMonth.AddDays(1);
-            }
-            TimeSpan delta = startOfNextMonth - when;
-            return startOfNextMonth.AddMonths(1) - delta;
+            // trivial case requires no math
+            if (count == 0) return startDate;
+
+            // The AddMonths method only gives proper results for a system where
+            //  1) time step is identified by beginning of period, and
+            //  2) time step begins on day 1 of month
+            // Therefore, we take the start date that is assumed to be end of period, convert
+            // to beginning of period, and remove the potential time shift in month definition.
+            DateTime startOfNextMonth = startDate.AddDays(1 - dayShift);
+            // Use AddMonths method to add the number of months requrested by this method's parameter
+            DateTime endDate = startOfNextMonth.AddMonths(count);
+            // Convert back to the end of period with potential time shift
+            endDate = endDate.AddDays(dayShift - 1);
+
+            return endDate;
+        } 
+        #endregion
+
+        #region RoundMonthEnd method
+        /// <summary>
+        /// This method returns the end of the month that contains the given date.  The method has not
+        /// been designed to work if the dayShift is outside the range -30 to +30.
+        /// </summary>
+        /// <param name="date">the date whose month end is to be returned</param>
+        /// <param name="dayShift">The shift (measured in days) in the definition of monthly time steps.
+        /// If the value is 0, then months are defined as ending on the last day of the standard calendar
+        /// month.  If the value is 1, then months are defined as ending on the 1st day of the standard
+        /// calendar month.  If the value is -1, then months are defined as ending on the day before the
+        /// last day of the standard calendar month.</param>
+        public static DateTime RoundMonthEnd(this DateTime date, int dayShift)
+        {
+            DateTime endDate = new DateTime(date.Year, date.Month, 1).AddMinutes(-1).AddDays(dayShift);
+            while (endDate < date)
+                endDate = endDate.AddMonthsByEnd(dayShift, 1);
+            return endDate;
         }
+        #endregion
 
     }
 }

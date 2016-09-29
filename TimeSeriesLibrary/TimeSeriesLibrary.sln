@@ -12,9 +12,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TimeSeriesLibrary_Test", "TimeSeriesLibrary_Test\TimeSeriesLibrary_Test.csproj", "{935F25D4-F649-4BB6-BA20-CB9E9C9AA752}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{D90788E5-7531-45EF-A589-AC3AEBED55D8}"
-	ProjectSection(SolutionItems) = preProject
-		TimeSeriesLibrary.vsmdi = TimeSeriesLibrary.vsmdi
-	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lzfx", "lzfx\lzfx.vcxproj", "{ED6E8A3A-86BE-4D5F-B833-EE0604C898DB}"
 EndProject
