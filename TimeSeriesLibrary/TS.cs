@@ -193,6 +193,20 @@ namespace TimeSeriesLibrary
         }
         #endregion
 
+        #region GetNewSqlCommand method
+        /// <summary>
+        /// This method returns a new SqlCommand object that is initialized with the given text.
+        /// </summary>
+        /// <param name="text">the initial text of the SQL command</param>
+        protected SqlCommand GetNewSqlCommand(String text)
+        {
+            // CommandTimeout value of 600 was chosen to compensate for problems with very large number
+            // of records in OASIS's OutputTimeSeries and OutputTimeSeriesTraces table
+
+            return new SqlCommand(text, Connx) { CommandTimeout = 600 };
+        }
+        #endregion
+
         #region ReadValuesRegular() Method
         /// <summary>
         /// Method reads the time series matching the given ID and trace number, storing the values into
@@ -448,7 +462,7 @@ namespace TimeSeriesLibrary
             String comm = String.Format("insert into {0} ({1}) values ({2}); select SCOPE_IDENTITY()",
                             ParametersTableName, colString, valString);
             // SqlCommand object can execute the query for us
-            using (SqlCommand sqlCommand = new SqlCommand(comm, Connx))
+            using (SqlCommand sqlCommand = GetNewSqlCommand(comm))
             {
                 try
                 {
@@ -718,11 +732,11 @@ namespace TimeSeriesLibrary
         private SqlCommand CreateWriteTraceSqlCommand(String keyString)
         {
             // Instantiate the SqlCommand object using a SQL INSERT command
-            SqlCommand command = new SqlCommand("INSERT INTO " + TraceTableName
+            SqlCommand command = GetNewSqlCommand("INSERT INTO " + TraceTableName
                                 + "(TimeSeries_Id, TraceNumber, TimeStepCount, EndDate, "
                                                     + "ValueBlob, Checksum) "
                                 + "VALUES (@TimeSeries_Id, @TraceNumber, @TimeStepCount, @EndDate, "
-                                                    + "@ValueBlob, @Checksum)", Connx);
+                                                    + "@ValueBlob, @Checksum)");
 
             // Add parameters to the command
             command.Parameters.Add("@TimeSeries_Id", SqlDbType.Int);
@@ -748,8 +762,8 @@ namespace TimeSeriesLibrary
         private SqlCommand CreateSelectTraceChecksumSqlCommand(String keyString)
         {
             // Instantiate the SqlCommand object using a SQL INSERT command
-            SqlCommand command = new SqlCommand("SELECT  TraceNumber, Checksum from "
-                        + TraceTableName+" where TimeSeries_Id=@TimeSeries_Id order by TraceNumber", Connx);
+            SqlCommand command = GetNewSqlCommand("SELECT  TraceNumber, Checksum from "
+                        + TraceTableName+" where TimeSeries_Id=@TimeSeries_Id order by TraceNumber");
 
             // Add parameters to the command
             command.Parameters.Add("@TimeSeries_Id", SqlDbType.Int);
@@ -770,8 +784,8 @@ namespace TimeSeriesLibrary
         private SqlCommand CreateUpdateChecksumSqlCommand(String keyString)
         {
             // Instantiate the SqlCommand object using a SQL INSERT command
-            SqlCommand command = new SqlCommand("UPDATE " + ParametersTableName
-                                    + " SET Checksum=@Checksum WHERE Id=@Id", Connx);
+            SqlCommand command = GetNewSqlCommand("UPDATE " + ParametersTableName
+                                    + " SET Checksum=@Checksum WHERE Id=@Id");
 
             // Add parameters to the command
             command.Parameters.Add("@Checksum", SqlDbType.Binary, 16);
@@ -805,7 +819,7 @@ namespace TimeSeriesLibrary
             comm = String.Format("delete from {0} where TimeSeries_Id='{1}' ",
                                     TraceTableName, Id);
             // SqlCommand object allows us to execute the command
-            using (sqlCommand = new SqlCommand(comm, Connx))
+            using (sqlCommand = GetNewSqlCommand(comm))
             {
                 // This method executes the SQL command and returns the number of rows that were affected
                 sqlCommand.ExecuteNonQuery();
@@ -818,7 +832,7 @@ namespace TimeSeriesLibrary
             comm = String.Format("delete from {0} where Id='{1}' ",
                                     ParametersTableName, Id);
             // SqlCommand object allows us to execute the command
-            using (sqlCommand = new SqlCommand(comm, Connx))
+            using (sqlCommand = GetNewSqlCommand(comm))
             {
                 // This method executes the SQL command and returns the number of rows that were affected
                 int numRowsAffected = sqlCommand.ExecuteNonQuery();
@@ -850,7 +864,7 @@ namespace TimeSeriesLibrary
             comm = String.Format("delete t from {0} t inner join {1} p on p.Id = t.TimeSeries_Id and {2} ",
                                     TraceTableName, ParametersTableName, whereClause);
             // SqlCommand object allows us to execute the command
-            using (sqlCommand = new SqlCommand(comm, Connx))
+            using (sqlCommand = GetNewSqlCommand(comm))
             {
                 // This method executes the SQL command and returns the number of rows that were affected
                 sqlCommand.ExecuteNonQuery();
@@ -863,7 +877,7 @@ namespace TimeSeriesLibrary
             comm = String.Format("delete from {0} where {1}",
                                     ParametersTableName, whereClause);
             // SqlCommand object allows us to execute the command
-            using (sqlCommand = new SqlCommand(comm, Connx))
+            using (sqlCommand = GetNewSqlCommand(comm))
             {
                 // This method executes the SQL command and returns the number of rows that were affected
                 int numRowsAffected = sqlCommand.ExecuteNonQuery();
