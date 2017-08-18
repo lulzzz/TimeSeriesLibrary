@@ -40,6 +40,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DocumentationFile>..\..\OasisLibs\TimeSeriesLibrary.XML</DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
+    <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Oasis.Foundation, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
@@ -56,6 +57,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ComTSLibrary.cs" />
+    <Compile Include="LZ4.cs" />
     <Compile Include="LZFX.cs" />
     <Compile Include="TSDateValueStruct.cs" />
     <Compile Include="TimeSeriesValue.cs" />

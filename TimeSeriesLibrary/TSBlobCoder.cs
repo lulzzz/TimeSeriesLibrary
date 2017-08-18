@@ -357,7 +357,7 @@ namespace TimeSeriesLibrary
         /// still be used by invoking the compression code that was current at the time that
         /// an old time series was compressed.
         /// </summary>
-        public const int currentCompressionCode = 1;
+        public const int currentCompressionCode = 2;
 
         /// <summary>
         /// This returns a compressed version of the given byte array
@@ -372,7 +372,7 @@ namespace TimeSeriesLibrary
                 Byte[] compressedBlob;
                 // the byte-array length of the input blob
                 int inputLength = uncompressedBlob.Length;
-                // The byte array that will be created by the first compression.
+                // The byte array that will be created by the compression.
                 // Note that some incompressible BLOBs will actually be made larger by LZFX
                 // compression.  We have observed about 1% increase over the original BLOB,
                 // so the factor of 1.05 is expected to be safe.  We add 16 since the factor
@@ -382,6 +382,23 @@ namespace TimeSeriesLibrary
                 // Compress using LZFX algorithm.
                 // This method resizes the compressed byte array for us.
                 LZFX.Compress(uncompressedBlob, ref compressedBlob);
+                return compressedBlob;
+            }
+            if (compressionCode == 2)
+            {
+                Byte[] compressedBlob;
+                // the byte-array length of the input blob
+                int inputLength = uncompressedBlob.Length;
+                // The byte array that will be created by the compression.
+                // Note that some incompressible BLOBs might actually be made larger by LZ4
+                // compression.  The GetMaxSize method calls a function built into LZ4 which
+                // returns the maximum possible size of the output array. LZ4 documentation suggests
+                // that speed is optimized by allocating this max size.
+                compressedBlob = new Byte[(int)LZ4.GetMaxSize(inputLength)];
+
+                // Compress using LZ4 algorithm.
+                // This method resizes the compressed byte array for us.
+                LZ4.Compress(uncompressedBlob, ref compressedBlob, 4);
                 return compressedBlob;
             }
             else
@@ -408,6 +425,17 @@ namespace TimeSeriesLibrary
                 // This method will throw an exception if the decompressed data does not
                 // exactly fit into the allocated array size.
                 LZFX.Decompress(inputBlob, decompressedBlob);
+
+                return decompressedBlob;
+            }
+            if (compressionCode == 2)
+            {
+                // the byte array of the output blob
+                Byte[] decompressedBlob = new Byte[decompressedLength];
+                // Decompress using LZFX algorithm.
+                // This method will throw an exception if the decompressed data does not
+                // exactly fit into the allocated array size.
+                LZ4.Decompress(inputBlob, decompressedBlob);
 
                 return decompressedBlob;
             }

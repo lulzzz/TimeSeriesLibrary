@@ -18,17 +18,15 @@ namespace TimeSeriesLibrary_Test
         static List<TimeSeriesValue> IrregList1 = new List<TimeSeriesValue>();
         static List<TimeSeriesValue> IrregList2 = new List<TimeSeriesValue>();
         static List<TimeSeriesValue> RegList1 = new List<TimeSeriesValue>();
-            static TSDateCalculator.TimeStepUnitCode TimeStepUnit1 = TSDateCalculator.TimeStepUnitCode.Hour;
-            static short TimeStepQuantity1 = 3;
-            static DateTime BlobStartDate1 = DateTime.Parse("1/1/1920 12:00 PM");
-            static int TimeStepCount1 =500;
+        static TSDateCalculator.TimeStepUnitCode TimeStepUnit1 = TSDateCalculator.TimeStepUnitCode.Hour;
+        static short TimeStepQuantity1 = 3;
+        static DateTime BlobStartDate1 = DateTime.Parse("1/1/1920 12:00 PM");
+        static int TimeStepCount1 =500;
         static List<TimeSeriesValue> RegList2 = new List<TimeSeriesValue>();
-            static TSDateCalculator.TimeStepUnitCode TimeStepUnit2 = TSDateCalculator.TimeStepUnitCode.Month;
-            static short TimeStepQuantity2 = 1;
-            static DateTime BlobStartDate2 = DateTime.Parse("3/3/1933 12:11 PM");
-            static int TimeStepCount2 = 1144;
-
-        private TestContext testContextInstance;
+        static TSDateCalculator.TimeStepUnitCode TimeStepUnit2 = TSDateCalculator.TimeStepUnitCode.Month;
+        static short TimeStepQuantity2 = 1;
+        static DateTime BlobStartDate2 = DateTime.Parse("3/3/1933 12:11 PM");
+        static int TimeStepCount2 = 1144;
 
         #region TestContext
         /// <summary>
@@ -37,15 +35,10 @@ namespace TimeSeriesLibrary_Test
         ///</summary>
         public TestContext TestContext
         {
-            get
-            {
-                return testContextInstance;
-            }
-            set
-            {
-                testContextInstance = value;
-            }
-        } 
+            get { return testContextInstance; }
+            set { testContextInstance = value; }
+        }
+        private TestContext testContextInstance;
         #endregion
 
 
