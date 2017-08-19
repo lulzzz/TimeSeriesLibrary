@@ -40,17 +40,17 @@ namespace Sandbox
 
         private unsafe int WritingTest()
         {
-            //String paramTableName = "OutputTimeSeries";
-            //String traceTableName = "OutputTimeSeriesTraces";
-            //String extraParamNames = 
-            //        "RunGUID, TimeSeriesType, VariableType, Unit_Id, VariableName, RunElementGUID";
-            //String extraParamValues =
-            //        "'00000000-0000-0000-0000-000000000000', 2, 'Dummy', 2, 'DELETEME', '00000000-0000-0000-0000-000000000000'";
+            String paramTableName = "OutputTimeSeries";
+            String traceTableName = "OutputTimeSeriesTraces";
+            String extraParamNames =
+                    "RunGUID, TimeSeriesType, VariableType, Unit_Id, VariableName, RunElementGUID";
+            String extraParamValues =
+                    "'00000000-0000-0000-0000-000000000000', 2, 'Dummy', 2, 'DELETEME', '00000000-0000-0000-0000-000000000000'";
 
-            //int connectionNumber = 1;
-            //TSLibrary tsLib = new TSLibrary();
-            //connectionNumber = tsLib.OpenConnection(
-            //            "Data Source=.; Database=NYC-SpeedTest; Trusted_Connection=yes;");
+            int connectionNumber = 1;
+            TSLibrary tsLib = new TSLibrary();
+            connectionNumber = tsLib.OpenConnection(
+                        "Data Source=.; Database=NYC-SpeedTest; Trusted_Connection=yes;");
             
             List<Double> valList = new List<Double>();
             DateTime date = StartDate;
@@ -58,40 +58,40 @@ namespace Sandbox
             int x = 0;
             for (int i = 0; i < nVals; i++)
             {
-                x = Math.Abs(x - 1);
+                //x = Math.Abs(x - 1);
                 valList.Add(i*Math.PI);
                 date = date.AddDays(1);
             }
             var valArray = valList.ToArray();
 
-            byte[] blob = null;
+            //byte[] blob = null;
             for (int j = 0; j < nIter; j++)
             {
-                //var ts = new TS(tsLib.ConnxObject.TSConnectionsCollection[connectionNumber],
-                //                tsLib.ConnxObject, paramTableName, traceTableName);
+                var ts = new TS(tsLib.ConnxObject.TSConnectionsCollection[connectionNumber],
+                                tsLib.ConnxObject, paramTableName, traceTableName);
 
-                //int id = ts.WriteParametersRegular(true, null,
-                //                (short)TSDateCalculator.TimeStepUnitCode.Day, 1, nVals, StartDate,
-                //                extraParamNames, extraParamValues);
-                ////int id = 800291;
+                int id = ts.WriteParametersRegular(true, null,
+                                (short)TSDateCalculator.TimeStepUnitCode.Day, 1, nVals, StartDate,
+                                extraParamNames, extraParamValues);
+                //int id = 800291;
 
                 for (int i = 0; i < nTrc; i++)
                 {
-                    //ts.WriteTraceRegular(id, true, null, i + 1, valArray);
+                    ts.WriteTraceRegular(id, true, null, i + 1, valArray);
 
 
-                    ITimeSeriesTrace traceObject = new TSTrace
-                    {
-                        TraceNumber = i+1,
-                        TimeStepCount = nVals,
-                        EndDate = date
-                    };
+                    //ITimeSeriesTrace traceObject = new TSTrace
+                    //{
+                    //    TraceNumber = i+1,
+                    //    TimeStepCount = nVals,
+                    //    EndDate = date
+                    //};
 
-                    blob = TSBlobCoder.ConvertArrayToBlobRegular(valArray, 2, traceObject);
+                    //blob = TSBlobCoder.ConvertArrayToBlobRegular(valArray, 2, traceObject);
                 }
 
             }
-            return blob.Length;
+            return 0; // blob.Length;
         }
         
         private void MainWindowClosed(object sender, EventArgs e)

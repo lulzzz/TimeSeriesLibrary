@@ -326,6 +326,7 @@ namespace TimeSeriesLibrary
                     binWriter.Write(t.Checksum);
 
                 return new MurmurHash().ComputeHash(binArray);
+                //return BitConverter.GetBytes(LZ4.GetXXHash64(binArray));
             }
         }
         /// <summary>
@@ -343,7 +344,8 @@ namespace TimeSeriesLibrary
             {
                 binWriter.Write(traceNumber);
                 binWriter.Write(valueBlob);
-                return new MurmurHash().ComputeHash(binArray);
+                //return new MurmurHash().ComputeHash(binArray);
+                return BitConverter.GetBytes(LZ4.GetXXHash64(binArray));
             }
         }
         #endregion

@@ -33,6 +33,8 @@ namespace TimeSeriesLibrary
                                           int compressedSize, int maxDecompressedSize);
             [DllImport("lz4_32.dll", CallingConvention = CallingConvention.Cdecl)]
             public extern static int LZ4_compressBound(int inputSize);
+            [DllImport("lz4_32.dll", CallingConvention = CallingConvention.Cdecl)]
+            public extern static ulong XXH64 (void* input, uint length, ulong seed);
         }
         private static class LZ4_64
         {
@@ -44,6 +46,8 @@ namespace TimeSeriesLibrary
                                           int compressedSize, int maxDecompressedSize);
             [DllImport("lz4_64.dll", CallingConvention = CallingConvention.Cdecl)]
             public extern static int LZ4_compressBound(int inputSize);
+            [DllImport("lz4_64.dll", CallingConvention = CallingConvention.Cdecl)]
+            public extern static ulong XXH64(void* input, uint length, ulong seed);
         }
         // delegate types for the delegates that will call either the 32-bit or 64-bit
         // functions from DLL import that are declared above
@@ -52,11 +56,13 @@ namespace TimeSeriesLibrary
         private delegate int lz4_decompress_delegate_type(byte* source, byte* dest,
                                           int compressedSize, int maxDecompressedSize);
         private delegate int lz4_get_max_size_delegate_type(int inputSize);
+        private delegate ulong get_xxHash_64_delegate_type(void* input, uint length, ulong seed);
 
         // Delegates for calling either the 32-bit or 64-bit functions from DLL import
         private static lz4_compress_delegate_type lz4_compress;
         private static lz4_decompress_delegate_type lz4_decompress;
         private static lz4_get_max_size_delegate_type lz4_get_max_size;
+        private static get_xxHash_64_delegate_type get_xxHash_64;
         #endregion
 
         #region static constructor
@@ -72,6 +78,7 @@ namespace TimeSeriesLibrary
                 lz4_compress = LZ4_64.LZ4_compress_fast;
                 lz4_decompress = LZ4_64.LZ4_decompress_safe;
                 lz4_get_max_size = LZ4_64.LZ4_compressBound;
+                get_xxHash_64 = LZ4_64.XXH64;
             }
             // If this is a 32-bit process
             else
@@ -80,6 +87,7 @@ namespace TimeSeriesLibrary
                 lz4_compress = LZ4_32.LZ4_compress_fast;
                 lz4_decompress = LZ4_32.LZ4_decompress_safe;
                 lz4_get_max_size = LZ4_32.LZ4_compressBound;
+                get_xxHash_64 = LZ4_32.XXH64;
             }
         }
         #endregion
@@ -144,6 +152,26 @@ namespace TimeSeriesLibrary
         static public int GetMaxSize(int inputByteArrayLength)
         {
             return lz4_get_max_size(inputByteArrayLength);
+        }
+        /// <summary>
+        /// Returns the 64-bit (16-byte) hash of the given byte array, computed by the xxHash algorithm.
+        /// At the time of this writing (Aug 2017), this algorithm was known to be one of the fastest
+        /// hashing algorithms available, although it is not considered to be secure for password hashing.
+        /// The algorithm is also believed to have a very low collision rate.
+        /// This method is exposed by the LZ4 class because xxHash is provided with the LZ4 library.
+        /// For more information about xxHash, refer to:
+        /// https://github.com/Cyan4973/xxHash
+        /// http://aras-p.info/blog/2016/08/09/More-Hash-Function-Tests/
+        /// </summary>
+        /// <param name="inputByteArray">The byte array whose hash is to be computed</param>
+        static public ulong GetXXHash64(byte[] inputByteArray)
+        {
+            ulong hash = 0;
+            fixed(void* inputPtr = inputByteArray)
+            {
+                hash = get_xxHash_64(inputPtr, Convert.ToUInt32(inputByteArray.Length), 0);
+            }
+            return hash;
         }
         #endregion
 
