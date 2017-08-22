@@ -87,9 +87,9 @@ namespace TimeSeriesLibrary
         /// </summary>
         private TSLibrary TSLib;
         /// <summary>
-        /// TSConnection object maintains a list of connections that have been opened by the library
+        /// TSConnectionManager object maintains a list of connections that have been opened by the library
         /// </summary>
-        public TSConnection ConnxObject;
+        public TSConnectionManager ConnxObject;
 
         #region Error Handling
         private bool _hasError = false;

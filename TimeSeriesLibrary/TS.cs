@@ -22,7 +22,7 @@ namespace TimeSeriesLibrary
         /// <summary>
         /// Object that manages connection objects for TimeSeriesLibrary
         /// </summary>
-        private TSConnection TSConnection;
+        private TSConnectionManager TSConnection;
         /// <summary>
         /// name of the database table that stores parameters of this time series
         /// </summary>
@@ -98,7 +98,7 @@ namespace TimeSeriesLibrary
         /// <param name="tsConnection">Object that manages connection objects for TimeSeriesLibrary</param>
         /// <param name="paramTableName">Name of the table in the database that stores this object's record</param>
         /// <param name="traceTableName">The name of the database table that stores the BLOB for a single trace</param>
-        public TS(SqlConnection connx, TSConnection tsConnection, String paramTableName, String traceTableName)
+        public TS(SqlConnection connx, TSConnectionManager tsConnection, String paramTableName, String traceTableName)
         {
             // Store the method parameters in class fields
             Connx = connx;
@@ -750,7 +750,7 @@ namespace TimeSeriesLibrary
             // with identifying information.  Note that the container's constructor will call
             // the command's Prepare method.
             var container = new TSSqlCommandContainer(0, Connx, TraceTableName, keyString, command);
-            // The TSConnection manager object will keep this container in a collection
+            // The TSConnectionManager object will keep this container in a collection
             TSConnection.PreparedSqlCommands.Add(container);
 
             return command;
@@ -772,7 +772,7 @@ namespace TimeSeriesLibrary
             // with identifying information.  Note that the container's constructor will call
             // the command's Prepare method.
             var container = new TSSqlCommandContainer(0, Connx, TraceTableName, keyString, command);
-            // The TSConnection manager object will keep this container in a collection
+            // The TSConnectionManager object will keep this container in a collection
             TSConnection.PreparedSqlCommands.Add(container);
 
             return command;
@@ -795,7 +795,7 @@ namespace TimeSeriesLibrary
             // with identifying information.  Note that the container's constructor will call
             // the command's Prepare method.
             var container = new TSSqlCommandContainer(0, Connx, TraceTableName, keyString, command);
-            // The TSConnection manager object will keep this container in a collection
+            // The TSConnectionManager object will keep this container in a collection
             TSConnection.PreparedSqlCommands.Add(container);
 
             return command;

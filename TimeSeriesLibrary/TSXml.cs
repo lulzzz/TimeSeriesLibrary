@@ -19,7 +19,7 @@ namespace TimeSeriesLibrary
         private String TableName;
         private String TraceTableName;
         private SqlConnection Connx;
-        private TSConnection TSConnection;
+        private TSConnectionManager TSConnection;
         private DateTime _defaultTime = new DateTime(2000, 1, 1, 23, 59, 59);
 
         private String reportedFileName;
@@ -41,7 +41,7 @@ namespace TimeSeriesLibrary
         /// <param name="connx">SqlConnection object that this object will use</param>
         /// <param name="tableName">Name of the table in the database that stores this object's records</param>
         /// <param name="traceTableName">The name of the database table that stores the BLOB for a single trace</param>
-        public TSXml(SqlConnection connx, TSConnection tsConnection, String tableName, String traceTableName)
+        public TSXml(SqlConnection connx, TSConnectionManager tsConnection, String tableName, String traceTableName)
         {
             Connx = connx;
             TSConnection = tsConnection;

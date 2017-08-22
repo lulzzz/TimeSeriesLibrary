@@ -14,9 +14,9 @@ namespace TimeSeriesLibrary
     public class TSLibrary
     {
         /// <summary>
-        /// TSConnection object maintains a list of connections that have been opened by the library
+        /// TSConnectionManager object maintains a list of connections that have been opened by the library
         /// </summary>
-        internal TSConnection ConnxObject = new TSConnection();
+        internal TSConnectionManager ConnxObject = new TSConnectionManager();
 
 
         #region ConvertBlobToList() methods
@@ -386,7 +386,7 @@ namespace TimeSeriesLibrary
         /// <returns>The serial number that was automatically assigned to the new connection.</returns>
         public int OpenConnection(String connectionString)
         {
-            // all the logic is found in the TSConnection object.
+            // all the logic is found in the TSConnectionManager object.
             return ConnxObject.OpenConnection(connectionString);
         }
         /// <summary>
@@ -398,7 +398,7 @@ namespace TimeSeriesLibrary
         /// <param name="connectionNumber">The serial number of the connection to be closed</param>
         public void CloseConnection(int connectionNumber)
         {
-            // all the logic is found in the TSConnection object.
+            // all the logic is found in the TSConnectionManager object.
             ConnxObject.CloseConnection(connectionNumber);
         }
         /// <summary>

@@ -11,16 +11,8 @@ namespace TimeSeriesLibrary
     /// by the time series library.  It contains methods for maintaining the collection
     /// of database connection objects.
     /// </summary>
-    public class TSConnection
+    public class TSConnectionManager
     {
-
-        #region Private Fields
-        /// <summary>
-        /// Dictionary of connections keyed to a connection number
-        /// </summary>
-        private Dictionary<int, SqlConnection> tSConnectionsCollection;
-        #endregion
-
 
         #region Public properties
         /// <summary>
@@ -33,13 +25,14 @@ namespace TimeSeriesLibrary
             get
             {
                 // Initialize the collection if it has not already been initialized
-                if (tSConnectionsCollection == null)
+                if (_tSConnectionsCollection == null)
                 {
-                    tSConnectionsCollection = new Dictionary<int, SqlConnection>();
+                    _tSConnectionsCollection = new Dictionary<int, SqlConnection>();
                 }
-                return tSConnectionsCollection;
+                return _tSConnectionsCollection;
             }
         }
+        private Dictionary<int, SqlConnection> _tSConnectionsCollection;
         /// <summary>
         /// Collection of wrapper objects for SqlCommand objects that have been cached using
         /// the SqlCommand.Prepare method.
@@ -77,7 +70,7 @@ namespace TimeSeriesLibrary
             // What will be the new key (i.e., the connection number)
             int key = TSConnectionsCollection.Count + 1;
             // add to the collection (dictionary)
-            tSConnectionsCollection.Add(key, connx);
+            TSConnectionsCollection.Add(key, connx);
             
             return key;
         }
@@ -99,8 +92,69 @@ namespace TimeSeriesLibrary
                 return;
             }
             // if the connection was successfully closed, then remove it from the collection
-            tSConnectionsCollection.Remove(key);
+            TSConnectionsCollection.Remove(key);
         }
+
+        ///// <summary>
+        ///// 
+        ///// </summary>
+        ///// <param name="key">The integer number of the database connection</param>
+        ///// <param name="tableName">The name of the table into which the trace information is to
+        ///// be stored (not the name of the staging table)</param>
+        //public String BeginStagingTrace(int key, String tableName)
+        //{
+        //    // Create a name for the temporary table.  The initial # char signals to SQL Server
+        //    // that the table is temporary.  Part of a randomly generated GUID is appended to
+        //    // the table's name to avoid conflict with other threads.
+        //    String tempTableName = "#staging_" + tableName
+        //                + "_" + Guid.NewGuid().ToString("N").Substring(0, 12);
+        //    // Add the temporary table name to a Dictionary for later recall
+        //    TemporaryTraceTableNames[key].Add(tableName, tempTableName);
+
+        //    return tempTableName;
+
+        //    //// Create the temporary table in the database.  The SQL command is designed to ensure that
+        //    //// the temporary table has exactly the same columns as the actual table. The "TOP 0" clause
+        //    //// of the SELECT statement ensures that no data is copied into the new table.  Note that the
+        //    //// temporary table will not have any indexes of any kind when created.
+        //    //String commandText = "SELECT TOP 0 * INTO " + tempTableName
+        //    //                    + " FROM " + tableName;
+        //    //var command = new SqlCommand(commandText, tSConnectionsCollection[key]);
+        //    //command.ExecuteNonQuery();
+        //    //command.Dispose();
+
+        //    //return tempTableName;
+        //}
+        ///// <summary>
+        ///// 
+        ///// </summary>
+        ///// <param name="key">The integer number of the database connection</param>
+        ///// <param name="tableName">The name of the table into which the trace information is to
+        ///// be stored (not the name of the staging table)</param>
+        //public void CommitStagedTraces(int key, String tableName)
+        //{
+        //    String tempTableName;
+        //    // Get the name of the temporary staging table from the Dictionary
+        //    if (TemporaryTraceTableNames[key].TryGetValue(tableName, out tempTableName) == false)
+        //        return;
+
+        //    //// Copy all rows from the staging table into the actual table.  We are copying values
+        //    //// from all columns except the 'Id' column.  The 'Id' column would cause an error since
+        //    //// it has the IDENTITY property on it.  After the INSERT command copies all records from
+        //    //// the staging table, the DROP command deletes the table entirely.
+        //    //String text = "INSERT INTO " + tableName + "\n"
+        //    //          + "SELECT TraceNumber, TimeStepCount, EndDate, ValueBlob, Checksum, TimeSeries_Id\n"
+        //    //          + "FROM " + tempTableName + "\n\n"
+        //    //          + "DROP TABLE " + tempTableName;
+        //    //var command = new SqlCommand(text, tSConnectionsCollection[key]) { CommandTimeout = 600 };
+        //    //command.ExecuteNonQuery();
+        //    //command.Dispose();
+
+        //    // Remove the name of the temporary staging table from the Dictionary, since it will
+        //    // never be used again.
+        //    TemporaryTraceTableNames[key].Remove(tableName);
+        //}
+        
         #endregion
 
     }
