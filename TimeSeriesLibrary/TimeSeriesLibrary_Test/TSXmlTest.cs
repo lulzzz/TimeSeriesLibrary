@@ -136,9 +136,9 @@ namespace TimeSeriesLibrary_Test
             // original trial.  However, it is good if the test flags any change, to ensure that the
             // developer can account for any change.  E.g., if the original value was incorrect, then
             // that should be documented and the new output should be scrutinized.
-            Assert.AreEqual(BitConverter.ToString(TsImportList[0].Checksum), "A1-6D-B1-9F-C8-0B-3B-4E-D6-5E-58-FD-55-58-44-40");
-            Assert.AreEqual(BitConverter.ToString(TsImportList[1].Checksum), "71-E9-06-BD-1F-7B-F3-26-A3-7A-D8-E9-D1-D3-DF-B5");
-            Assert.AreEqual(BitConverter.ToString(TsImportList[2].Checksum), "B5-72-A6-D7-D9-C9-45-A3-ED-A6-D7-16-C6-69-58-55");
+            Assert.AreEqual(BitConverter.ToString(TsImportList[0].Checksum), "79-25-65-64-1F-AE-C9-00-33-54-AC-0C-E7-FA-43-F0");
+            Assert.AreEqual(BitConverter.ToString(TsImportList[1].Checksum), "54-50-F9-F2-89-34-D0-E6-4B-88-A3-0C-B8-E9-FC-A1");
+            Assert.AreEqual(BitConverter.ToString(TsImportList[2].Checksum), "55-BA-2B-2D-5E-DD-3D-80-2D-36-62-5D-E6-81-4B-71");
 
             List<TimeSeriesValue> tsvList = null;
             // Verify BLOB # 1 in import list
@@ -281,13 +281,13 @@ namespace TimeSeriesLibrary_Test
             // original trial.  However, it is good if the test flags any change, to ensure that the
             // developer can account for any change.  E.g., if the original value was incorrect, then
             // that should be documented and the new output should be scrutinized.
-            Assert.AreEqual(BitConverter.ToString(TsImportList[0].Checksum), "27-1E-69-C1-9F-A3-DF-20-51-8F-D9-5A-98-F8-F5-71");
-            Assert.AreEqual(BitConverter.ToString(TsImportList[1].Checksum), "FF-57-04-45-48-F4-53-A6-2A-60-C5-A5-6B-05-E9-8E");
+            Assert.AreEqual(BitConverter.ToString(TsImportList[0].Checksum), "7A-8B-F7-D5-A2-3F-17-04-D2-5E-38-F2-8A-17-FC-FF");
+            Assert.AreEqual(BitConverter.ToString(TsImportList[1].Checksum), "8D-E5-3B-9A-C2-05-C5-9F-BF-57-59-56-BC-29-FE-77");
             // Verify Checksum in individual traces
-            Assert.AreEqual(BitConverter.ToString(TsImportList[0].TraceList.Single(t => t.TraceNumber == 1).Checksum), "99-83-FA-1D-3E-B1-DB-97-A6-0E-40-57-2E-3A-60-BC");
-            Assert.AreEqual(BitConverter.ToString(TsImportList[0].TraceList.Single(t => t.TraceNumber == 2).Checksum), "55-B3-D7-E0-68-76-EF-B3-AD-ED-12-36-CD-33-14-46");
-            Assert.AreEqual(BitConverter.ToString(TsImportList[1].TraceList.Single(t => t.TraceNumber == 2).Checksum), "53-17-A2-8F-D1-A1-C5-F6-64-F0-73-D1-04-D7-72-70");
-            Assert.AreEqual(BitConverter.ToString(TsImportList[1].TraceList.Single(t => t.TraceNumber == 3).Checksum), "37-AE-62-94-E1-D3-3B-4B-DA-F7-13-0F-BF-B3-AF-7D");
+            Assert.AreEqual(BitConverter.ToString(TsImportList[0].TraceList.Single(t => t.TraceNumber == 1).Checksum), "32-49-F4-BB-2F-85-69-A0");
+            Assert.AreEqual(BitConverter.ToString(TsImportList[0].TraceList.Single(t => t.TraceNumber == 2).Checksum), "2C-04-08-D2-05-BB-17-DC");
+            Assert.AreEqual(BitConverter.ToString(TsImportList[1].TraceList.Single(t => t.TraceNumber == 2).Checksum), "12-F2-2E-3D-27-A0-CD-62");
+            Assert.AreEqual(BitConverter.ToString(TsImportList[1].TraceList.Single(t => t.TraceNumber == 3).Checksum), "03-C0-12-B2-3A-EE-37-84");
 
             List<TimeSeriesValue> tsvList = null;
             // Verify BLOB of Series# 1 Trace# 1 in import list
@@ -528,9 +528,9 @@ namespace TimeSeriesLibrary_Test
             // original trial.  However, it is good if the test flags any change, to ensure that the
             // developer can account for any change.  E.g., if the original value was incorrect, then
             // that should be documented and the new output should be scrutinized.
-            Assert.AreEqual(BitConverter.ToString(TsImportList[0].Checksum), "A1-6D-B1-9F-C8-0B-3B-4E-D6-5E-58-FD-55-58-44-40");
-            Assert.AreEqual(BitConverter.ToString(TsImportList[1].Checksum), "71-E9-06-BD-1F-7B-F3-26-A3-7A-D8-E9-D1-D3-DF-B5");
-            Assert.AreEqual(BitConverter.ToString(TsImportList[2].Checksum), "B5-72-A6-D7-D9-C9-45-A3-ED-A6-D7-16-C6-69-58-55");
+            Assert.AreEqual(BitConverter.ToString(TsImportList[0].Checksum), "79-25-65-64-1F-AE-C9-00-33-54-AC-0C-E7-FA-43-F0");
+            Assert.AreEqual(BitConverter.ToString(TsImportList[1].Checksum), "54-50-F9-F2-89-34-D0-E6-4B-88-A3-0C-B8-E9-FC-A1");
+            Assert.AreEqual(BitConverter.ToString(TsImportList[2].Checksum), "55-BA-2B-2D-5E-DD-3D-80-2D-36-62-5D-E6-81-4B-71");
 
             List<TimeSeriesValue> tsvList = null;
             // Verify BLOB # 1 in import list

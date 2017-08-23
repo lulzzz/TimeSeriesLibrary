@@ -261,8 +261,8 @@ namespace TimeSeriesLibrary_Test
                 u2, q2, list2.Count,
                 list2[0].Date, list2[list2.Count - 1].Date, list2, trace2, out compressionCode);
 
-            Assert.IsTrue(trace1.Checksum.Length == 16);
-            Assert.IsTrue(trace2.Checksum.Length == 16);
+            Assert.IsTrue(trace1.Checksum.Length == 8);
+            Assert.IsTrue(trace2.Checksum.Length == 8);
 
             for (int i = 0; i < trace2.Checksum.Length; i++)
                 if (trace1.Checksum[i] != trace2.Checksum[i])
