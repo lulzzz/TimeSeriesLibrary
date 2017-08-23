@@ -11,21 +11,28 @@ namespace TimeSeriesLibrary
     /// </summary>
     public class TSSqlCommandContainer
     {
-        public int ConnectionId;
-        public SqlConnection SqlConnection;
+        /// <summary>
+        /// The name of the table that the command is used for
+        /// </summary>
         public String TableName;
+        /// <summary>
+        /// A string that distinguishes this command from others in the collection
+        /// </summary>
         public String KeyString;
+        /// <summary>
+        /// The SqlCommand that is wrapped by this container object.
+        /// </summary>
         public SqlCommand SqlCommand;
 
         /// <summary>
         /// Constructor.  The constructor will call the Prepare method on the SqlCommand
         /// object, so the caller does not need to call this method.
         /// </summary>
-        public TSSqlCommandContainer(int connectionId, SqlConnection sqlConnection, 
-                    String tableName, String keyString, SqlCommand sqlCommand)
+        /// <param name="tableName">The name of the table that the command is used for</param>
+        /// <param name="keyString">A string that distinguishes this command from others in the collection</param>
+        /// <param name="sqlCommand">The SqlCommand that is wrapped by this container object</param>
+        public TSSqlCommandContainer(String tableName, String keyString, SqlCommand sqlCommand)
         {
-            ConnectionId = connectionId;
-            SqlConnection = sqlConnection;
             TableName = tableName;
             KeyString = keyString;
             SqlCommand = sqlCommand;

@@ -18,8 +18,7 @@ namespace TimeSeriesLibrary
     {
         private String TableName;
         private String TraceTableName;
-        private SqlConnection Connx;
-        private TSConnectionManager TSConnection;
+        private TSConnection TSConnection;
         private DateTime _defaultTime = new DateTime(2000, 1, 1, 23, 59, 59);
 
         private String reportedFileName;
@@ -41,10 +40,9 @@ namespace TimeSeriesLibrary
         /// <param name="connx">SqlConnection object that this object will use</param>
         /// <param name="tableName">Name of the table in the database that stores this object's records</param>
         /// <param name="traceTableName">The name of the database table that stores the BLOB for a single trace</param>
-        public TSXml(SqlConnection connx, TSConnectionManager tsConnection, String tableName, String traceTableName)
+        public TSXml(TSConnection connx, String tableName, String traceTableName)
         {
-            Connx = connx;
-            TSConnection = tsConnection;
+            TSConnection = connx;
             TableName = tableName;
             TraceTableName = traceTableName;
         }
@@ -53,7 +51,7 @@ namespace TimeSeriesLibrary
         /// </summary>
         public TSXml()
         {
-            Connx = null;
+            TSConnection = null;
             TableName = null;
         }
         #endregion
@@ -104,7 +102,7 @@ namespace TimeSeriesLibrary
             if (xmlFileName != null && xmlText != null)
                 throw new TSLibraryException(ErrCode.Enum.Xml_Memory_File_Exclusion,
                             "The method's xmlFileName and xmlText parameters can not both be non-null.");
-            if(shouldStoreToDatabase && Connx==null)
+            if(shouldStoreToDatabase && TSConnection==null)
                 throw new TSLibraryException(ErrCode.Enum.Xml_Connection_Not_Initialized,
                             "The method is directed to store results to database, " +
                             "but a database connection has not been assigned in the constructor.");
@@ -321,7 +319,7 @@ namespace TimeSeriesLibrary
                                 // IRREGULAR TIME SERIES
 
                                 // The TS object is used to save one record to the database table
-                                TS ts = new TS(Connx, TSConnection, TableName, TraceTableName);
+                                TS ts = new TS(TSConnection, TableName, TraceTableName);
                                 foreach (KeyValuePair<int, String> keyValuePair in DataStrings)
                                 {
                                     int traceNumber = keyValuePair.Key;
@@ -371,7 +369,7 @@ namespace TimeSeriesLibrary
                                 // REGULAR TIME SERIES
 
                                 // The TS object is used to save one record to the database table
-                                TS ts = new TS(Connx, TSConnection, TableName, TraceTableName);
+                                TS ts = new TS(TSConnection, TableName, TraceTableName);
                                 foreach (KeyValuePair<int, String> keyValuePair in DataStrings)
                                 {
                                     int traceNumber = keyValuePair.Key;

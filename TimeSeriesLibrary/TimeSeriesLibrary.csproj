@@ -59,6 +59,7 @@
     <Compile Include="ComTSLibrary.cs" />
     <Compile Include="LZ4.cs" />
     <Compile Include="LZFX.cs" />
+    <Compile Include="TSConnection.cs" />
     <Compile Include="TSDateValueStruct.cs" />
     <Compile Include="TimeSeriesValue.cs" />
     <Compile Include="TSBlobCoder.cs" />

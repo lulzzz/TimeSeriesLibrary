@@ -18,7 +18,7 @@ namespace TimeSeriesLibrary
         /// <summary>
         /// Dictionary of connections keyed to a connection number
         /// </summary>
-        public Dictionary<int, SqlConnection> TSConnectionsCollection
+        public Dictionary<int, TSConnection> TSConnectionsCollection
         {
             // get returns reference to the private field.
             // there is no set.
@@ -27,17 +27,12 @@ namespace TimeSeriesLibrary
                 // Initialize the collection if it has not already been initialized
                 if (_tSConnectionsCollection == null)
                 {
-                    _tSConnectionsCollection = new Dictionary<int, SqlConnection>();
+                    _tSConnectionsCollection = new Dictionary<int, TSConnection>();
                 }
                 return _tSConnectionsCollection;
             }
         }
-        private Dictionary<int, SqlConnection> _tSConnectionsCollection;
-        /// <summary>
-        /// Collection of wrapper objects for SqlCommand objects that have been cached using
-        /// the SqlCommand.Prepare method.
-        /// </summary>
-        public List<TSSqlCommandContainer> PreparedSqlCommands = new List<TSSqlCommandContainer>();
+        private Dictionary<int, TSConnection> _tSConnectionsCollection;
         #endregion
 
 
@@ -70,7 +65,7 @@ namespace TimeSeriesLibrary
             // What will be the new key (i.e., the connection number)
             int key = TSConnectionsCollection.Count + 1;
             // add to the collection (dictionary)
-            TSConnectionsCollection.Add(key, connx);
+            TSConnectionsCollection.Add(key, new TSConnection(connx));
             
             return key;
         }
@@ -83,7 +78,7 @@ namespace TimeSeriesLibrary
         {
             try
             {   // close the connection
-                SqlConnection connx = TSConnectionsCollection[key];
+                SqlConnection connx = TSConnectionsCollection[key].Connection;
                 connx.Close();
                 connx.Dispose();
             }

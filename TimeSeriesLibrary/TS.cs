@@ -16,13 +16,9 @@ namespace TimeSeriesLibrary
     {
         #region Fields
         /// <summary>
-        /// Object handles the connection to the database
+        /// Container of the SqlConnection objects used by this TS object
         /// </summary>
-        private SqlConnection Connx;
-        /// <summary>
-        /// Object that manages connection objects for TimeSeriesLibrary
-        /// </summary>
-        private TSConnectionManager TSConnection;
+        private TSConnection TSConnection;
         /// <summary>
         /// name of the database table that stores parameters of this time series
         /// </summary>
@@ -98,10 +94,9 @@ namespace TimeSeriesLibrary
         /// <param name="tsConnection">Object that manages connection objects for TimeSeriesLibrary</param>
         /// <param name="paramTableName">Name of the table in the database that stores this object's record</param>
         /// <param name="traceTableName">The name of the database table that stores the BLOB for a single trace</param>
-        public TS(SqlConnection connx, TSConnectionManager tsConnection, String paramTableName, String traceTableName)
+        public TS(TSConnection tsConnection, String paramTableName, String traceTableName)
         {
             // Store the method parameters in class fields
-            Connx = connx;
             TSConnection = tsConnection;
             ParametersTableName = paramTableName;
             TraceTableName = traceTableName;
@@ -115,7 +110,6 @@ namespace TimeSeriesLibrary
         public TS()
         {
             // These field values reflect that the database is not accessed
-            Connx = null;
             ParametersTableName = null;
             TraceTableName = null;
             // Mark this time series as uninitialized
@@ -145,7 +139,7 @@ namespace TimeSeriesLibrary
                                         "StartDate,CompressionCode " +
                                         "from {0} where Id='{1}'", ParametersTableName, Id);
             // SqlDataAdapter object will use the query to fill the DataTable
-            using (SqlDataAdapter adp = new SqlDataAdapter(comm, Connx))
+            using (SqlDataAdapter adp = new SqlDataAdapter(comm, TSConnection.Connection))
             {
                 DataTable dTable = new DataTable();
                 // Execute the query to fill the DataTable object
@@ -203,7 +197,7 @@ namespace TimeSeriesLibrary
             // CommandTimeout value of 600 was chosen to compensate for problems with very large number
             // of records in OASIS's OutputTimeSeries and OutputTimeSeriesTraces table
 
-            return new SqlCommand(text, Connx) { CommandTimeout = 600 };
+            return new SqlCommand(text, TSConnection.Connection) { CommandTimeout = 600 };
         }
         #endregion
 
@@ -311,7 +305,7 @@ namespace TimeSeriesLibrary
                             + "from {0} where TimeSeries_Id='{1}' and TraceNumber='{2}' ",
                                     TraceTableName, Id, traceNumber);
             // SqlDataAdapter object will use the query to fill the DataTable
-            using (SqlDataAdapter adp = new SqlDataAdapter(comm, Connx))
+            using (SqlDataAdapter adp = new SqlDataAdapter(comm, TSConnection.Connection))
             using (DataTable dTable = new DataTable())
             {
                 // Execute the query to fill the DataTable object
@@ -487,7 +481,9 @@ namespace TimeSeriesLibrary
         private void ErrorCheckWriteValues(bool doWriteToDB, TSImport tsImport)
         {
             // TODO: create an error code and throw exception
-            if (doWriteToDB && (ParametersTableName == null || Connx == null || TraceTableName == null))
+            if (doWriteToDB && (ParametersTableName == null 
+                                    || TSConnection.Connection == null 
+                                    || TraceTableName == null))
             {
             }
         }
@@ -601,8 +597,7 @@ namespace TimeSeriesLibrary
             // Find a SqlCommand that was previously cached for this purpose
             var commandContainer = TSConnection.PreparedSqlCommands
                     .Where(o => o.TableName == TraceTableName 
-                                && o.KeyString == keyString 
-                                && o.SqlConnection == Connx).FirstOrDefault();
+                                && o.KeyString == keyString).FirstOrDefault();
             // If no SqlCommand has been created yet
             if (commandContainer == null)
                 // Then create one.
@@ -638,7 +633,6 @@ namespace TimeSeriesLibrary
         /// If this parameter is null, then the method will skip the recording of such paramters to an object.</param>
         private void UpdateParametersChecksum(bool doWriteToDB, TSImport tsImport)
         {
-            String comm;
             // This List will contain one item for each trace for this time series.  The primary
             // purpose of the list is to store the checksum for each trace, since the checksum
             // of the timeseries is computed from the list of checksums from each of its traces.
@@ -657,8 +651,7 @@ namespace TimeSeriesLibrary
                 // Find a SqlCommand that was previously cached for this purpose
                 var commandContainer = TSConnection.PreparedSqlCommands
                         .Where(o => o.TableName == TraceTableName
-                                    && o.KeyString == keyString
-                                    && o.SqlConnection == Connx).FirstOrDefault();
+                                    && o.KeyString == keyString).FirstOrDefault();
                 // If no SqlCommand has been created yet
                 if (commandContainer == null)
                     // Then create one.
@@ -711,8 +704,7 @@ namespace TimeSeriesLibrary
                 // Find a SqlCommand that was previously cached for this purpose
                 var commandContainer = TSConnection.PreparedSqlCommands
                         .Where(o => o.TableName == TraceTableName
-                                    && o.KeyString == keyString
-                                    && o.SqlConnection == Connx).FirstOrDefault();
+                                    && o.KeyString == keyString).FirstOrDefault();
                 // If no SqlCommand has been created yet
                 if (commandContainer == null)
                     // Then create one.
@@ -749,7 +741,7 @@ namespace TimeSeriesLibrary
             // add the new command to a container that keeps the command object wrapped together
             // with identifying information.  Note that the container's constructor will call
             // the command's Prepare method.
-            var container = new TSSqlCommandContainer(0, Connx, TraceTableName, keyString, command);
+            var container = new TSSqlCommandContainer(TraceTableName, keyString, command);
             // The TSConnectionManager object will keep this container in a collection
             TSConnection.PreparedSqlCommands.Add(container);
 
@@ -771,7 +763,7 @@ namespace TimeSeriesLibrary
             // add the new command to a container that keeps the command object wrapped together
             // with identifying information.  Note that the container's constructor will call
             // the command's Prepare method.
-            var container = new TSSqlCommandContainer(0, Connx, TraceTableName, keyString, command);
+            var container = new TSSqlCommandContainer(TraceTableName, keyString, command);
             // The TSConnectionManager object will keep this container in a collection
             TSConnection.PreparedSqlCommands.Add(container);
 
@@ -794,7 +786,7 @@ namespace TimeSeriesLibrary
             // add the new command to a container that keeps the command object wrapped together
             // with identifying information.  Note that the container's constructor will call
             // the command's Prepare method.
-            var container = new TSSqlCommandContainer(0, Connx, TraceTableName, keyString, command);
+            var container = new TSSqlCommandContainer(TraceTableName, keyString, command);
             // The TSConnectionManager object will keep this container in a collection
             TSConnection.PreparedSqlCommands.Add(container);
 

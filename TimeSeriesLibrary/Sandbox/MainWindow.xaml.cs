@@ -68,7 +68,7 @@ namespace Sandbox
             for (int j = 0; j < nIter; j++)
             {
                 var ts = new TS(tsLib.ConnxObject.TSConnectionsCollection[connectionNumber],
-                                tsLib.ConnxObject, paramTableName, traceTableName);
+                                paramTableName, traceTableName);
 
                 int id = ts.WriteParametersRegular(true, null,
                                 (short)TSDateCalculator.TimeStepUnitCode.Day, 1, nVals, StartDate,

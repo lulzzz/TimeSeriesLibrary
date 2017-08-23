@@ -335,9 +335,9 @@ namespace TimeSeriesLibrary
                         String xmlFileName, List<TSImport> tsImportList)
         {
             // Get the connection that we'll pass along.
-            SqlConnection connx = GetConnectionFromId(connectionNumber);
+            var connx = GetConnectionContainerFromId(connectionNumber);
             // Construct new TSXml object with SqlConnection object and table name
-            TSXml tsXml = new TSXml(connx, ConnxObject, tableName, traceTableName);
+            TSXml tsXml = new TSXml(connx, tableName, traceTableName);
             // Method in the TSXml object does all the work
             return tsXml.ReadAndStore(xmlFileName, null, tsImportList, true, true);
         }
@@ -362,9 +362,9 @@ namespace TimeSeriesLibrary
                     int nReqValues, DateTime[] dateArray, DateTime reqStartDate)
         {
             // Get the connection that we'll pass along.
-            SqlConnection connx = GetConnectionFromId(connectionNumber);
+            var connx = GetConnectionContainerFromId(connectionNumber);
             // Construct new TS object with SqlConnection object and table name
-            TS ts = new TS(connx, ConnxObject, tableName, traceTableName);
+            TS ts = new TS(connx, tableName, traceTableName);
 
             ts.FillDateArray(id, nReqValues, dateArray, reqStartDate);
         }
@@ -408,7 +408,15 @@ namespace TimeSeriesLibrary
         /// <returns>The SqlConnection object corresponding to the given connection number</returns>
         public SqlConnection GetConnectionFromId(int connectionNumber)
         {
-            SqlConnection connx;
+            return GetConnectionContainerFromId(connectionNumber).Connection;
+        }
+        /// <summary>
+        /// Returns the TSConnection object corresponding to the given connection number.
+        /// </summary>
+        /// <param name="connectionNumber">serial number of the connection within the collection</param>
+        public TSConnection GetConnectionContainerFromId(int connectionNumber)
+        {
+            TSConnection connx;
             try
             {
                 connx = ConnxObject.TSConnectionsCollection[connectionNumber];
@@ -416,7 +424,7 @@ namespace TimeSeriesLibrary
             catch
             {
                 throw new TSLibraryException(ErrCode.Enum.Connection_Not_Found,
-                                String.Format("TimeSeriesLibrary does not have an open connection number {0}", 
+                                String.Format("TimeSeriesLibrary does not have an open connection number {0}",
                                 connectionNumber));
             }
             return connx;
@@ -704,9 +712,9 @@ namespace TimeSeriesLibrary
                 int connectionNumber, String tableName, String traceTableName, int id)
         {
             // Get the connection that we'll pass along.
-            SqlConnection connx = GetConnectionFromId(connectionNumber);
+            var connx = GetConnectionContainerFromId(connectionNumber);
             // Construct new TS object with SqlConnection object and table name
-            TS ts = new TS(connx, ConnxObject, tableName, traceTableName);
+            TS ts = new TS(connx, tableName, traceTableName);
 
             return ts.DeleteSeries(id);
         }
@@ -726,9 +734,9 @@ namespace TimeSeriesLibrary
                 int connectionNumber, String tableName, String traceTableName, String whereClause)
         {
             // Get the connection that we'll pass along.
-            SqlConnection connx = GetConnectionFromId(connectionNumber);
+            var connx = GetConnectionContainerFromId(connectionNumber);
             // Construct new TS object with SqlConnection object and table name
-            TS ts = new TS(connx, ConnxObject, tableName, traceTableName);
+            TS ts = new TS(connx, tableName, traceTableName);
 
             return ts.DeleteMatchingSeries(whereClause);
         }
