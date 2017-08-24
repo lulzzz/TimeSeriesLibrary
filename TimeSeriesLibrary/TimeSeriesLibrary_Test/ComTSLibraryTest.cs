@@ -16,10 +16,10 @@ namespace TimeSeriesLibrary_Test
     ///to contain all ComTSLibraryTest Unit Tests
     ///</summary>
     [TestClass()]
-    [DeploymentItem("lzfx.dll")]
-    [DeploymentItem("lzfx64.dll")]
-    [DeploymentItem("lz4_32.dll")]
-    [DeploymentItem("lz4_64.dll")]
+//    [DeploymentItem("lzfx.dll")]
+//    [DeploymentItem("lzfx64.dll")]
+//    [DeploymentItem("lz4_32.dll")]
+//    [DeploymentItem("lz4_64.dll")]
     public unsafe class ComTSLibraryTest
     {
         TransactionScope _transactionScope;

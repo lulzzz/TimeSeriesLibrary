@@ -592,45 +592,72 @@ namespace TimeSeriesLibrary
         /// <param name="traceObject"></param>
         private unsafe void WriteTrace(ITimeSeriesTrace traceObject)
         {
-            String keyString = "WriTrc";
-            SqlCommand sqlCommand;
-            // Find a SqlCommand that was previously cached for this purpose
-            var commandContainer = TSConnection.PreparedSqlCommands
-                    .Where(o => o.TableName == TraceTableName 
-                                && o.KeyString == keyString).FirstOrDefault();
-            // If no SqlCommand has been created yet
-            if (commandContainer == null)
-                // Then create one.
-                sqlCommand = CreateWriteTraceSqlCommand(keyString);
-            else
-                sqlCommand = commandContainer.SqlCommand;
+            //String keyString = "WriTrc";
 
-            // Supply parameter values for the SqlCommand
-            sqlCommand.Parameters["@TimeSeries_Id"].Value = Id;
-            sqlCommand.Parameters["@TraceNumber"].Value = traceObject.TraceNumber;
-            sqlCommand.Parameters["@TimeStepCount"].Value = traceObject.TimeStepCount;
-            sqlCommand.Parameters["@EndDate"].Value = traceObject.EndDate;
-            sqlCommand.Parameters["@ValueBlob"].Value = traceObject.ValueBlob;
-            sqlCommand.Parameters["@Checksum"].Value = traceObject.Checksum;
-            // Execute the SQL command
-            try
+            DataTable dataTable;
+            // Attempt to get the existing DataTable object from the collection that is kept by
+            // the TSConnection object.  If this fails, then we'll create a new DataTable.
+            if (TSConnection.BulkCopyDataTables.TryGetValue(TraceTableName, out dataTable) == false)
             {
-                sqlCommand.ExecuteNonQuery();
+                // Create the DataTable object and add columns that match the columns
+                // of the database table.
+                dataTable = new DataTable();
+                dataTable.Columns.Add("TimeSeries_Id", typeof(int));
+                dataTable.Columns.Add("TraceNumber", typeof(int));
+                dataTable.Columns.Add("TimeStepCount", typeof(int));
+                dataTable.Columns.Add("EndDate", typeof(DateTime));
+                dataTable.Columns.Add("ValueBlob", typeof(byte[]));
+                dataTable.Columns.Add("Checksum", typeof(byte[]));
+                // Add the DataTable to a collection that is kept in the TSConnection object.
+                TSConnection.BulkCopyDataTables.Add(TraceTableName, dataTable);
             }
-            catch (Exception e)
-            {   // The query failed
-                throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
-                                "Table '" + TraceTableName + "' could not be opened using query:\n\n"
-                                + sqlCommand.CommandText, e);
-            }
+            // Add the trace as a new DataRow object in the DataTable.  In the 'Add' method,
+            // the parameters must be entered in the same order as the columns were created
+            // in the code immediately above.
+            dataTable.Rows.Add(Id, traceObject.TraceNumber,
+                                   traceObject.TimeStepCount, traceObject.EndDate,
+                                   traceObject.ValueBlob, traceObject.Checksum);
+
+            //SqlCommand sqlCommand;
+            //// Find a SqlCommand that was previously cached for this purpose
+            //var commandContainer = TSConnection.PreparedSqlCommands
+            //        .Where(o => o.TableName == TraceTableName 
+            //                    && o.KeyString == keyString).FirstOrDefault();
+            //// If no SqlCommand has been created yet
+            //if (commandContainer == null)
+            //    // Then create one.
+            //    sqlCommand = CreateWriteTraceSqlCommand(keyString);
+            //else
+            //    sqlCommand = commandContainer.SqlCommand;
+            //
+            //// Supply parameter values for the SqlCommand
+            //sqlCommand.Parameters["@TimeSeries_Id"].Value = Id;
+            //sqlCommand.Parameters["@TraceNumber"].Value = traceObject.TraceNumber;
+            //sqlCommand.Parameters["@TimeStepCount"].Value = traceObject.TimeStepCount;
+            //sqlCommand.Parameters["@EndDate"].Value = traceObject.EndDate;
+            //sqlCommand.Parameters["@ValueBlob"].Value = traceObject.ValueBlob;
+            //sqlCommand.Parameters["@Checksum"].Value = traceObject.Checksum;
+            //// Execute the SQL command
+            //try
+            //{
+            //    sqlCommand.ExecuteNonQuery();
+            //}
+            //catch (Exception e)
+            //{   // The query failed
+            //    throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
+            //                    "Table '" + TraceTableName + "' could not be opened using query:\n\n"
+            //                    + sqlCommand.CommandText, e);
+            //}
         }
         /// <summary>
         /// This method updates the value in the Checksum field of the parameters table.
         /// It does not modify any other fields.
         /// </summary>
-        /// <param name="doWriteToDB">true if the method should actually save the timeseries to the database</param>
-        /// <param name="tsImport">TSImport object into which the method will record values that it has computed.
-        /// If this parameter is null, then the method will skip the recording of such paramters to an object.</param>
+        /// <param name="doWriteToDB">true if the method should actually
+        /// save the timeseries to the database</param>
+        /// <param name="tsImport">TSImport object into which the method will record values
+        /// that it has computed. If this parameter is null, then the method will skip the recording
+        /// of such paramters to an object.</param>
         private void UpdateParametersChecksum(bool doWriteToDB, TSImport tsImport)
         {
             // This List will contain one item for each trace for this time series.  The primary

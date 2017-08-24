@@ -51,6 +51,7 @@ namespace Sandbox
             TSLibrary tsLib = new TSLibrary();
             connectionNumber = tsLib.OpenConnection(
                         "Data Source=.; Database=NYC-SpeedTest; Trusted_Connection=yes;");
+            var connection = tsLib.ConnxObject.TSConnectionsCollection[connectionNumber];
             
             List<Double> valList = new List<Double>();
             DateTime date = StartDate;
@@ -67,8 +68,7 @@ namespace Sandbox
             //byte[] blob = null;
             for (int j = 0; j < nIter; j++)
             {
-                var ts = new TS(tsLib.ConnxObject.TSConnectionsCollection[connectionNumber],
-                                paramTableName, traceTableName);
+                var ts = new TS(connection, paramTableName, traceTableName);
 
                 int id = ts.WriteParametersRegular(true, null,
                                 (short)TSDateCalculator.TimeStepUnitCode.Day, 1, nVals, StartDate,
@@ -78,7 +78,6 @@ namespace Sandbox
                 for (int i = 0; i < nTrc; i++)
                 {
                     ts.WriteTraceRegular(id, true, null, i + 1, valArray);
-
 
                     //ITimeSeriesTrace traceObject = new TSTrace
                     //{
@@ -91,6 +90,8 @@ namespace Sandbox
                 }
 
             }
+            connection.CommitWritesToTable(traceTableName);
+            
             return 0; // blob.Length;
         }
         
