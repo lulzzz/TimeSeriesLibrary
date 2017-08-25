@@ -5,6 +5,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Text;
 using System.IO;
+using Oasis.Foundation.Infrastructure;
 
 namespace TimeSeriesLibrary
 {
@@ -375,7 +376,7 @@ namespace TimeSeriesLibrary
             // written series, there are not yet any traces to incorporate into the checksum
             // (presumably those will be added later).
             Checksum = TSBlobCoder.ComputeChecksum(TSParameters, new List<ITimeSeriesTrace>());
-            // WriteValues method will handle all of the database interaction
+            // WriteParameters method will handle all of the database interaction
             if (doWriteToDB)
                 WriteParameters(extraParamNames, extraParamValues);
 
@@ -416,7 +417,7 @@ namespace TimeSeriesLibrary
             // written series, there are not yet any traces to incorporate into the checksum
             // (presumably those will be added later).
             Checksum = TSBlobCoder.ComputeChecksum(TSParameters, new List<ITimeSeriesTrace>());
-            // WriteValues method will handle all of the database interaction
+            // WriteParameters method will handle all of the database interaction
             if (doWriteToDB)
                 WriteParameters(extraParamNames, extraParamValues);
 
@@ -439,36 +440,107 @@ namespace TimeSeriesLibrary
         /// <returns>the primary key Id value of the new record that was created</returns>
         private unsafe int WriteParameters(String extraParamNames, String extraParamValues)
         {
-            // Initialize the string of column names and column values with the first pair.
-            String colString = "TimeStepUnit";
-            String valString = ((short)TimeStepUnit).ToString();
-            // Add the rest of the column names and column values such that each is preceded by a comma
-            AppendStringPair(ref colString, ref valString, "TimeStepQuantity", TimeStepQuantity.ToString());
-            AppendStringPair(ref colString, ref valString, "StartDate", "'" + BlobStartDate.ToString() + "'");
-            AppendStringPair(ref colString, ref valString, "Checksum", ByteArrayToString(Checksum));
-            AppendStringPair(ref colString, ref valString, "CompressionCode", CompressionCode.ToString());
-            // Now our strings contain all of the columns that TimeSeriesLibrary is responsible for
-            // handling.  The caller may pass in additional column names and values that we now add
-            // to our strings.
-            AppendStringPair(ref colString, ref valString, extraParamNames, extraParamValues);
-            // Create a SQL INSERT command.  The "select SCOPE_IDENTITY" at the end of the command
-            // ensures that the command will return the ID of the new record.
-            String comm = String.Format("insert into {0} ({1}) values ({2}); select SCOPE_IDENTITY()",
-                            ParametersTableName, colString, valString);
-            // SqlCommand object can execute the query for us
-            using (SqlCommand sqlCommand = GetNewSqlCommand(comm))
+            const String keyString = "WriPar";
+            SqlCommand sqlCommand;
+            // Find a SqlCommand that was previously cached for this purpose
+            var commandContainer = TSConnection.PreparedSqlCommands
+                    .Where(o => o.TableName == ParametersTableName
+                                && o.KeyString == keyString).FirstOrDefault();
+            // If no SqlCommand has been created yet
+            if (commandContainer == null)
+                // Then create one.
+                sqlCommand = CreateWriteParametersSqlCommand(keyString, extraParamNames);
+            else
+                sqlCommand = commandContainer.SqlCommand;
+
+            // Supply parameter values for the SqlCommand
+            sqlCommand.Parameters["@TimeStepUnit"].Value = (short)TimeStepUnit;
+            sqlCommand.Parameters["@TimeStepQuantity"].Value = TimeStepQuantity;
+            sqlCommand.Parameters["@StartDate"].Value = BlobStartDate;
+            sqlCommand.Parameters["@Checksum"].Value = Checksum;
+            sqlCommand.Parameters["@CompressionCode"].Value = CompressionCode;
+            
+            var extraNameList = extraParamNames.SplitAndTrim(',').Select(s => "@" + s).ToList();
+            var extraValueList = extraParamValues.SplitAndTrim(',');
+            for (int i = 0; i < extraNameList.Count; i++)
+                sqlCommand.Parameters[extraNameList[i]].Value = extraValueList[i];
+            // Execute the SQL command
+            try
             {
-                try
-                {
-                    Id = (int)(decimal)sqlCommand.ExecuteScalar();
-                }
-                catch (Exception e)
-                {   // The query failed
-                    throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
-                                    "Could not execute query:\n\n." + comm, e);
-                }
+                Id = (int)(decimal)sqlCommand.ExecuteScalar();
             }
+            catch (Exception e)
+            {   
+                throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
+                                "Table '" + ParametersTableName + "' could not be opened using query:\n\n"
+                                + sqlCommand.CommandText, e);
+            }
+
+
+            //// Initialize the string of column names and column values with the first pair.
+            //String colString = "TimeStepUnit";
+            //String valString = ((short)TimeStepUnit).ToString();
+            //// Add the rest of the column names and column values such that each is preceded by a comma
+            //AppendStringPair(ref colString, ref valString, "TimeStepQuantity", TimeStepQuantity.ToString());
+            //AppendStringPair(ref colString, ref valString, "StartDate", "'" + BlobStartDate.ToString() + "'");
+            //AppendStringPair(ref colString, ref valString, "Checksum", ByteArrayToString(Checksum));
+            //AppendStringPair(ref colString, ref valString, "CompressionCode", CompressionCode.ToString());
+            //// Now our strings contain all of the columns that TimeSeriesLibrary is responsible for
+            //// handling.  The caller may pass in additional column names and values that we now add
+            //// to our strings.
+            //AppendStringPair(ref colString, ref valString, extraParamNames, extraParamValues);
+            //// Create a SQL INSERT command.  The "select SCOPE_IDENTITY" at the end of the command
+            //// ensures that the command will return the ID of the new record.
+            //String comm = String.Format("insert into {0} ({1}) values ({2}); select SCOPE_IDENTITY()",
+            //                ParametersTableName, colString, valString);
+            //// SqlCommand object can execute the query for us
+            //using (SqlCommand sqlCommand = GetNewSqlCommand(comm))
+            //{
+            //    try
+            //    {
+            //        Id = (int)(decimal)sqlCommand.ExecuteScalar();
+            //    }
+            //    catch (Exception e)
+            //    {   // The query failed
+            //        throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
+            //                        "Could not execute query:\n\n." + comm, e);
+            //    }
+            //}
             return Id;
+        }
+        /// <summary>
+        /// Create a new SqlCommand object for the WriteParameters method, so that the
+        /// SqlCommand can be cached and reused by the database system.
+        /// </summary>
+        private SqlCommand CreateWriteParametersSqlCommand(String keyString, String extraParamNames)
+        {
+            var extraParamList = extraParamNames.SplitAndTrim(',').Select(s => "@" + s).ToList();
+            // Instantiate the SqlCommand object using a SQL INSERT command
+            String text = String.Format("INSERT INTO {0}\n"
+                    + "(TimeStepUnit, TimeStepQuantity, StartDate, Checksum, CompressionCode, {1})\n"
+                    + "VALUES\n"
+                    + "(@TimeStepUnit, @TimeStepQuantity, @StartDate, @Checksum, @CompressionCode, {2});\n"
+                    + "SELECT SCOPE_IDENTITY()",
+                            ParametersTableName, extraParamNames, String.Join(", ", extraParamList));
+            SqlCommand command = GetNewSqlCommand(text);
+
+            // Add parameters to the command
+            command.Parameters.Add("@TimeStepUnit", SqlDbType.Int);
+            command.Parameters.Add("@TimeStepQuantity", SqlDbType.Int);
+            command.Parameters.Add("@StartDate", SqlDbType.DateTime);
+            command.Parameters.Add("@Checksum", SqlDbType.Binary, 16);
+            command.Parameters.Add("@CompressionCode", SqlDbType.Int);
+            foreach (String paramName in extraParamList)
+                command.Parameters.Add(paramName, SqlDbType.VarChar, 2048);
+
+            // add the new command to a container that keeps the command object wrapped together
+            // with identifying information.  Note that the container's constructor will call
+            // the command's Prepare method.
+            var container = new TSSqlCommandContainer(ParametersTableName, keyString, command);
+            // The TSConnectionManager object will keep this container in a collection
+            TSConnection.PreparedSqlCommands.Add(container);
+
+            return command;
         }
         /// <summary>
         /// This method contains error checks on the input parameters of this class's methods
@@ -592,8 +664,6 @@ namespace TimeSeriesLibrary
         /// <param name="traceObject"></param>
         private unsafe void WriteTrace(ITimeSeriesTrace traceObject)
         {
-            //String keyString = "WriTrc";
-
             DataTable dataTable;
             // Attempt to get the existing DataTable object from the collection that is kept by
             // the TSConnection object.  If this fails, then we'll create a new DataTable.
@@ -617,37 +687,6 @@ namespace TimeSeriesLibrary
             dataTable.Rows.Add(Id, traceObject.TraceNumber,
                                    traceObject.TimeStepCount, traceObject.EndDate,
                                    traceObject.ValueBlob, traceObject.Checksum);
-
-            //SqlCommand sqlCommand;
-            //// Find a SqlCommand that was previously cached for this purpose
-            //var commandContainer = TSConnection.PreparedSqlCommands
-            //        .Where(o => o.TableName == TraceTableName 
-            //                    && o.KeyString == keyString).FirstOrDefault();
-            //// If no SqlCommand has been created yet
-            //if (commandContainer == null)
-            //    // Then create one.
-            //    sqlCommand = CreateWriteTraceSqlCommand(keyString);
-            //else
-            //    sqlCommand = commandContainer.SqlCommand;
-            //
-            //// Supply parameter values for the SqlCommand
-            //sqlCommand.Parameters["@TimeSeries_Id"].Value = Id;
-            //sqlCommand.Parameters["@TraceNumber"].Value = traceObject.TraceNumber;
-            //sqlCommand.Parameters["@TimeStepCount"].Value = traceObject.TimeStepCount;
-            //sqlCommand.Parameters["@EndDate"].Value = traceObject.EndDate;
-            //sqlCommand.Parameters["@ValueBlob"].Value = traceObject.ValueBlob;
-            //sqlCommand.Parameters["@Checksum"].Value = traceObject.Checksum;
-            //// Execute the SQL command
-            //try
-            //{
-            //    sqlCommand.ExecuteNonQuery();
-            //}
-            //catch (Exception e)
-            //{   // The query failed
-            //    throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
-            //                    "Table '" + TraceTableName + "' could not be opened using query:\n\n"
-            //                    + sqlCommand.CommandText, e);
-            //}
         }
         /// <summary>
         /// This method updates the value in the Checksum field of the parameters table.
@@ -743,36 +782,6 @@ namespace TimeSeriesLibrary
                 sqlCommand.Parameters["@Checksum"].Value = Checksum;
                 sqlCommand.ExecuteNonQuery();
             }
-        }
-        /// <summary>
-        /// Create a new SqlCommand object for the WriteTrace method, so that the
-        /// SqlCommand can be cached and reused by the database system.
-        /// </summary>
-        private SqlCommand CreateWriteTraceSqlCommand(String keyString)
-        {
-            // Instantiate the SqlCommand object using a SQL INSERT command
-            SqlCommand command = GetNewSqlCommand("INSERT INTO " + TraceTableName
-                                + "(TimeSeries_Id, TraceNumber, TimeStepCount, EndDate, "
-                                                    + "ValueBlob, Checksum) "
-                                + "VALUES (@TimeSeries_Id, @TraceNumber, @TimeStepCount, @EndDate, "
-                                                    + "@ValueBlob, @Checksum)");
-
-            // Add parameters to the command
-            command.Parameters.Add("@TimeSeries_Id", SqlDbType.Int);
-            command.Parameters.Add("@TraceNumber", SqlDbType.Int);
-            command.Parameters.Add("@TimeStepCount", SqlDbType.Int);
-            command.Parameters.Add("@EndDate", SqlDbType.DateTime);
-            command.Parameters.Add("@ValueBlob", SqlDbType.VarBinary, -1);
-            command.Parameters.Add("@Checksum", SqlDbType.Binary, 16);
-
-            // add the new command to a container that keeps the command object wrapped together
-            // with identifying information.  Note that the container's constructor will call
-            // the command's Prepare method.
-            var container = new TSSqlCommandContainer(TraceTableName, keyString, command);
-            // The TSConnectionManager object will keep this container in a collection
-            TSConnection.PreparedSqlCommands.Add(container);
-
-            return command;
         }
         /// <summary>
         /// Create a new SqlCommand object for the UpdateParametersChecksum method, so that the
