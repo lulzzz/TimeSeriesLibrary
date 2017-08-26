@@ -45,7 +45,7 @@ namespace Sandbox
             String extraParamNames =
                     "RunGUID, TimeSeriesType, VariableType, Unit_Id, VariableName, RunElementGUID";
             String extraParamValues =
-                    "00000000-0000-0000-0000-000000000000, 2, Dummy, 2, DELETEME, 00000000-0000-0000-0000-000000000000";
+                    "'00000000-0000-0000-0000-000000000000', 2, 'Dummy', 2, 'DELETEME', '00000000-0000-0000-0000-000000000000'";
 
             int connectionNumber = 1;
             TSLibrary tsLib = new TSLibrary();

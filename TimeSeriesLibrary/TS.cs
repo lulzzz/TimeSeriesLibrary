@@ -434,113 +434,42 @@ namespace TimeSeriesLibrary
         /// <param name="extraParamNames">A list of field names that the the method should fill, in addition
         /// to the fields that the TimeSeriesLibrary is designed to maintain.  Every item in this list must
         /// be matched to an item in extraParamValues.</param>
-        /// <param name="extraParamValues">A list of field values that the the method should fill, in addition
-        /// to the fields that the TimeSeriesLibrary is designed to maintain.  Every item in this list must
-        /// be matched to an item in extraParamNames.</param>
+        /// <param name="extraParamValues">A list of field values that the the method should fill,
+        /// in addition to the fields that the TimeSeriesLibrary is designed to maintain.  Every
+        /// item in this list must be matched to an item in extraParamNames.</param>
         /// <returns>the primary key Id value of the new record that was created</returns>
         private unsafe int WriteParameters(String extraParamNames, String extraParamValues)
         {
-            const String keyString = "WriPar";
-            SqlCommand sqlCommand;
-            // Find a SqlCommand that was previously cached for this purpose
-            var commandContainer = TSConnection.PreparedSqlCommands
-                    .Where(o => o.TableName == ParametersTableName
-                                && o.KeyString == keyString).FirstOrDefault();
-            // If no SqlCommand has been created yet
-            if (commandContainer == null)
-                // Then create one.
-                sqlCommand = CreateWriteParametersSqlCommand(keyString, extraParamNames);
-            else
-                sqlCommand = commandContainer.SqlCommand;
-
-            // Supply parameter values for the SqlCommand
-            sqlCommand.Parameters["@TimeStepUnit"].Value = (short)TimeStepUnit;
-            sqlCommand.Parameters["@TimeStepQuantity"].Value = TimeStepQuantity;
-            sqlCommand.Parameters["@StartDate"].Value = BlobStartDate;
-            sqlCommand.Parameters["@Checksum"].Value = Checksum;
-            sqlCommand.Parameters["@CompressionCode"].Value = CompressionCode;
-            
-            var extraNameList = extraParamNames.SplitAndTrim(',').Select(s => "@" + s).ToList();
-            var extraValueList = extraParamValues.SplitAndTrim(',');
-            for (int i = 0; i < extraNameList.Count; i++)
-                sqlCommand.Parameters[extraNameList[i]].Value = extraValueList[i];
-            // Execute the SQL command
-            try
+            // Initialize the string of column names and column values with the first pair.
+            String colString = "TimeStepUnit";
+            String valString = ((short)TimeStepUnit).ToString();
+            // Add the rest of the column names and column values such that each is preceded by a comma
+            AppendStringPair(ref colString, ref valString, "TimeStepQuantity", TimeStepQuantity.ToString());
+            AppendStringPair(ref colString, ref valString, "StartDate", "'" + BlobStartDate + "'");
+            AppendStringPair(ref colString, ref valString, "Checksum", ByteArrayToString(Checksum));
+            AppendStringPair(ref colString, ref valString, "CompressionCode", CompressionCode.ToString());
+            // Now our strings contain all of the columns that TimeSeriesLibrary is responsible for
+            // handling.  The caller may pass in additional column names and values that we now add
+            // to our strings.
+            AppendStringPair(ref colString, ref valString, extraParamNames, extraParamValues);
+            // Create a SQL INSERT command.  The "select SCOPE_IDENTITY" at the end of the command
+            // ensures that the command will return the ID of the new record.
+            String comm = String.Format("insert into {0} ({1}) values ({2}); select SCOPE_IDENTITY()",
+                            ParametersTableName, colString, valString);
+            // SqlCommand object can execute the query for us
+            using (SqlCommand sqlCommand = GetNewSqlCommand(comm))
             {
-                Id = (int)(decimal)sqlCommand.ExecuteScalar();
+                try
+                {
+                    Id = (int)(decimal)sqlCommand.ExecuteScalar();
+                }
+                catch (Exception e)
+                {   // The query failed
+                    throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
+                                    "Could not execute query:\n\n." + comm, e);
+                }
             }
-            catch (Exception e)
-            {   
-                throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
-                                "Table '" + ParametersTableName + "' could not be opened using query:\n\n"
-                                + sqlCommand.CommandText, e);
-            }
-
-
-            //// Initialize the string of column names and column values with the first pair.
-            //String colString = "TimeStepUnit";
-            //String valString = ((short)TimeStepUnit).ToString();
-            //// Add the rest of the column names and column values such that each is preceded by a comma
-            //AppendStringPair(ref colString, ref valString, "TimeStepQuantity", TimeStepQuantity.ToString());
-            //AppendStringPair(ref colString, ref valString, "StartDate", "'" + BlobStartDate.ToString() + "'");
-            //AppendStringPair(ref colString, ref valString, "Checksum", ByteArrayToString(Checksum));
-            //AppendStringPair(ref colString, ref valString, "CompressionCode", CompressionCode.ToString());
-            //// Now our strings contain all of the columns that TimeSeriesLibrary is responsible for
-            //// handling.  The caller may pass in additional column names and values that we now add
-            //// to our strings.
-            //AppendStringPair(ref colString, ref valString, extraParamNames, extraParamValues);
-            //// Create a SQL INSERT command.  The "select SCOPE_IDENTITY" at the end of the command
-            //// ensures that the command will return the ID of the new record.
-            //String comm = String.Format("insert into {0} ({1}) values ({2}); select SCOPE_IDENTITY()",
-            //                ParametersTableName, colString, valString);
-            //// SqlCommand object can execute the query for us
-            //using (SqlCommand sqlCommand = GetNewSqlCommand(comm))
-            //{
-            //    try
-            //    {
-            //        Id = (int)(decimal)sqlCommand.ExecuteScalar();
-            //    }
-            //    catch (Exception e)
-            //    {   // The query failed
-            //        throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
-            //                        "Could not execute query:\n\n." + comm, e);
-            //    }
-            //}
             return Id;
-        }
-        /// <summary>
-        /// Create a new SqlCommand object for the WriteParameters method, so that the
-        /// SqlCommand can be cached and reused by the database system.
-        /// </summary>
-        private SqlCommand CreateWriteParametersSqlCommand(String keyString, String extraParamNames)
-        {
-            var extraParamList = extraParamNames.SplitAndTrim(',').Select(s => "@" + s).ToList();
-            // Instantiate the SqlCommand object using a SQL INSERT command
-            String text = String.Format("INSERT INTO {0}\n"
-                    + "(TimeStepUnit, TimeStepQuantity, StartDate, Checksum, CompressionCode, {1})\n"
-                    + "VALUES\n"
-                    + "(@TimeStepUnit, @TimeStepQuantity, @StartDate, @Checksum, @CompressionCode, {2});\n"
-                    + "SELECT SCOPE_IDENTITY()",
-                            ParametersTableName, extraParamNames, String.Join(", ", extraParamList));
-            SqlCommand command = GetNewSqlCommand(text);
-
-            // Add parameters to the command
-            command.Parameters.Add("@TimeStepUnit", SqlDbType.Int);
-            command.Parameters.Add("@TimeStepQuantity", SqlDbType.Int);
-            command.Parameters.Add("@StartDate", SqlDbType.DateTime);
-            command.Parameters.Add("@Checksum", SqlDbType.Binary, 16);
-            command.Parameters.Add("@CompressionCode", SqlDbType.Int);
-            foreach (String paramName in extraParamList)
-                command.Parameters.Add(paramName, SqlDbType.VarChar, 2048);
-
-            // add the new command to a container that keeps the command object wrapped together
-            // with identifying information.  Note that the container's constructor will call
-            // the command's Prepare method.
-            var container = new TSSqlCommandContainer(ParametersTableName, keyString, command);
-            // The TSConnectionManager object will keep this container in a collection
-            TSConnection.PreparedSqlCommands.Add(container);
-
-            return command;
         }
         /// <summary>
         /// This method contains error checks on the input parameters of this class's methods
