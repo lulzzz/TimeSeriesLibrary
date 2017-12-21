@@ -77,7 +77,7 @@ namespace TimeSeriesLibrary_Test
         public static void MyClassInitialize(TestContext testContext)
         {
             _lib = new ComTSLibrary();
-            _connxNumber = _lib.OpenConnection(GetSbyte("Data Source=.; Database=ObjectModel; Trusted_Connection=yes;"));
+            _connxNumber = _lib.OpenConnection(GetSbyte("Data Source=.; Database=NYC-EF6; Trusted_Connection=yes;"));
             _connx = _lib.GetConnectionFromId(_connxNumber);
         }
         
@@ -202,6 +202,7 @@ namespace TimeSeriesLibrary_Test
             // The method being tested
             _lib.WriteTraceRegular(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
                         id, traceNumber, valArray);
+            _lib.CommitTraceWrites(_connxNumber, GetSbyte(_traceTableName));
 
             String comm = String.Format("select * from {0} where TimeSeries_Id={1} and TraceNumber={2}",
                             _traceTableName, id, traceNumber);
@@ -252,6 +253,7 @@ namespace TimeSeriesLibrary_Test
             // The method being tested
             _lib.WriteTraceIrregular(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
                         id, traceNumber, dateValArray);
+            _lib.CommitTraceWrites(_connxNumber, GetSbyte(_traceTableName));
 
             String comm = String.Format("select * from {0} where TimeSeries_Id={1} and TraceNumber={2}",
                             _traceTableName, id, traceNumber);
@@ -300,6 +302,7 @@ namespace TimeSeriesLibrary_Test
                                     timeStepQuantity, timeStepCount - 1);
             _lib.WriteTraceRegular(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
                         id, traceNumber, valArray);
+            _lib.CommitTraceWrites(_connxNumber, GetSbyte(_traceTableName));
 
             // The method being tested
             _lib.ReadValuesRegular(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
@@ -342,6 +345,7 @@ namespace TimeSeriesLibrary_Test
             }
             _lib.WriteTraceRegular(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
                         id, traceNumber, valArray);
+            _lib.CommitTraceWrites(_connxNumber, GetSbyte(_traceTableName));
 
             // The method being tested
             _lib.ReadDatesValues(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
@@ -381,6 +385,7 @@ namespace TimeSeriesLibrary_Test
             }
             _lib.WriteTraceIrregular(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
                         id, traceNumber, dateValArray);
+            _lib.CommitTraceWrites(_connxNumber, GetSbyte(_traceTableName));
 
             // The method being tested
             _lib.ReadDatesValues(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
@@ -422,6 +427,7 @@ namespace TimeSeriesLibrary_Test
                         id, 5, valArray);
             _lib.WriteTraceRegular(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
                         id, 6, valArray);
+            _lib.CommitTraceWrites(_connxNumber, GetSbyte(_traceTableName));
 
             String comm = String.Format("select count(1) from {0} where TimeSeries_Id={1}", _traceTableName, id);
             SqlCommand sqlCommand = new SqlCommand(comm, _connx);
@@ -467,6 +473,7 @@ namespace TimeSeriesLibrary_Test
                         id, 5, valArray);
             _lib.WriteTraceRegular(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
                         id, 6, valArray);
+            _lib.CommitTraceWrites(_connxNumber, GetSbyte(_traceTableName));
 
             String comm = String.Format("select count(1) from {0} where TimeSeries_Id={1}", _traceTableName, id);
             SqlCommand sqlCommand = new SqlCommand(comm, _connx);

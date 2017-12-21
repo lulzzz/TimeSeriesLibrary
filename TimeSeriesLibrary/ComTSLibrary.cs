@@ -50,6 +50,8 @@ namespace TimeSeriesLibrary
                         int id, int traceNumber, TSDateValueStruct[] dateValueArray);
         [ComVisible(true)]
         void WriteTraceRegular(int connectionNumber, sbyte* pParamTableName, sbyte *pTraceTableName, int id, int traceNumber, double[] valueArray);
+        [ComVisible(true)]
+        void CommitTraceWrites(int connectionNumber, sbyte* pTraceTableName);
 
         [ComVisible(true)]
         bool DeleteMatchingSeries(int connectionNumber, sbyte* pParamTableName, sbyte* pTraceTableName, sbyte* pWhereClause);
@@ -515,6 +517,28 @@ namespace TimeSeriesLibrary
                 TS ts = new TS(connx, paramTableName, traceTableName);
 
                 ts.WriteTraceIrregular(id, true, null, traceNumber, dateValueArray);
+            }
+            catch (Exception e)
+            {
+                ErrorMessage = e.Message;
+            }
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="connectionNumber"></param>
+        /// <param name="pTraceTableName"></param>
+        [ComVisible(true)]
+        public void CommitTraceWrites(int connectionNumber, sbyte* pTraceTableName)
+        {
+            try
+            {
+                // Convert from simple character byte array to .Net String object
+                String traceTableName = new String(pTraceTableName);
+                // Get the connection that we'll pass along.
+                var connx = TSLib.GetConnectionContainerFromId(connectionNumber);
+                // Send all of the staged records to the database
+                connx.CommitWritesToTable(traceTableName);
             }
             catch (Exception e)
             {

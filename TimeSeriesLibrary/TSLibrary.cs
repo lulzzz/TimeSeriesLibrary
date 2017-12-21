@@ -260,7 +260,7 @@ namespace TimeSeriesLibrary
         }
         #endregion
 
-        #region ComputeChecksum method
+        #region ComputeChecksum methods
         /// <summary>
         /// This method computes a Checksum for the timeseries.  The input to the hash includes
         /// the list of parameters of the time series, and the list of checksums for each of the traces in
@@ -281,6 +281,19 @@ namespace TimeSeriesLibrary
             return TSBlobCoder.ComputeChecksum(timeStepUnit, timeStepQuantity,
                                     blobStartDate, traceList);
         } 
+        /// <summary>
+        /// This method computes the checksum for an individual trace of a time series, where the time
+        /// series is understood to be an ensemble of one or more traces.  The checksum of a trace is
+        /// computed from the trace number and from the BLOB that contains the values for each time 
+        /// step of the time series.
+        /// </summary>
+        /// <param name="traceNumber">the number for identifying the trace</param>
+        /// <param name="valueBlob">the BLOB that contains the values for each time step
+        /// of the time series.</param>
+        public byte[] ComputeTraceChecksum(int traceNumber, byte[] valueBlob)
+        {
+            return TSBlobCoder.ComputeTraceChecksum(traceNumber, valueBlob);
+        }
         #endregion
 
         #region Public methods for XML import

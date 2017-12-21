@@ -79,6 +79,12 @@
     <Compile Include="TSXml.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>xcopy /y /d "$(ProjectDir)obj\Release\lz4_32.dll" "$(ProjectDir)$(OutDir)"
+xcopy /y /d "$(ProjectDir)obj\Release\lz4_32.pdb" "$(ProjectDir)$(OutDir)"
+xcopy /y /d "$(ProjectDir)obj\Release\lz4_64.dll" "$(ProjectDir)$(OutDir)"
+xcopy /y /d "$(ProjectDir)\obj\Release\lz4_64.pdb" "$(ProjectDir)$(OutDir)"</PostBuildEvent>
+  </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

@@ -325,8 +325,14 @@ namespace TimeSeriesLibrary
                 foreach (var t in traceList.OrderBy(t => t.TraceNumber))
                     binWriter.Write(t.Checksum);
 
+                // MurmurHash is used instead of xxHash b/c:
+                //  1) It was already established
+                //  2) MurmurHash produces 32-byte has, as opposed to 16-byte hash of xxHash, which
+                //     should reduce the chance of collision.
+                //  3) xxHash was later chosen for the traces b/c speed of the algorithm was a problem
+                //     with the large input for the trace.  The input to the overall timeseries object
+                //     is much smaller, and so there is much less to be gained by switching to xxHash.
                 return new MurmurHash().ComputeHash(binArray);
-                //return BitConverter.GetBytes(LZ4.GetXXHash64(binArray));
             }
         }
         /// <summary>
@@ -335,6 +341,8 @@ namespace TimeSeriesLibrary
         /// computed from the trace number and from the BLOB that contains the values for each time 
         /// step of the time series.
         /// </summary>
+        /// <param name="traceNumber">the number for identifying the trace</param>
+        /// <param name="valueBlob">the BLOB that contains the values for each time step
         /// <returns>the Checksum as a byte[16] array</returns>
         public static byte[] ComputeTraceChecksum(int traceNumber, byte[] valueBlob)
         {
@@ -344,7 +352,10 @@ namespace TimeSeriesLibrary
             {
                 binWriter.Write(traceNumber);
                 binWriter.Write(valueBlob);
-                //return new MurmurHash().ComputeHash(binArray);
+                // plan to follow the example at https://stackoverflow.com/a/5896716/2998072
+                // in order to pad the end with zeros and thereby create a 32-byte array in
+                // order to avoid upsetting code that was established when this checksum
+                // was based on 32-byte MurmurHash.
                 return BitConverter.GetBytes(LZ4.GetXXHash64(binArray));
             }
         }

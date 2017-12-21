@@ -154,7 +154,7 @@ namespace TimeSeriesLibrary
             return lz4_get_max_size(inputByteArrayLength);
         }
         /// <summary>
-        /// Returns the 64-bit (16-byte) hash of the given byte array, computed by the xxHash algorithm.
+        /// Returns the 64-bit (8-byte) hash of the given byte array, computed by the xxHash algorithm.
         /// At the time of this writing (Aug 2017), this algorithm was known to be one of the fastest
         /// hashing algorithms available, although it is not considered to be secure for password hashing.
         /// The algorithm is also believed to have a very low collision rate.
