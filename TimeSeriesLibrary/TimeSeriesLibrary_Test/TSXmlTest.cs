@@ -284,10 +284,10 @@ namespace TimeSeriesLibrary_Test
             Assert.AreEqual(BitConverter.ToString(TsImportList[0].Checksum), "7A-8B-F7-D5-A2-3F-17-04-D2-5E-38-F2-8A-17-FC-FF");
             Assert.AreEqual(BitConverter.ToString(TsImportList[1].Checksum), "8D-E5-3B-9A-C2-05-C5-9F-BF-57-59-56-BC-29-FE-77");
             // Verify Checksum in individual traces
-            Assert.AreEqual(BitConverter.ToString(TsImportList[0].TraceList.Single(t => t.TraceNumber == 1).Checksum), "32-49-F4-BB-2F-85-69-A0");
-            Assert.AreEqual(BitConverter.ToString(TsImportList[0].TraceList.Single(t => t.TraceNumber == 2).Checksum), "2C-04-08-D2-05-BB-17-DC");
-            Assert.AreEqual(BitConverter.ToString(TsImportList[1].TraceList.Single(t => t.TraceNumber == 2).Checksum), "12-F2-2E-3D-27-A0-CD-62");
-            Assert.AreEqual(BitConverter.ToString(TsImportList[1].TraceList.Single(t => t.TraceNumber == 3).Checksum), "03-C0-12-B2-3A-EE-37-84");
+            Assert.AreEqual(BitConverter.ToString(TsImportList[0].TraceList.Single(t => t.TraceNumber == 1).Checksum), "32-49-F4-BB-2F-85-69-A0-00-00-00-00-00-00-00-00");
+            Assert.AreEqual(BitConverter.ToString(TsImportList[0].TraceList.Single(t => t.TraceNumber == 2).Checksum), "2C-04-08-D2-05-BB-17-DC-00-00-00-00-00-00-00-00");
+            Assert.AreEqual(BitConverter.ToString(TsImportList[1].TraceList.Single(t => t.TraceNumber == 2).Checksum), "12-F2-2E-3D-27-A0-CD-62-00-00-00-00-00-00-00-00");
+            Assert.AreEqual(BitConverter.ToString(TsImportList[1].TraceList.Single(t => t.TraceNumber == 3).Checksum), "03-C0-12-B2-3A-EE-37-84-00-00-00-00-00-00-00-00");
 
             List<TimeSeriesValue> tsvList = null;
             // Verify BLOB of Series# 1 Trace# 1 in import list

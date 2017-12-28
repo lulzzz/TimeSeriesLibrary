@@ -263,12 +263,13 @@ namespace TimeSeriesLibrary
         #region ComputeChecksum methods
         /// <summary>
         /// This method computes a Checksum for the timeseries.  The input to the hash includes
-        /// the list of parameters of the time series, and the list of checksums for each of the traces in
-        /// the time series ensemble.  The list of the traces' checksums are passed to this method within 
-        /// a list of ITimeSeriesTrace objects.  This method does not modify the object given in the traceList
-        /// parameter or assign any property values to any of its items.
+        /// the list of parameters of the time series, and the list of checksums for each of the traces
+        /// in the time series ensemble.  The list of the traces' checksums are passed to this method
+        /// within a list of ITimeSeriesTrace objects.  This method does not modify the object given
+        /// in the traceList parameter or assign any property values to any of its items.
         /// </summary>
-        /// <param name="timeStepUnit">TSDateCalculator.TimeStepUnitCode value for Minute,Hour,Day,Week,Month, Year, or Irregular</param>
+        /// <param name="timeStepUnit">TSDateCalculator.TimeStepUnitCode value for Minute, Hour, Day,
+        /// Week, Month, Year, or Irregular</param>
         /// <param name="timeStepQuantity">The number of the given unit that defines the time step.
         /// For instance, if the time step is 6 hours long, then this value is 6.</param>
         /// <param name="blobStartDate">Date of the first time step in the BLOB</param>

@@ -209,7 +209,8 @@ namespace TimeSeriesLibrary
             // However, this could make it difficult to upgrade the compression algorithm in the
             // future, because the checksum value would be dependent on the compression algorithm.
             Byte[] checksum = ComputeTraceChecksum(traceObject.TraceNumber, blobData);
-            Boolean checksumChanged = (MurmurHash.ByteArraysAreEqual(traceObject.Checksum, checksum) == false);
+            Boolean checksumChanged 
+                           = (MurmurHash.ByteArraysAreEqual(traceObject.Checksum, checksum) == false);
             // If the checksum did not change, then we will not assign any properties to the traceObject.
             // The result will be that we will return the original ValueBlob.  If the checksum did change,
             // then we compute a new compressed ValueBlob and assign the new values.
@@ -262,7 +263,8 @@ namespace TimeSeriesLibrary
             // However, this could make it difficult to upgrade the compression algorithm in the
             // future, because the checksum value would be dependent on the compression algorithm.
             Byte[] checksum = ComputeTraceChecksum(traceObject.TraceNumber, blobData);
-            Boolean checksumChanged = (MurmurHash.ByteArraysAreEqual(traceObject.Checksum, checksum) == false);
+            Boolean checksumChanged 
+                           = (MurmurHash.ByteArraysAreEqual(traceObject.Checksum, checksum) == false);
             // If the checksum did not change, then we will not assign any properties to the traceObject.
             // The result will be that we will return the original ValueBlob.  If the checksum did change,
             // then we compute a new compressed ValueBlob and assign the new values.
@@ -298,7 +300,8 @@ namespace TimeSeriesLibrary
         /// the time series ensemble.  The list of the traces' checksums are passed to this method within 
         /// a list of ITimeSeriesTrace objects.
         /// </summary>
-        /// <param name="timeStepUnit">TSDateCalculator.TimeStepUnitCode value for Minute,Hour,Day,Week,Month, Year, or Irregular</param>
+        /// <param name="timeStepUnit">TSDateCalculator.TimeStepUnitCode value for Minute, Hour, Day,
+        /// Week, Month, Year, or Irregular</param>
         /// <param name="timeStepQuantity">The number of the given unit that defines the time step.
         /// For instance, if the time step is 6 hours long, then this value is 6.</param>
         /// <param name="blobStartDate">Date of the first time step in the BLOB</param>
@@ -322,12 +325,15 @@ namespace TimeSeriesLibrary
                 binWriter.Write((short)timeStepUnit);
                 binWriter.Write(timeStepQuantity);
                 binWriter.Write(blobStartDate.ToBinary());
+                // Because the last 8 bytes of the (xxHash-computed) checksum value of the trace object
+                // is always zero, we shave off a little bit of time by only feeding the first 8 bytes
+                // into the checksum function of this time series object.
                 foreach (var t in traceList.OrderBy(t => t.TraceNumber))
-                    binWriter.Write(t.Checksum);
+                    binWriter.Write(t.Checksum, 0, 8);
 
                 // MurmurHash is used instead of xxHash b/c:
                 //  1) It was already established
-                //  2) MurmurHash produces 32-byte has, as opposed to 16-byte hash of xxHash, which
+                //  2) MurmurHash produces 16-byte hash, as opposed to the 8-byte hash of xxHash, which
                 //     should reduce the chance of collision.
                 //  3) xxHash was later chosen for the traces b/c speed of the algorithm was a problem
                 //     with the large input for the trace.  The input to the overall timeseries object
@@ -342,7 +348,7 @@ namespace TimeSeriesLibrary
         /// step of the time series.
         /// </summary>
         /// <param name="traceNumber">the number for identifying the trace</param>
-        /// <param name="valueBlob">the BLOB that contains the values for each time step
+        /// <param name="valueBlob">the BLOB that contains the values for each time step</param>
         /// <returns>the Checksum as a byte[16] array</returns>
         public static byte[] ComputeTraceChecksum(int traceNumber, byte[] valueBlob)
         {
@@ -352,11 +358,15 @@ namespace TimeSeriesLibrary
             {
                 binWriter.Write(traceNumber);
                 binWriter.Write(valueBlob);
-                // plan to follow the example at https://stackoverflow.com/a/5896716/2998072
-                // in order to pad the end with zeros and thereby create a 32-byte array in
-                // order to avoid upsetting code that was established when this checksum
-                // was based on 32-byte MurmurHash.
-                return BitConverter.GetBytes(LZ4.GetXXHash64(binArray));
+                // Use of BlockCopy follows the example at https://stackoverflow.com/a/5896716/2998072.
+                // 'longArray' pads the end with zeros and thereby create a 16-byte array in order
+                // to avoid upsetting code that was established when this checksum was based
+                // on 16-byte MurmurHash.
+                ulong[] longArray = new ulong[] { LZ4.GetXXHash64(binArray), 0 };
+                // Convert the longArray into a Byte array
+                Byte[] result = new Byte[16];
+                Buffer.BlockCopy(longArray, 0, result, 0, 16);
+                return result;
             }
         }
         #endregion
