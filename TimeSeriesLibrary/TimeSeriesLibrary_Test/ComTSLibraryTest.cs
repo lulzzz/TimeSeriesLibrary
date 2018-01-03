@@ -6,6 +6,8 @@ using System.Transactions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Oasis.TestFoundation;
 using TimeSeriesLibrary;
+using System.Collections.Generic;
+using Oasis.Foundation.Infrastructure;
 
 namespace TimeSeriesLibrary_Test
 {
@@ -16,10 +18,6 @@ namespace TimeSeriesLibrary_Test
     ///to contain all ComTSLibraryTest Unit Tests
     ///</summary>
     [TestClass()]
-//    [DeploymentItem("lzfx.dll")]
-//    [DeploymentItem("lzfx64.dll")]
-//    [DeploymentItem("lz4_32.dll")]
-//    [DeploymentItem("lz4_64.dll")]
     public unsafe class ComTSLibraryTest
     {
         TransactionScope _transactionScope;
@@ -28,6 +26,14 @@ namespace TimeSeriesLibrary_Test
         static SqlConnection _connx;
         const String _paramTableName = "OutputTimeSeries";
         const String _traceTableName = "OutputTimeSeriesTraces";
+        // These two constants are for temporary tables that are designed to absorb database changes
+        // that are caused by SqlBulkCopy operations, and are thus not subject to transaction scope.
+        const String _TestParamTableName = "#TimeSeries_TestTimeSeriesLibrary";
+        const String _TestTraceTableName = "#TimeSeriesTraces_TestTimeSeriesLibrary";
+        /// <summary>
+        /// flag indicates whether temp tables have been created
+        /// </summary>
+        Boolean _createdTempTables = false;
 
         #region GetSbyte helper method
         /// <summary>
@@ -49,6 +55,120 @@ namespace TimeSeriesLibrary_Test
         }
         #endregion
 
+        #region temporary table helper methods
+        /// <summary>
+        /// This is a helper method designed to be called from test methods of this class.
+        /// 
+        /// This method creates a two temporary tables: one for the 'parameters' table and one for the
+        /// 'traces' table.  Both tables are created empty.  The method sets the flag field
+        /// '_createdTempTables' to indicate that the temporary tables shall be automatically deleted
+        /// when the test method is complete.
+        /// 
+        /// This method is useful if the test method will alter data in the database in a way that
+        /// can not be rolled back via TransactionScope. For example, it has been found that
+        /// SqlBulkCopy is not affected by TransactionScope.  This method allows the test methods to
+        /// change the data in temporary tables instead of in the 'real' database.
+        /// </summary>
+        private void CreateTempTables()
+        {
+            DropTempTables(true);
+
+            // FWIW, I tried to add a primary key constraint to each of these tables, and a
+            // foreign key constraint on the traces table.  I thought this would provide a better
+            // set of conditions for running the tests.  However, I then learned that foreign key
+            // constraints are not enforced on temporary tables, so I decided it was not worth
+            // adding the primary key constraints either.
+
+            String commandText = String.Format("CREATE TABLE {0}\n(\n"
+                            + "	[Id] [int] IDENTITY(1,1) NOT NULL,\n"
+                            + "	[TimeSeriesType] [int] NOT NULL,\n"
+                            + "	[TimeStepUnit] [int] NOT NULL,\n"
+                            + "	[TimeStepQuantity] [int] NOT NULL,\n"
+                            + "	[StartDate] [datetime] NOT NULL,\n"
+                            + "	[Checksum] [binary](16) NOT NULL,\n"
+                            + "	[RunGUID] [uniqueidentifier] NOT NULL,\n"
+                            + "	[VariableType] [nvarchar](200) NULL,\n"
+                            + "	[VariableName] [nvarchar](200) NULL,\n"
+                            + "	[RunElementGUID] [uniqueidentifier] NOT NULL,\n"
+                            + "	[CompressionCode] [int] NOT NULL,\n"
+                            + "	[Unit_Id] [int] NOT NULL\n)", _TestParamTableName);
+            using (var createTableCommand = new SqlCommand(commandText, _connx))
+            {
+                createTableCommand.ExecuteNonQuery();
+            }
+            commandText = String.Format("CREATE TABLE {0}\n(\n"
+                            + "	[Id] [int] IDENTITY(1,1) NOT NULL,\n"
+                            + "	[TraceNumber] [int] NOT NULL,\n"
+                            + "	[TimeStepCount] [int] NOT NULL,\n"
+                            + "	[EndDate] [datetime] NOT NULL,\n"
+                            + "	[ValueBlob] [varbinary](max) NOT NULL,\n"
+                            + "	[Checksum] [binary](16) NOT NULL,\n"
+                            + "	[TimeSeries_Id] [int] NOT NULL\n)\n"
+                            + "ALTER TABLE {0} ADD  DEFAULT ((0)) FOR [ValueBlob]",
+                  _TestTraceTableName, _TestParamTableName);
+            using (var createTableCommand = new SqlCommand(commandText, _connx))
+            {
+                createTableCommand.ExecuteNonQuery();
+            }
+            _createdTempTables = true;
+        }
+        /// <summary>
+        /// This is a helper method designed to be called from test methods of this class.
+        /// 
+        /// This method creates a two temporary tables: one for the 'parameters' table and one for the
+        /// 'traces' table.  Both tables are with an initial population copied from the permanent tables,
+        /// being the 'parameters' object with the given Id number, and all of its associated traces.
+        /// The method sets the flag field '_createdTempTables' to indicate that the temporary tables
+        /// shall be automatically deleted when the test method is complete.
+        /// 
+        /// This method is useful if the test method will alter data in the database in a way that
+        /// can not be rolled back via TransactionScope. For example, it has been found that
+        /// SqlBulkCopy is not affected by TransactionScope.  This method allows the test methods to
+        /// change the data in temporary tables instead of in the 'real' database.
+        /// </summary>
+        private void CreateTempTablesFromExisting(int id)
+        {
+            DropTempTables(true);
+
+            // FWIW, I tried to add a primary key constraint to each of these tables, and a
+            // foreign key constraint on the traces table.  I thought this would provide a better
+            // set of conditions for running the tests.  However, I then learned that foreign key
+            // constraints are not enforced on temporary tables, so I decided it was not worth
+            // adding the primary key constraints either.
+
+            String commandText = String.Format("SELECT * INTO {2} FROM {0} x\n"
+                            + "    WHERE x.Id={4}\n"
+                            + "SELECT * INTO {3} FROM {1} x\n"
+                            + "    WHERE x.TimeSeries_Id={4}\n"
+                            + "ALTER TABLE {3} ADD  DEFAULT ((0)) FOR [ValueBlob]",
+                        _paramTableName, _traceTableName, _TestParamTableName, _TestTraceTableName, id);
+            using (var createTableCommand = new SqlCommand(commandText, _connx))
+            {
+                createTableCommand.ExecuteNonQuery();
+            }
+            _createdTempTables = true;
+        }
+        /// <summary>
+        /// This is a helper method designed to be called from MyTestCleanup.  If no temporary tables
+        /// were created by this class's helper methods CreateTempTables or CreateTempTablesFromExisting,
+        /// then this method does nothing.  If temporary tables were created, then this method ensures
+        /// that they are deleted.
+        /// </summary>
+        private void DropTempTables(Boolean toForce = false)
+        {
+            if (_createdTempTables == false && toForce == false) return;
+            String commandText
+                    = String.Format("IF OBJECT_ID('tempdb..{0}','U') IS NOT NULL DROP TABLE {0};\n"
+                                  + "IF OBJECT_ID('tempdb..{1}','U') IS NOT NULL DROP TABLE {1};\n",
+                            _TestTraceTableName, _TestParamTableName);
+            using (var createTableCommand = new SqlCommand(commandText, _connx))
+            {
+                createTableCommand.ExecuteNonQuery();
+            }
+            _createdTempTables = false;
+        }
+        #endregion
+
         #region TestContext
         private TestContext testContextInstance;
         /// <summary>
@@ -57,14 +177,8 @@ namespace TimeSeriesLibrary_Test
         ///</summary>
         public TestContext TestContext
         {
-            get
-            {
-                return testContextInstance;
-            }
-            set
-            {
-                testContextInstance = value;
-            }
+            get { return testContextInstance; }
+            set { testContextInstance = value; }
         } 
         #endregion
 
@@ -102,6 +216,8 @@ namespace TimeSeriesLibrary_Test
         {
             if (_transactionScope != null)
                 _transactionScope.Dispose();
+            
+            DropTempTables();
         }
         #endregion
 
