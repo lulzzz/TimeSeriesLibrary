@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.40629.0
+VisualStudioVersion = 12.0.21005.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TimeSeriesLibrary", "TimeSeriesLibrary.csproj", "{1FDAC323-A742-4375-8033-00E11714F084}"
 EndProject
@@ -89,6 +89,7 @@ Global
 		{935F25D4-F649-4BB6-BA20-CB9E9C9AA752}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
 		{935F25D4-F649-4BB6-BA20-CB9E9C9AA752}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
 		{935F25D4-F649-4BB6-BA20-CB9E9C9AA752}.Debug|Win32.ActiveCfg = Debug|Any CPU
+		{935F25D4-F649-4BB6-BA20-CB9E9C9AA752}.Debug|Win32.Build.0 = Debug|Any CPU
 		{935F25D4-F649-4BB6-BA20-CB9E9C9AA752}.Debug|x64.ActiveCfg = Release|Any CPU
 		{935F25D4-F649-4BB6-BA20-CB9E9C9AA752}.Debug|x86.ActiveCfg = Release|Any CPU
 		{935F25D4-F649-4BB6-BA20-CB9E9C9AA752}.Release|Any CPU.ActiveCfg = Release|Any CPU

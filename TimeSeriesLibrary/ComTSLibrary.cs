@@ -51,7 +51,7 @@ namespace TimeSeriesLibrary
         [ComVisible(true)]
         void WriteTraceRegular(int connectionNumber, sbyte* pParamTableName, sbyte *pTraceTableName, int id, int traceNumber, double[] valueArray);
         [ComVisible(true)]
-        void CommitTraceWrites(int connectionNumber, sbyte* pTraceTableName);
+        void CommitTraceWrites(int connectionNumber, sbyte* pParamTableName, sbyte* pTraceTableName);
 
         [ComVisible(true)]
         bool DeleteMatchingSeries(int connectionNumber, sbyte* pParamTableName, sbyte* pTraceTableName, sbyte* pWhereClause);
@@ -225,9 +225,11 @@ namespace TimeSeriesLibrary
         /// This method is designed to be used from unmanaged code such as C/C++.  This method
         /// does not return values for the dates of each time step.
         /// </summary>
-        /// <param name="connectionNumber">The serial number of the connection that is used to read the time series</param>
-        /// <param name="paramTableName">The name of the database table that contains the time series</param>
-        /// <param name="traceTableName">The name of the database table that stores the BLOB for a single trace</param>
+        /// <param name="connectionNumber">The serial number of the connection that is used to read
+        /// the time series</param>
+        /// <param name="pParamTableName">The name of the database table that contains the time series</param>
+        /// <param name="pTraceTableName">The name of the database table that stores the BLOB for
+        /// a single trace</param>
         /// <param name="id">ID value identifying the time series to read</param>
         /// <param name="traceNumber">number of the trace to read</param>
         /// <param name="nReqValues">The maximum number of values that the method will fill into the array</param>
@@ -238,7 +240,8 @@ namespace TimeSeriesLibrary
         // usage: for onevar to read model output, b/c it does not need dates for each timeseries
         [ComVisible(true)]
         public int ReadValuesRegular(
-                int connectionNumber, sbyte *pParamTableName, sbyte* pTraceTableName, int id, int traceNumber,
+                int connectionNumber, sbyte *pParamTableName, sbyte* pTraceTableName,
+                int id, int traceNumber,
                 int nReqValues, double[] valueArray, DateTime reqStartDate, DateTime reqEndDate)
         {
             try
@@ -251,7 +254,8 @@ namespace TimeSeriesLibrary
                 // Construct new TS object with SqlConnection object and table name
                 TS ts = new TS(connx, paramTableName, traceTableName);
 
-                return ts.ReadValuesRegular(id, traceNumber, nReqValues, valueArray, reqStartDate, reqEndDate);
+                return ts.ReadValuesRegular(id, traceNumber, nReqValues, valueArray,
+                                        reqStartDate, reqEndDate);
             }
             catch (Exception e)
             {
@@ -261,17 +265,19 @@ namespace TimeSeriesLibrary
 
         }
         /// <summary>
-        /// This method reads the time series matching the given ID, using the given
-        /// database connection number and database table name, and stores the values into
-        /// the given array of TSDateValueStruct structs (date/value pairs).  The method starts populating the
-        /// array at the given start date, filling in no more than the number of values
-        /// that are requested.  The method will read regular or irregular time series.
+        /// This method reads the time series matching the given ID, using the given database connection
+        /// number and database table name, and stores the values into the given array of TSDateValueStruct
+        /// structs (date/value pairs).  The method starts populating the array at the given start date,
+        /// filling in no more than the number of values that are requested.  The method will read regular
+        /// or irregular time series.
         /// 
         /// This method is designed to be used from unmanaged code such as C/C++.
         /// </summary>
-        /// <param name="connectionNumber">The serial number of the connection that is used to read the time series</param>
-        /// <param name="paramTableName">The name of the database table that contains the time series</param>
-        /// <param name="traceTableName">The name of the database table that stores the BLOB for a single trace</param>
+        /// <param name="connectionNumber">The serial number of the connection that is used to read
+        /// the time series</param>
+        /// <param name="pParamTableName">The name of the database table that contains the time series</param>
+        /// <param name="pTraceTableName">The name of the database table that stores the BLOB for
+        /// a single trace</param>
         /// <param name="id">ID value identifying the time series to read</param>
         /// <param name="traceNumber">number of the trace to read</param>
         /// <param name="nReqValues">The maximum number of values that the method will fill into the array</param>
@@ -282,8 +288,9 @@ namespace TimeSeriesLibrary
         // usage: general model/onevar input
         [ComVisible(true)]
         public int ReadDatesValues(
-                int connectionNumber, sbyte *pParamTableName, sbyte *pTraceTableName, int id, int traceNumber,
-                int nReqValues, ref TSDateValueStruct[] dateValueArray, DateTime reqStartDate, DateTime reqEndDate)
+                int connectionNumber, sbyte *pParamTableName, sbyte *pTraceTableName,
+                int id, int traceNumber, int nReqValues,
+                ref TSDateValueStruct[] dateValueArray, DateTime reqStartDate, DateTime reqEndDate)
         {
             try
             {
@@ -305,7 +312,8 @@ namespace TimeSeriesLibrary
                     // IRREGULAR TIME SERIES
 
                     // Read the date/value array from the database
-                    nValuesRead = ts.ReadValuesIrregular(id, traceNumber, nReqValues, dateValueArray, reqStartDate, reqEndDate);
+                    nValuesRead = ts.ReadValuesIrregular(id, traceNumber, nReqValues, dateValueArray,
+                                                    reqStartDate, reqEndDate);
                 }
                 else
                 {
@@ -314,7 +322,8 @@ namespace TimeSeriesLibrary
                     // Allocate an array to hold the time series' data values
                     double[] valueArray = new double[nReqValues];
                     // Read the data values from the database
-                    nValuesRead = ts.ReadValuesRegular(id, traceNumber, nReqValues, valueArray, reqStartDate, reqEndDate);
+                    nValuesRead = ts.ReadValuesRegular(id, traceNumber, nReqValues, valueArray,
+                                                    reqStartDate, reqEndDate);
                     // Allocate an array to hold the time series' date values
                     DateTime[] dateArray = new DateTime[nValuesRead];
                     // Fill the array with the date values corresponding to the time steps defined
@@ -357,17 +366,17 @@ namespace TimeSeriesLibrary
         /// This method is designed to be used from unmanaged code such as C/C++.
         /// </summary>
         /// <param name="connectionNumber">The serial number of the connection that is used to write the time series</param>
-        /// <param name="paramTableName">The name of the database table that time series will be written to</param>
-        /// <param name="traceTableName">The name of the database table that stores the BLOB for a single trace</param>
+        /// <param name="pParamTableName">The name of the database table that time series will be written to</param>
+        /// <param name="pTraceTableName">The name of the database table that stores the BLOB for a single trace</param>
         /// <param name="timeStepUnit">TSDateCalculator.TimeStepUnitCode value for Minute,Hour,Day,Week,Month, or Year</param>
         /// <param name="timeStepQuantity">The number of the given unit that defines the time step.
         /// For instance, if the time step is 6 hours long, then this value is 6.</param>
         /// <param name="nOutValues">The number of values in the array to be written to the database</param>
         /// <param name="outStartDate">date of the first time step in the series</param>
-        /// <param name="extraParamNames">A list of field names that the the method should fill, in addition
+        /// <param name="pExtraParamNames">A list of field names that the the method should fill, in addition
         /// to the fields that the TimeSeriesLibrary is designed to maintain.  Every item in this list must
         /// be matched to an item in extraParamValues.</param>
-        /// <param name="extraParamValues">A list of field values that the the method should fill, in addition
+        /// <param name="pExtraParamValues">A list of field values that the the method should fill, in addition
         /// to the fields that the TimeSeriesLibrary is designed to maintain.  Every item in this list must
         /// be matched to an item in extraParamNames.</param>
         /// <returns>ID value identifying the database record that was created</returns>
@@ -401,17 +410,21 @@ namespace TimeSeriesLibrary
             }
         }
         /// <summary>
-        /// This method saves the given time series array to a new database record, using the given
-        /// database connection number and database table name.  The method creates a new record in
-        /// the trace table, but does not create a record in the parameters table.  The method does
-        /// ensure that the checksum in the parameters table is updated.  The method only writes regular
-        /// time series.  The given array is expressed only as values without explicit dates.
+        /// This method creates a new database record for the given time series array, using the given
+        /// database connection number and database table name.  The method creates a new record
+        /// for trace table, The method computes a new checksum for the parameters table. The new or
+        /// recomputed data for both tables is *not* saved to the database, but held in memory for
+        /// fast bulk copying at a later time.  It is necessary to call method CommitTraceWrites after
+        /// calling this method, or no actual changes will be saved to the database.
+        /// 
+        /// This method is only for regular time series.  The given array is expressed only as values
+        /// without explicit dates.
         /// 
         /// This method is designed to be used from unmanaged code such as C/C++.
         /// </summary>
         /// <param name="connectionNumber">The serial number of the connection that is used to write the time series</param>
-        /// <param name="paramTableName">The name of the database table that time series will be written to</param>
-        /// <param name="traceTableName">The name of the database table that stores the BLOB for a single trace</param>
+        /// <param name="pParamTableName">The name of the database table that time series will be written to</param>
+        /// <param name="pTraceTableName">The name of the database table that stores the BLOB for a single trace</param>
         /// <param name="id">the primary key value of the record in the parameters table that this trace is associated with</param>
         /// <param name="traceNumber">number of the trace to write</param>
         /// <param name="valueArray">array of time series values to be written to database</param>
@@ -446,15 +459,15 @@ namespace TimeSeriesLibrary
         /// This method is designed to be used from unmanaged code such as C/C++.
         /// </summary>
         /// <param name="connectionNumber">The serial number of the connection that is used to write the time series</param>
-        /// <param name="paramTableName">The name of the database table that time series will be written to</param>
-        /// <param name="traceTableName">The name of the database table that stores the BLOB for a single trace</param>
+        /// <param name="pParamTableName">The name of the database table that time series will be written to</param>
+        /// <param name="pTraceTableName">The name of the database table that stores the BLOB for a single trace</param>
         /// <param name="nOutValues">The number of values in the array to be written to the database</param>
         /// <param name="outStartDate">date of the first time step in the series</param>
         /// <param name="outEndDate">date of the last time step in the series</param>
-        /// <param name="extraParamNames">A list of field names that the the method should fill, in addition
+        /// <param name="pExtraParamNames">A list of field names that the the method should fill, in addition
         /// to the fields that the TimeSeriesLibrary is designed to maintain.  Every item in this list must
         /// be matched to an item in extraParamValues.</param>
-        /// <param name="extraParamValues">A list of field values that the the method should fill, in addition
+        /// <param name="pExtraParamValues">A list of field values that the the method should fill, in addition
         /// to the fields that the TimeSeriesLibrary is designed to maintain.  Every item in this list must
         /// be matched to an item in extraParamNames.</param>
         /// <returns>ID value identifying the database record that was created</returns>
@@ -486,17 +499,21 @@ namespace TimeSeriesLibrary
             }
         }
         /// <summary>
-        /// This method saves the given time series array to a new database record, using the given
-        /// database connection number and database table name.  The method creates a new record in
-        /// the trace table, but does not create a record in the parameters table.  The method does
-        /// ensure that the checksum in the parameters table is updated.  The method only writes irregular
-        /// time series.  The given array is expressed only as values without explicit dates.
+        /// This method creates a new database record for the given time series array, using the given
+        /// database connection number and database table name.  The method creates a new record
+        /// for trace table, The method computes a new checksum for the parameters table. The new or
+        /// recomputed data for both tables is *not* saved to the database, but held in memory for
+        /// fast bulk copying at a later time.  It is necessary to call method CommitTraceWrites after
+        /// calling this method, or no actual changes will be saved to the database.
+        /// 
+        /// This method is only for irregular time series.  The given array is expressed only as
+        /// date/value pairs.
         /// 
         /// This method is designed to be used from unmanaged code such as C/C++.
         /// </summary>
         /// <param name="connectionNumber">The serial number of the connection that is used to write the time series</param>
-        /// <param name="paramTableName">The name of the database table that time series will be written to</param>
-        /// <param name="traceTableName">The name of the database table that stores the BLOB for a single trace</param>
+        /// <param name="pParamTableName">The name of the database table that time series will be written to</param>
+        /// <param name="pTraceTableName">The name of the database table that stores the BLOB for a single trace</param>
         /// <param name="id">the primary key value of the record in the parameters table that this trace is associated with</param>
         /// <param name="traceNumber">number of the trace to write</param>
         /// <param name="dateValueArray">the array of time series date/value pairs to be written to database</param>
@@ -524,21 +541,28 @@ namespace TimeSeriesLibrary
             }
         }
         /// <summary>
-        /// 
+        /// This method writes to the database the data that has been stored to DataTable objects
+        /// when WriteTraceIrregular or WriteTraceRegular were called. The design calls for
+        /// WriteTraceIrregular or WriteTraceRegular to be called multiple times, and then for this method
+        /// to be called once in order to commit the collected changes to the database.  If this method
+        /// is not called after calling WriteTraceIrregular or WriteTraceRegular, then those methods
+        /// will not have written anything to the database.
         /// </summary>
-        /// <param name="connectionNumber"></param>
-        /// <param name="pTraceTableName"></param>
+        /// <param name="connectionNumber">The serial number of the connection that is used to write the time series</param>
+        /// <param name="pParamTableName">The name of the database table that time series will be written to</param>
+        /// <param name="pTraceTableName">The name of the database table that stores the BLOB for a single trace</param>
         [ComVisible(true)]
-        public void CommitTraceWrites(int connectionNumber, sbyte* pTraceTableName)
+        public void CommitTraceWrites(int connectionNumber, sbyte* pParamTableName, sbyte* pTraceTableName)
         {
             try
             {
                 // Convert from simple character byte array to .Net String object
+                String paramTableName = new String(pParamTableName);
                 String traceTableName = new String(pTraceTableName);
                 // Get the connection that we'll pass along.
                 var connx = TSLib.GetConnectionContainerFromId(connectionNumber);
                 // Send all of the staged records to the database
-                connx.CommitWritesToTable(traceTableName);
+                connx.CommitNewTraceWrites(paramTableName, traceTableName);
             }
             catch (Exception e)
             {

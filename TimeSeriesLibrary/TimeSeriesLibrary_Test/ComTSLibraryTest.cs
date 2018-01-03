@@ -296,6 +296,10 @@ namespace TimeSeriesLibrary_Test
         [TestMethod()]
         public void WriteTraceRegular()
         {
+            // All database changes should be directed into these temp tables, since the tested methods
+            // use SqlBulkCopy, which is not subject to transaction scope.
+            CreateTempTables();
+
             DateTime startDate = DateTime.Parse("2/10/2000");
             int timeStepCount = 40;
             short timeStepUnit = (short)TSDateCalculator.TimeStepUnitCode.Day;
@@ -304,7 +308,7 @@ namespace TimeSeriesLibrary_Test
 
             String extraParamNames = "TimeSeriesType, Unit_Id, RunGUID, VariableType, VariableName, RunElementGUID";
             String extraParamValues = "0, 1, 'A0101010-AAAA-BBBB-2222-3E3E3E3E3E3E', 0, 'eraseme', '00000000-0000-0000-0000-000000000000'";
-            id = _lib.WriteParametersRegular(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
+            id = _lib.WriteParametersRegular(_connxNumber, GetSbyte(_TestParamTableName), GetSbyte(_TestTraceTableName),
                     timeStepUnit, timeStepQuantity, timeStepCount, startDate, 
                     GetSbyte(extraParamNames), GetSbyte(extraParamValues));
 
@@ -316,12 +320,12 @@ namespace TimeSeriesLibrary_Test
                 x *= 1.2;
             }
             // The method being tested
-            _lib.WriteTraceRegular(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
+            _lib.WriteTraceRegular(_connxNumber, GetSbyte(_TestParamTableName), GetSbyte(_TestTraceTableName),
                         id, traceNumber, valArray);
-            _lib.CommitTraceWrites(_connxNumber, GetSbyte(_traceTableName));
+            _lib.CommitTraceWrites(_connxNumber, GetSbyte(_TestParamTableName), GetSbyte(_TestTraceTableName));
 
             String comm = String.Format("select * from {0} where TimeSeries_Id={1} and TraceNumber={2}",
-                            _traceTableName, id, traceNumber);
+                            _TestTraceTableName, id, traceNumber);
             // SqlDataAdapter object will use the query to fill the DataTable
             using (SqlDataAdapter adp = new SqlDataAdapter(comm, _connx))
             {
@@ -343,6 +347,10 @@ namespace TimeSeriesLibrary_Test
         [TestMethod()]
         public void WriteTraceIrregular()
         {
+            // All database changes should be directed into these temp tables, since the tested methods
+            // use SqlBulkCopy, which is not subject to transaction scope.
+            CreateTempTables();
+
             DateTime startDate = DateTime.Parse("2/10/2000");
             DateTime endDate = DateTime.Parse("2/10/2002");
             int timeStepCount = 40;
@@ -350,7 +358,7 @@ namespace TimeSeriesLibrary_Test
 
             String extraParamNames = "TimeSeriesType, Unit_Id, RunGUID, VariableType, VariableName, RunElementGUID";
             String extraParamValues = "0, 1, 'A0101010-AAAA-BBBB-2222-3E3E3E3E3E3E', 0, 'eraseme', '00000000-0000-0000-0000-000000000000'";
-            id = _lib.WriteParametersIrregular(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
+            id = _lib.WriteParametersIrregular(_connxNumber, GetSbyte(_TestParamTableName), GetSbyte(_TestTraceTableName),
                     timeStepCount, startDate, endDate, GetSbyte(extraParamNames), GetSbyte(extraParamValues));
 
             TSDateValueStruct[] dateValArray = new TSDateValueStruct[timeStepCount],
@@ -367,12 +375,12 @@ namespace TimeSeriesLibrary_Test
                 curDate = curDate.AddDays(y);
             }
             // The method being tested
-            _lib.WriteTraceIrregular(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
+            _lib.WriteTraceIrregular(_connxNumber, GetSbyte(_TestParamTableName), GetSbyte(_TestTraceTableName),
                         id, traceNumber, dateValArray);
-            _lib.CommitTraceWrites(_connxNumber, GetSbyte(_traceTableName));
+            _lib.CommitTraceWrites(_connxNumber, GetSbyte(_TestParamTableName), GetSbyte(_TestTraceTableName));
 
             String comm = String.Format("select * from {0} where TimeSeries_Id={1} and TraceNumber={2}",
-                            _traceTableName, id, traceNumber);
+                            _TestTraceTableName, id, traceNumber);
             // SqlDataAdapter object will use the query to fill the DataTable
             using (SqlDataAdapter adp = new SqlDataAdapter(comm, _connx))
             {
@@ -386,6 +394,135 @@ namespace TimeSeriesLibrary_Test
                 // 
                 for (int i = 0; i < timeStepCount; i++)
                     Assert.AreEqual(dateValArray[i], testDateValArray[i]);
+            }
+
+        }
+        /// <summary>
+        /// Test will
+        ///  1) Find an existing time series that has at least one trace
+        ///  2) add a new trace to the existing time series
+        ///      (calling WriteTraceRegular and CommitTraceWrites)
+        ///  3) verify that
+        ///      a) new and old traces are indeed found in the DB table
+        ///      b) checksum of in the parameters table fits the set of new and old traces
+        /// </summary>
+        [TestMethod()]
+        public void WriteMultiTraceRegular()
+        {
+            int id = 0, traceNumber = 0, traceCount = 0;
+
+            // Find an existing time series that has at least one trace and where the
+            // time series type is not irregular
+            String comm = "SELECT TOP(1) x.Id FROM " + _traceTableName + " t\n"
+                         + "JOIN " + _paramTableName + " x ON t.TimeSeries_Id=x.Id\n"
+                         + "WHERE x.TimeSeriesType != 0";
+            using (var queryCommand = new SqlCommand(comm, _connx) { CommandTimeout = 0 })
+            using (var reader = queryCommand.ExecuteReader())
+            {
+                // Loop through every record in the result set
+                while (reader.Read())
+                {
+                    // Populate an array of Objects with the query results for this record
+                    Object[] valueArray = new Object[1];
+                    reader.GetValues(valueArray);
+                    id = (int)valueArray[0];
+                }
+            }
+            // Get the highest existing trace number of the existing time series
+            comm = "SELECT TOP(1) t.[TraceNumber] FROM " + _traceTableName + " t\n"
+                         + "where t.[TimeSeries_Id]=" + id + "\norder by t.[TraceNumber] desc";
+            using (var queryCommand = new SqlCommand(comm, _connx) { CommandTimeout = 0 })
+            using (var reader = queryCommand.ExecuteReader())
+            {
+                // Loop through every record in the result set
+                while (reader.Read())
+                {
+                    // Populate an array of Objects with the query results for this record
+                    Object[] valueArray = new Object[1];
+                    reader.GetValues(valueArray);
+                    traceNumber = (int)valueArray[0];
+                }
+            }
+            // Get the highest existing trace number of the existing time series
+            comm = "SELECT COUNT(*) FROM " + _traceTableName + " t\n"
+                         + "where t.[TimeSeries_Id]=" + id;
+            using (var queryCommand = new SqlCommand(comm, _connx) { CommandTimeout = 0 })
+            using (var reader = queryCommand.ExecuteReader())
+            {
+                // Loop through every record in the result set
+                while (reader.Read())
+                {
+                    // Populate an array of Objects with the query results for this record
+                    Object[] valueArray = new Object[1];
+                    reader.GetValues(valueArray);
+                    traceCount = (int)valueArray[0];
+                }
+            }
+            // Read the values of the existing trace that has the highest trace number
+            int ArrayDim = 5000;
+            var valArray = new Double[ArrayDim];
+            int nVals = _lib.ReadValuesRegular(_connxNumber,
+                        GetSbyte(_paramTableName), GetSbyte(_traceTableName),
+                        id, traceNumber, ArrayDim, valArray, DateTime.MinValue, DateTime.MaxValue);
+            var newValArray = valArray.Take(nVals).ToArray();
+
+            // Create temporary tables that will absorb all data changes.  We do this because
+            // the tested methods use SqlBulkCopy, which is not subject to TransactionScope.
+            CreateTempTablesFromExisting(id);
+
+            // The method being tested--we add another trace that is identical to the one we just
+            // read, but give it a new trace number.
+            _lib.WriteTraceRegular(_connxNumber, GetSbyte(_TestParamTableName), GetSbyte(_TestTraceTableName),
+                        id, traceNumber + 1, newValArray);
+            _lib.CommitTraceWrites(_connxNumber, GetSbyte(_TestParamTableName), GetSbyte(_TestTraceTableName));
+
+            // Now verify that the new trace is written to the DB,
+            // and that the checksum of the time series includes all traces including the new one
+            comm = "SELECT c.[Checksum], c.[TimeStepUnit], c.[TimeStepQuantity], "
+                          + "c.[StartDate],\n    t.[TraceNumber], t.[Checksum]\n"
+                          + "FROM [" + _TestParamTableName + "] c\n"
+                          + "LEFT JOIN [" + _TestTraceTableName + "] t ON c.[Id]=t.[TimeSeries_Id]\n"
+                          + "WHERE c.[Id]=" + id;
+
+            using (var queryCommand = new SqlCommand(comm, _connx) { CommandTimeout = 0 })
+            using (var reader = queryCommand.ExecuteReader())
+            {
+                Boolean initialized = false;
+                var traceList = new List<ITimeSeriesTrace>();
+                Byte[] checksum = new Byte[0];
+                var timeStepUnit = TSDateCalculator.TimeStepUnitCode.Day;
+                short timeStepQuantity = 1;
+                DateTime startDate = DateTime.MinValue;
+                // Loop through every record in the result set
+                while (reader.Read())
+                {
+                    // Populate an array of Objects with the query results for this record
+                    Object[] valueArray = new Object[6];
+                    reader.GetValues(valueArray);
+                    if (!initialized)
+                    {
+                        checksum = (Byte[])valueArray[0];
+                        timeStepUnit = (TSDateCalculator.TimeStepUnitCode)(int)valueArray[1];
+                        timeStepQuantity = (short)(int)valueArray[2];
+                        startDate = (DateTime)valueArray[3];
+                        initialized = true;
+                    }
+                    // Add to the collection a container object for this trace's properties
+                    traceList.Add(new TSTrace
+                    {
+                        TraceNumber = (int)valueArray[4],
+                        Checksum = (Byte[])valueArray[5]
+                    });
+                }
+                // Is the new trace in the DB?
+                Assert.IsTrue(traceList.Any(o => o.TraceNumber == traceNumber + 1));
+                // Is the actual number of traces incremented by one?
+                Assert.AreEqual(traceCount + 1, traceList.Count);
+                // Do an independent computation of the checksum
+                var correctChecksum = TSBlobCoder.ComputeChecksum(timeStepUnit, timeStepQuantity,
+                                                    startDate, traceList);
+                // was the correct checksum stored in the DB?
+                Assert.IsTrue(NumericExtensions.ByteArraysAreEqual(correctChecksum, checksum));
             }
 
         }
@@ -418,7 +555,7 @@ namespace TimeSeriesLibrary_Test
                                     timeStepQuantity, timeStepCount - 1);
             _lib.WriteTraceRegular(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
                         id, traceNumber, valArray);
-            _lib.CommitTraceWrites(_connxNumber, GetSbyte(_traceTableName));
+            _lib.CommitTraceWrites(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName));
 
             // The method being tested
             _lib.ReadValuesRegular(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
@@ -461,7 +598,7 @@ namespace TimeSeriesLibrary_Test
             }
             _lib.WriteTraceRegular(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
                         id, traceNumber, valArray);
-            _lib.CommitTraceWrites(_connxNumber, GetSbyte(_traceTableName));
+            _lib.CommitTraceWrites(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName));
 
             // The method being tested
             _lib.ReadDatesValues(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
@@ -501,7 +638,7 @@ namespace TimeSeriesLibrary_Test
             }
             _lib.WriteTraceIrregular(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
                         id, traceNumber, dateValArray);
-            _lib.CommitTraceWrites(_connxNumber, GetSbyte(_traceTableName));
+            _lib.CommitTraceWrites(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName));
 
             // The method being tested
             _lib.ReadDatesValues(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
@@ -543,7 +680,7 @@ namespace TimeSeriesLibrary_Test
                         id, 5, valArray);
             _lib.WriteTraceRegular(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
                         id, 6, valArray);
-            _lib.CommitTraceWrites(_connxNumber, GetSbyte(_traceTableName));
+            _lib.CommitTraceWrites(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName));
 
             String comm = String.Format("select count(1) from {0} where TimeSeries_Id={1}", _traceTableName, id);
             SqlCommand sqlCommand = new SqlCommand(comm, _connx);
@@ -589,7 +726,7 @@ namespace TimeSeriesLibrary_Test
                         id, 5, valArray);
             _lib.WriteTraceRegular(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName),
                         id, 6, valArray);
-            _lib.CommitTraceWrites(_connxNumber, GetSbyte(_traceTableName));
+            _lib.CommitTraceWrites(_connxNumber, GetSbyte(_paramTableName), GetSbyte(_traceTableName));
 
             String comm = String.Format("select count(1) from {0} where TimeSeries_Id={1}", _traceTableName, id);
             SqlCommand sqlCommand = new SqlCommand(comm, _connx);
@@ -612,6 +749,7 @@ namespace TimeSeriesLibrary_Test
         } 
         #endregion 
 
+        #region Test error handling
         // Test Error Handling
         [TestMethod()]
         public void ResetErrorHandler()
@@ -666,7 +804,8 @@ namespace TimeSeriesLibrary_Test
                 errorString = new String(pErrorMessage);
             }
             Assert.IsTrue(errorString.Length > 0);
-        } 
+        }  
+        #endregion
 
     }
 }

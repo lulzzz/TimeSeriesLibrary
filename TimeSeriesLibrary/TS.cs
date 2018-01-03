@@ -45,6 +45,13 @@ namespace TimeSeriesLibrary
         /// Checksum computed from the BLOB and meta-parameters when the timeseries is saved to database.
         /// </summary>
         public Byte[] Checksum;
+
+        /// <summary>
+        /// A collection of containers, one for each trace of the time series.  This collection is
+        /// only initialized under certain conditions, and it is designed such that each container
+        /// should only contain the properties that are needed to compute the checksum of the timeseries.
+        /// </summary>
+        private List<ITimeSeriesTrace> TraceList;
         #endregion
 
         #region Properties linked to TSParameters field
@@ -129,29 +136,37 @@ namespace TimeSeriesLibrary
         /// the entire set of data values.
         /// </summary>
         /// <param name="id">ID of the time series record</param>
+        /// <param name="toIncludeTraceData">If true, then this method will populate a collection
+        /// of TSTrace objects to be stored in the TraceList field.  This is to be used when the
+        /// checksum of the timeseries will need to be computed.  The default value is false.</param>
         /// <returns>true if a record was found, false if no record was found</returns>
-        public Boolean Initialize(int id)
+        public Boolean Initialize(int id, Boolean toIncludeTraceData = false)
         {
             // store the method's input parameters
             Id = id;
             // Define the SQL query
+            String traceDataPart1 = toIncludeTraceData ? ",\nt.[TraceNumber] tN, t.[Checksum] tChk\n" : "\n";
+            String traceDataPart2 = toIncludeTraceData ? "left join " + TraceTableName
+                                           + " t on t.[TimeSeries_Id]=x.[Id]\n" : "";
 
-            String comm = String.Format("select TimeStepUnit,TimeStepQuantity," +
-                                        "StartDate,CompressionCode " +
-                                        "from {0} where Id='{1}'", ParametersTableName, Id);
+            String comm = String.Format("select x.[TimeStepUnit], x.[TimeStepQuantity], " +
+                                        "x.[StartDate], x.[Checksum], x.[CompressionCode]{2}" +
+                                        "from {0} x\n{3}where x.[Id]='{1}'", 
+                                        ParametersTableName, Id, traceDataPart1, traceDataPart2);
             // SqlDataAdapter object will use the query to fill the DataTable
             using (SqlDataAdapter adp = new SqlDataAdapter(comm, TSConnection.Connection))
+            using (DataTable dTable = new DataTable())
             {
-                DataTable dTable = new DataTable();
                 // Execute the query to fill the DataTable object
                 try
                 {
                     adp.Fill(dTable);
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {   // The query failed.
                     throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
-                                    "Table '" + ParametersTableName + "' could not be opened using query:\n\n" + comm, e);
+                                    "Table '" + ParametersTableName 
+                                    + "' could not be opened using query:\n\n" + comm, e);
                 }
                 // There should be at least 1 row in the DataTable object
                 if (dTable.Rows.Count < 1)
@@ -164,7 +179,23 @@ namespace TimeSeriesLibrary
                 TimeStepQuantity = (short)dTable.Rows[0].Field<int>("TimeStepQuantity");
                 BlobStartDate = dTable.Rows[0].Field<DateTime>("StartDate");
                 CompressionCode = dTable.Rows[0].Field<int>("CompressionCode");
-                dTable.Dispose();
+
+                // If this method's toIncludeTraceData parameter is true, then populate the TraceList
+                // collection with properties of the trace objects.  The intent is that this is only
+                // done when the checksum of the timeseries object must be computed.
+                if (toIncludeTraceData)
+                {
+                    TraceList = new List<ITimeSeriesTrace>();
+                    for (int i = 0; i < dTable.Rows.Count; i++)
+                    {
+                        if (dTable.Rows[i].Field<Object>("tN") == null) break;
+                        TraceList.Add(new TSTrace()
+                        {
+                            TraceNumber = dTable.Rows[i].Field<int>("tN"),
+                            Checksum = dTable.Rows[i].Field<Byte[]>("tChk")
+                        });
+                    }
+                }
             }
             IsInitialized = true;
             return true;
@@ -492,10 +523,14 @@ namespace TimeSeriesLibrary
 
         #region WriteTrace methods
         /// <summary>
-        /// This method writes a new record to the trace table for a regular time step series.
+        /// This method prepares a new record for the trace table for a regular time step series.
         /// The method converts the given valueArray into the BLOB that is actually stored in
-        /// the table.  The method computes the checksum of the trace, and updates the checksum
-        /// in the parameters table to reflect the fact that a new trace has been added to the ensemble.
+        /// the table.  The method computes the checksum of the trace, and computes a new checksum
+        /// for the parameters table to reflect the fact that a new trace has been added to the ensemble.
+        /// For both the insertion to the trace table and the update to the parameters table, this method
+        /// only stores changes in DataTable objects--nothing is changed in the database. In order for
+        /// the changes to be sent to the database, the method TSConnection.CommitNewTraceWrites must
+        /// be called after WriteTraceRegular has been called for all new traces.
         /// </summary>
         /// <param name="id">identifying primary key value of the the parameters table for the record 
         /// that this trace belongs to</param>
@@ -510,7 +545,7 @@ namespace TimeSeriesLibrary
                     double[] valueArray)
         {
             // Initialize class fields other than the BLOB of data values
-            if (!IsInitialized) Initialize(id);
+            if (!IsInitialized) Initialize(id, true);
 
             // This method can only process regular-time-step series
             if (TimeStepUnit == TSDateCalculator.TimeStepUnitCode.Irregular)
@@ -530,20 +565,28 @@ namespace TimeSeriesLibrary
             };
             if (tsImport != null)
                 tsImport.TraceList.Add(traceObject);
+            else
+                TraceList.Add(traceObject);
             // Convert the array of double values into a byte array...a BLOB
             TSBlobCoder.ConvertArrayToBlobRegular(valueArray, CompressionCode, traceObject);
 
-            // Write a new record to the trace table
+            // Create a new record for the trace table
+            // (but for now it is only stored in a DataTable object)
             if(doWriteToDB)
                 WriteTrace(traceObject);
-            // update the checksum in the parameters table
+            // Compute a new checksum for the parameters table
+            // (but for now it is only stored in a DataTable object)
             UpdateParametersChecksum(doWriteToDB, tsImport);
         }
         /// <summary>
-        /// This method writes a new record to the trace table for an irregular time step series.
+        /// This method prepares a new record for the trace table for an irregular time step series.
         /// The method converts the given dateValueArray into the BLOB that is actually stored in
-        /// the table.  The method computes the checksum of the trace, and updates the checksum
-        /// in the parameters table to reflect the fact that a new trace has been added to the ensemble.
+        /// the table.  The method computes the checksum of the trace, and computes a new checksum
+        /// for the parameters table to reflect the fact that a new trace has been added to the ensemble.
+        /// For both the insertion to the trace table and the update to the parameters table, this method
+        /// only stores changes in DataTable objects--nothing is changed in the database. In order for
+        /// the changes to be sent to the database, the method TSConnection.CommitNewTraceWrites must
+        /// be called after WriteTraceIrregular has been called for all new traces.
         /// </summary>
         /// <param name="id">identifying primary key value of the the parameters table for the record 
         /// that this trace belongs to</param>
@@ -558,7 +601,7 @@ namespace TimeSeriesLibrary
                     TSDateValueStruct[] dateValueArray)
         {
             // Initialize class fields other than the BLOB of data values
-            if (!IsInitialized) Initialize(id);
+            if (!IsInitialized) Initialize(id, true);
 
             // This method can only process irregular-time-step series
             if (TimeStepUnit != TSDateCalculator.TimeStepUnitCode.Irregular)
@@ -576,21 +619,28 @@ namespace TimeSeriesLibrary
             };
             if (tsImport != null)
                 tsImport.TraceList.Add(traceObject);
+            else
+                TraceList.Add(traceObject);
             // Convert the array of double values into a byte array...a BLOB
             TSBlobCoder.ConvertArrayToBlobIrregular(dateValueArray, CompressionCode, traceObject);
 
-            // Write a new record to the trace table
+            // Create a new record for the trace table
+            // (but for now it is only stored in a DataTable object)
             if (doWriteToDB)
                 WriteTrace(traceObject);
-            // update the checksum in the parameters table
+            // Compute a new checksum for the parameters table
+            // (but for now it is only stored in a DataTable object)
             UpdateParametersChecksum(doWriteToDB, tsImport);
         }
         /// <summary>
-        /// This method writes the data contained in the traceObject parameter into a single
-        /// record of the trace table.  The properties of the traceObject, including the
-        /// checksum and BLOB, should be populated before calling this method.
+        /// This method adds the data contained in the traceObject parameter into a new row in a DataTable,
+        /// which is suitable for quick insertion--at a later time--to the trace table. This method doesn't
+        /// change any data in the database--it is assumed that method TSConnection.CommitNewTraceWrites
+        /// will be called later in order to send the changes to the database. The properties of the
+        /// traceObject, including the checksum and BLOB, should be populated before calling this method
         /// </summary>
-        /// <param name="traceObject"></param>
+        /// <param name="traceObject">ITimeSeriesTrace object containing the properties that are to
+        /// be inserted to the trace table</param>
         private unsafe void WriteTrace(ITimeSeriesTrace traceObject)
         {
             DataTable dataTable;
@@ -618,144 +668,49 @@ namespace TimeSeriesLibrary
                                    traceObject.ValueBlob, traceObject.Checksum);
         }
         /// <summary>
-        /// This method updates the value in the Checksum field of the parameters table.
-        /// It does not modify any other fields.
+        /// This computes a new value for the Checksum field of the parameters table.  It does not save
+        /// this change to the database, but to a DataTable object.  It is assumed that method 
+        /// TSConnection.CommitNewTraceWrites will be called later in order to send the changes to the
+        /// database. If parameter 'toWriteToDB' is false, then this method can simply save the
+        /// new Checksum value to the object given in the 'tsImport' parameter.
         /// </summary>
-        /// <param name="doWriteToDB">true if the method should actually
+        /// <param name="toWriteToDB">true if the method should actually
         /// save the timeseries to the database</param>
         /// <param name="tsImport">TSImport object into which the method will record values
         /// that it has computed. If this parameter is null, then the method will skip the recording
         /// of such paramters to an object.</param>
-        private void UpdateParametersChecksum(bool doWriteToDB, TSImport tsImport)
+        private void UpdateParametersChecksum(Boolean toWriteToDB, TSImport tsImport)
         {
-            // This List will contain one item for each trace for this time series.  The primary
-            // purpose of the list is to store the checksum for each trace, since the checksum
-            // of the timeseries is computed from the list of checksums from each of its traces.
+            // The collection in variable 'traceObjects' contains one item for each trace for this
+            // time series.  The primary purpose of the list is to store the checksum for each trace,
+            // since the checksum of the timeseries is computed from the list of checksums from each
+            // of its traces.
             List<ITimeSeriesTrace> traceObjects;
             if (tsImport != null)
                 traceObjects = tsImport.TraceList;
             else
-                traceObjects = new List<ITimeSeriesTrace>();
+                traceObjects = TraceList;
 
-            if (doWriteToDB)
-            {
-                //
-                // Query the Trace table to get all traces for this time series
-                String keyString = "SelTrcChk";
-                SqlCommand sqlCommand;
-                // Find a SqlCommand that was previously cached for this purpose
-                var commandContainer = TSConnection.PreparedSqlCommands
-                        .Where(o => o.TableName == TraceTableName
-                                    && o.KeyString == keyString).FirstOrDefault();
-                // If no SqlCommand has been created yet
-                if (commandContainer == null)
-                    // Then create one.
-                    sqlCommand = CreateSelectTraceChecksumSqlCommand(keyString);
-                else
-                    sqlCommand = commandContainer.SqlCommand;
-                // Supply parameter values for the SqlCommand
-                sqlCommand.Parameters["@TimeSeries_Id"].Value = Id;
-
-                // SqlDataAdapter object will use the query to fill the DataTable
-                using (SqlDataAdapter adp = new SqlDataAdapter(sqlCommand))
-                // SqlCommandBuilder object must be instantiated in order for us to call
-                // the Fill method of the SqlDataAdapter.  Interestingly, we only need to
-                // instantiate this object--we don't need to use it in any other way.
-                using (SqlCommandBuilder bld = new SqlCommandBuilder(adp))
-                using (DataTable dTable = new DataTable())
-                {
-                    // Execute the query to fill the DataTable object
-                    try
-                    {
-                        adp.Fill(dTable);
-                    }
-                    catch (Exception e)
-                    {   // The query failed
-                        throw new TSLibraryException(ErrCode.Enum.Could_Not_Open_Table,
-                                        "Table '" + TraceTableName + "' could not be opened using query:\n\n"
-                                        + sqlCommand.CommandText, e);
-                    }
-                    // Loop through all traces, and record the values that will be needed to compute the
-                    // checksum of the ensemble time series.  Note that this does not include the BLOB 
-                    // of the trace.
-                    foreach (DataRow row in dTable.Rows)
-                    {
-                        ITimeSeriesTrace traceObject = new TSTrace();
-                        traceObject.TraceNumber = (int)row["TraceNumber"];
-                        traceObject.Checksum = (byte[])row["Checksum"];
-                        traceObjects.Add(traceObject);
-                    }
-                }
-            }
             // Compute the new checksum of the ensemble
             Checksum = TSBlobCoder.ComputeChecksum(TimeStepUnit, TimeStepQuantity,
                                      BlobStartDate, traceObjects);
-            if (doWriteToDB)
+            if (toWriteToDB)
             {
-                // 
-                // Write the new value to the parameters table
-                String keyString = "UpdChk";
-                SqlCommand sqlCommand;
-                // Find a SqlCommand that was previously cached for this purpose
-                var commandContainer = TSConnection.PreparedSqlCommands
-                        .Where(o => o.TableName == TraceTableName
-                                    && o.KeyString == keyString).FirstOrDefault();
-                // If no SqlCommand has been created yet
-                if (commandContainer == null)
-                    // Then create one.
-                    sqlCommand = CreateUpdateChecksumSqlCommand(keyString);
-                else
-                    sqlCommand = commandContainer.SqlCommand;
-                // Supply parameter values for the SqlCommand
-                sqlCommand.Parameters["@Id"].Value = Id;
-                sqlCommand.Parameters["@Checksum"].Value = Checksum;
-                sqlCommand.ExecuteNonQuery();
+                DataTable dataTable;
+                // Attempt to get the existing DataTable object from the collection that is kept by
+                // the TSConnection object.  If this fails, then we'll create a new DataTable.
+                if (TSConnection.BulkCopyDataTables.TryGetValue(ParametersTableName, out dataTable) == false)
+                {
+                    // Create the DataTable object and add columns that match the columns
+                    // of the database table.
+                    dataTable = new DataTable();
+                    dataTable.Columns.Add("Id", typeof(int));
+                    dataTable.Columns.Add("Checksum", typeof(byte[]));
+                    // Add the DataTable to a collection that is kept in the TSConnection object.
+                    TSConnection.BulkCopyDataTables.Add(ParametersTableName, dataTable);
+                }
+                dataTable.Rows.Add(Id, Checksum);
             }
-        }
-        /// <summary>
-        /// Create a new SqlCommand object for the UpdateParametersChecksum method, so that the
-        /// SqlCommand can be cached and reused by the database system.
-        /// </summary>
-        private SqlCommand CreateSelectTraceChecksumSqlCommand(String keyString)
-        {
-            // Instantiate the SqlCommand object using a SQL INSERT command
-            SqlCommand command = GetNewSqlCommand("SELECT  TraceNumber, Checksum from "
-                        + TraceTableName+" where TimeSeries_Id=@TimeSeries_Id order by TraceNumber");
-
-            // Add parameters to the command
-            command.Parameters.Add("@TimeSeries_Id", SqlDbType.Int);
-
-            // add the new command to a container that keeps the command object wrapped together
-            // with identifying information.  Note that the container's constructor will call
-            // the command's Prepare method.
-            var container = new TSSqlCommandContainer(TraceTableName, keyString, command);
-            // The TSConnectionManager object will keep this container in a collection
-            TSConnection.PreparedSqlCommands.Add(container);
-
-            return command;
-        }
-        /// <summary>
-        /// Create a new SqlCommand object for the UpdateParametersChecksum method, so that the
-        /// SqlCommand can be cached and reused by the database system.
-        /// </summary>
-        private SqlCommand CreateUpdateChecksumSqlCommand(String keyString)
-        {
-            // Instantiate the SqlCommand object using a SQL INSERT command
-            SqlCommand command = GetNewSqlCommand("UPDATE " + ParametersTableName
-                                    + " SET Checksum=@Checksum WHERE Id=@Id");
-
-            // Add parameters to the command
-            command.Parameters.Add("@Checksum", SqlDbType.Binary, 16);
-            command.Parameters.Add("@Id", SqlDbType.Int);
-
-            // add the new command to a container that keeps the command object wrapped together
-            // with identifying information.  Note that the container's constructor will call
-            // the command's Prepare method.
-            var container = new TSSqlCommandContainer(TraceTableName, keyString, command);
-            // The TSConnectionManager object will keep this container in a collection
-            TSConnection.PreparedSqlCommands.Add(container);
-
-            return command;
         }
         #endregion
 
