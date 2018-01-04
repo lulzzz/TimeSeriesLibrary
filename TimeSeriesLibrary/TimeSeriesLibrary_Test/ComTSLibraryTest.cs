@@ -157,14 +157,8 @@ namespace TimeSeriesLibrary_Test
         private void DropTempTables(Boolean toForce = false)
         {
             if (_createdTempTables == false && toForce == false) return;
-            String commandText
-                    = String.Format("IF OBJECT_ID('tempdb..{0}','U') IS NOT NULL DROP TABLE {0};\n"
-                                  + "IF OBJECT_ID('tempdb..{1}','U') IS NOT NULL DROP TABLE {1};\n",
-                            _TestTraceTableName, _TestParamTableName);
-            using (var createTableCommand = new SqlCommand(commandText, _connx))
-            {
-                createTableCommand.ExecuteNonQuery();
-            }
+            _connx.DropTempTable(_TestTraceTableName);
+            _connx.DropTempTable(_TestParamTableName);
             _createdTempTables = false;
         }
         #endregion
@@ -209,6 +203,7 @@ namespace TimeSeriesLibrary_Test
         public void MyTestInitialize()
         {
             _transactionScope = TestHelper.GetNewTransactionScope();
+            _connx.EnlistTransaction(Transaction.Current);
         }
         //Use TestCleanup to run code after each test has run
         [TestCleanup()]
