@@ -181,6 +181,7 @@ namespace TimeSeriesLibrary
                             // Read one timeseries from XML
                             while (oneSeriesXmlReader.Read())
                             {
+                                Boolean binaryEncoded = false;
                                 // If the current position of the reader is on an element's start tag (e.g. <Name>)
                                 if (oneSeriesXmlReader.NodeType == XmlNodeType.Element)
                                 {
@@ -231,15 +232,9 @@ namespace TimeSeriesLibrary
                                         case "Data":
                                             // <Data> may have a TraceNumber attribute
                                             int traceNumber = 0;
-                                            if (oneSeriesXmlReader.MoveToAttribute("Trace"))
-                                            {
-                                                s = oneSeriesXmlReader.Value;
-                                                int.TryParse(s, out traceNumber);
-                                                oneSeriesXmlReader.MoveToElement();
-                                            }
-                                            //s = oneSeriesXmlReader.GetAttribute("Trace");
-                                            //if (int.TryParse(s, out traceNumber) == false)
-                                            //    traceNumber = 0;
+                                            s = oneSeriesXmlReader.GetAttribute("Trace");
+                                            if (int.TryParse(s, out traceNumber) == false)
+                                                traceNumber = 0;
                                             if (DataStrings.ContainsKey(traceNumber))
                                             {
                                                 throw new TSLibraryException(ErrCode.Enum.Xml_File_Inconsistent,
@@ -253,6 +248,15 @@ namespace TimeSeriesLibrary
                                             // where the trace number is the dictionary key
                                             DataStrings.Add(traceNumber, s);
                                             foundValueArray = true;
+                                            break;
+
+                                        case "Encoding":
+                                            // The default is that <Data> contains decimal text.
+                                            // However, the <Encoding> element may specify that it is
+                                            // Base64 encoded.
+                                            s = oneSeriesXmlReader.ReadElementContentAsString();
+                                            if (s == "Base64" || s == "base64")
+                                                binaryEncoded = true;
                                             break;
 
                                         case "Apart": // <Apart> contains the A part of record name from a HECDSS file
